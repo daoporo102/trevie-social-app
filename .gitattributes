@@ -1,0 +1,31 @@
+# Ensure all text files use LF line endings
+* text eol=lf
+
+# Flutter/Dart files
+*.dart text eol=lf
+*.yaml text eol=lf
+*.gradle text eol=lf
+*.kt text eol=lf
+*.kts text eol=lf
+*.swift text eol=lf
+*.cmake text eol=lf
+*.cc text eol=lf
+*.h text eol=lf
+*.md text eol=lf
+
+# Vector graphics: keep as text (LF)
+*.svg text eol=lf
+
+# Mark binary files so Git never changes them
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.mp3 binary
+*.mp4 binary
+*.aac binary
+*.wav binary
