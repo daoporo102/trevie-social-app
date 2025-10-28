@@ -1,0 +1,58 @@
+plugins {
+    id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
+    id("kotlin-android")
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("dev.flutter.flutter-gradle-plugin")
+}
+
+android {
+    namespace = "com.example.social_media_app"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
+    }
+
+    defaultConfig {
+        applicationId = "com.example.social_media_app"
+
+        minSdk = maxOf(21, flutter.minSdkVersion) // 21+ recommended with Firebase/Flutter
+        targetSdk = flutter.targetSdkVersion
+
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+
+        multiDexEnabled = true
+    }
+
+    buildTypes {
+        release {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+}
+
+dependencies {
+    // Import the BoM for the Firebase platform
+    implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
+    // Add the dependencies for the App Check libraries
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation("com.google.firebase:firebase-appcheck-debug")
+    // Only needed if minSdk < 21
+    implementation("androidx.multidex:multidex:2.0.1")
+}
+
+flutter {
+    source = "../.."
+}
