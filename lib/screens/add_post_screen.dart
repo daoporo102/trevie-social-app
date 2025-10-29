@@ -24,13 +24,13 @@ class _AddPostScreenState extends State<AddPostScreen> {
           },
           icon: const Icon(Icons.arrow_back),
         ),
-        title: const Text('Add Post'),
+        title: const Text('Tạo bài đăng'),
         centerTitle: false,
         actions: [
           TextButton(
             onPressed: () {},
             child: const Text(
-              'Post',
+              'Đăng bài',
               style: TextStyle(
                 color: appPrimaryColor,
                 fontWeight: FontWeight.bold,
@@ -55,7 +55,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 width: MediaQuery.of(context).size.width * 0.45,
                 child: TextField(
                   decoration: const InputDecoration(
-                    hintText: 'Write a caption...',
+                    hintText: 'Viết mô tả của bạn...',
                     border: InputBorder.none,
                   ),
                   maxLines: 8,
