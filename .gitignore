@@ -55,3 +55,7 @@ macos/Runner/GoogleService-Info.plist
 # Optional: FlutterFire app id files (not secret, but often ignored)
 ios/firebase_app_id_file.json
 macos/firebase_app_id_file.json
+
+# edit some custom widgets
+lib/widgets/text_button_custom.dart
+lib/widgets/custom_button.dart

@@ -21,7 +21,9 @@ class _ResponsiveLayoutState extends State<ResponsiveLayout> {
   @override
   void initState() {
     super.initState();
-    addData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      addData();
+    });
   }
 
   Future<void> addData() async {

@@ -1,17 +1,18 @@
 import 'package:flutter/widgets.dart';
-import 'package:social_media_app/models/user.dart' as model;
-import 'package:social_media_app/resources/auth_method.dart';
+import 'package:social_media_app/models/user.dart';
+import 'package:social_media_app/resources/auth_methods.dart';
 
 class UserProvider with ChangeNotifier {
-  model.User? _user;
-  final AuthMethod _authMethod = AuthMethod();
+  User? _user;
+  final AuthMethods _authMethod = AuthMethods();
 
-  model.User get getUser => _user!;
+  // Getter that can return null if user is not loaded
+  User? get getUserrOrNull => _user;
 
   Future<void> refreshUser() async {
-    model.User user = await _authMethod.getUserDetails();
+    User user = await _authMethod.getUserDetails();
     _user = user;
     notifyListeners();
-    
   }
+
 }
