@@ -1,9 +1,8 @@
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:social_media_app/resources/auth_method.dart';
+import 'package:social_media_app/resources/auth_methods.dart';
 import 'package:social_media_app/responsive/mobile_screen_layout.dart';
 import 'package:social_media_app/responsive/responsive_layout_screen.dart';
 import 'package:social_media_app/responsive/web_screen_layout.dart';
@@ -46,7 +45,7 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      final res = await AuthMethod().signUpUser(
+      final res = await AuthMethods().signUpUser(
         displayName: _displayNameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,

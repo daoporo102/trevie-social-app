@@ -6,7 +6,7 @@ import 'package:social_media_app/models/user.dart' as model;
 import 'package:social_media_app/resources/storage_method.dart';
 import 'package:social_media_app/utils/utils.dart';
 
-class AuthMethod {
+class AuthMethods {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -57,7 +57,7 @@ class AuthMethod {
         );
 
         //debugging print statement to verify user creation
-        // print("Firebase Auth User UID: ${cred.user!.uid}");
+        avoidPrint("Firebase Auth User UID: ${cred.user!.uid}");
 
         final photoUrl = await StorageMethod().uploadImageToStorage(
           'profilePics',
@@ -143,5 +143,4 @@ class AuthMethod {
   Future<void> signOut() async {
     await _auth.signOut();
   }
-
 }
