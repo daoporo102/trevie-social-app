@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:social_media_app/models/post.dart';
 import 'package:social_media_app/resources/storage_method.dart';
+import 'package:social_media_app/utils/utils.dart';
 import 'package:uuid/uuid.dart';
 
 class FirestoreMethod {
@@ -44,5 +45,24 @@ class FirestoreMethod {
       res = e.toString();
     }
     return res;
+  }
+
+  //like post
+  Future<void> likePost(String postId, String uid, List likes) async {
+    try {
+      if (likes.contains(uid)) {
+        //unlike the post
+        await _firestore.collection('posts').doc(postId).update({
+          'likes': FieldValue.arrayRemove([uid]),
+        });
+      } else {
+        //like the post
+        await _firestore.collection('posts').doc(postId).update({
+          'likes': FieldValue.arrayUnion([uid]),
+        });
+      }
+    } catch (e) {
+      avoidPrint(e.toString());
+    }
   }
 }
