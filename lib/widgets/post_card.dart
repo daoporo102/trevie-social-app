@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:social_media_app/models/user.dart';
+import 'package:social_media_app/providers/user_provider.dart';
+import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/widgets/like_animation.dart';
 
-class PostCard extends StatelessWidget {
+class PostCard extends StatefulWidget {
   final snap;
   const PostCard({super.key, required this.snap});
 
   @override
+  State<PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<PostCard> {
+  bool isLikeAnimating = false;
+
+  @override
   Widget build(BuildContext context) {
+    final User? user = Provider.of<UserProvider>(context).getUserrOrNull;
     return Container(
       color: mobileBackgroundColor,
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -25,7 +38,7 @@ class PostCard extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 16,
-                      backgroundImage: NetworkImage(snap['profImage']),
+                      backgroundImage: NetworkImage(widget.snap['profImage']),
                     ),
                     Expanded(
                       child: Padding(
@@ -35,14 +48,14 @@ class PostCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              snap['displayName'],
+                              widget.snap['displayName'],
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
                               DateFormat.yMMMd().format(
-                                snap['datePublished'].toDate(),
+                                widget.snap['datePublished'].toDate(),
                               ),
                               style: TextStyle(
                                 color: secondaryColor,
@@ -88,7 +101,7 @@ class PostCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        snap['postText'],
+                        widget.snap['postText'],
                         style: TextStyle(color: primaryTextColor),
                       ),
                     ),
@@ -98,20 +111,64 @@ class PostCard extends StatelessWidget {
             ),
           ),
           //IMAGE SECTION OF THE POST
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.35,
-            width: double.infinity,
-            child: Image.network(snap['postUrl'], fit: BoxFit.cover),
+          GestureDetector(
+            onDoubleTap: () async {
+              await FirestoreMethod().likePost(
+                widget.snap['postId'],
+                user!.uid,
+                widget.snap['likes'],
+              );
+              setState(() {
+                isLikeAnimating = true;
+              });
+            },
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.35,
+                  width: double.infinity,
+                  child: Image.network(
+                    widget.snap['postUrl'],
+                    fit: BoxFit.cover,
+                  ),
+                ),
+
+                AnimatedOpacity(
+                  opacity: isLikeAnimating ? 1 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: LikeAnimation(
+                    isAnimating: isLikeAnimating,
+                    duration: const Duration(milliseconds: 400),
+                    onEnd: () {
+                      setState(() {
+                        isLikeAnimating = false;
+                      });
+                    },
+                    child: Icon(Icons.favorite, color: Colors.red, size: 120),
+                  ),
+                ),
+              ],
+            ),
           ),
 
           //LIKE, COMMENT, SHARE SECTION OF THE POST
           Row(
             children: [
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.favorite_border_outlined,
-                  color: Colors.red,
+              LikeAnimation(
+                isAnimating: widget.snap['likes'].contains(user?.uid),
+                smallLike: true,
+                child: IconButton(
+                  onPressed: () async {
+                    await FirestoreMethod().likePost(
+                      widget.snap['postId'],
+                      user!.uid,
+                      widget.snap['likes'],
+                    );
+                  },
+                  icon: widget.snap['likes'].contains(user?.uid)
+                      ? const Icon(Icons.favorite, color: Colors.red)
+                      : const Icon(Icons.favorite_border, color: Colors.white),
                 ),
               ),
               //NUMBER OF LIKES CAN GO HERE
@@ -119,7 +176,7 @@ class PostCard extends StatelessWidget {
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
-                child: Text('${snap['likes'].length} likes'),
+                child: Text('${widget.snap['likes'].length} likes'),
               ),
               IconButton(
                 onPressed: () {},
