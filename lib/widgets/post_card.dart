@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:social_media_app/models/user.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
+import 'package:social_media_app/screens/comments_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/widgets/like_animation.dart';
 
@@ -179,7 +180,9 @@ class _PostCardState extends State<PostCard> {
                 child: Text('${widget.snap['likes'].length} likes'),
               ),
               IconButton(
-                onPressed: () {},
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => CommentsScreen()),
+                ),
                 icon: const Icon(Icons.comment_outlined),
               ),
               //NUMBER OF COMMENTS CAN GO HERE
