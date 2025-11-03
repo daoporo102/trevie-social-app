@@ -1,9 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:social_media_app/models/user.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
+import 'package:social_media_app/screens/comments_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/widgets/like_animation.dart';
 
@@ -17,10 +19,36 @@ class PostCard extends StatefulWidget {
 
 class _PostCardState extends State<PostCard> {
   bool isLikeAnimating = false;
+  // int commentLen = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // getComments();
+  }
+
+  // void getComments() async {
+  //   try {
+  //     QuerySnapshot snap = await FirebaseFirestore.instance
+  //         .collection('posts')
+  //         .doc(widget.snap['postId'])
+  //         .collection('comments')
+  //         .get();
+  //     commentLen = snap.docs.length;
+  //   } catch (e) {
+  //     avoidPrint(e.toString());
+  //     showSnackBar(e.toString(), context);
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
     final User? user = Provider.of<UserProvider>(context).getUserrOrNull;
+    final commentStream = FirebaseFirestore.instance
+        .collection('posts')
+        .doc(widget.snap['postId'])
+        .collection('comments')
+        .snapshots();
     return Container(
       color: mobileBackgroundColor,
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -129,7 +157,8 @@ class _PostCardState extends State<PostCard> {
                   height: MediaQuery.of(context).size.height * 0.35,
                   width: double.infinity,
                   child: Image.network(
-                    widget.snap['postUrl'],
+                    //check if disconnect network
+                    widget.snap['postUrl'] ?? '',
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -176,26 +205,40 @@ class _PostCardState extends State<PostCard> {
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
-                child: Text('${widget.snap['likes'].length} likes'),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.comment_outlined),
+                child: Text('${widget.snap['likes'].length} thích'),
               ),
               //NUMBER OF COMMENTS CAN GO HERE
-              DefaultTextStyle(
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
-                child: const Text('9 comments'),
+              IconButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        CommentsScreen(postId: widget.snap['postId']),
+                  ),
+                ),
+                icon: const Icon(Icons.comment_outlined),
               ),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.send)),
+              //NUMBER OF COMMENTS CAN GO HERE (live)
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: commentStream,
+                builder: (context, snapshot) {
+                  final totalComments = snapshot.hasData
+                      ? snapshot.data!.size
+                      : 0;
+                  return DefaultTextStyle(
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    child: Text('$totalComments bình luận'),
+                  );
+                },
+              ),
               //NUMBER OF SHARES CAN GO HERE
+              IconButton(onPressed: () {}, icon: const Icon(Icons.share)),
               DefaultTextStyle(
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
-                child: const Text('9 shares'),
+                child: const Text('9 chia sẻ'),
               ),
               Expanded(
                 child: Align(
