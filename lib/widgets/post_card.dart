@@ -7,6 +7,7 @@ import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/screens/comments_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/like_animation.dart';
 
 class PostCard extends StatefulWidget {
@@ -105,7 +106,16 @@ class _PostCardState extends State<PostCard> {
                               children: ['Delete', 'Edit']
                                   .map(
                                     (e) => InkWell(
-                                      onTap: () {},
+                                      onTap: () async {
+                                        FirestoreMethod().deletePost(
+                                          widget.snap['postId'],
+                                        );
+                                        Navigator.of(context).pop();
+                                        showSnackBar(
+                                          "Xoá bài thành công",
+                                          context,
+                                        );
+                                      },
                                       child: Container(
                                         padding: EdgeInsets.symmetric(
                                           vertical: 12,
