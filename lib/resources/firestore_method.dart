@@ -66,13 +66,14 @@ class FirestoreMethod {
     }
   }
 
-  Future<void> postComment(
+  Future<String> postComment(
     String postId,
     String text,
     String uid,
     String name,
     String profilePic,
   ) async {
+    String res = "Some error occurred";
     try {
       if (text.isNotEmpty) {
         String commentId = const Uuid().v1();
@@ -89,11 +90,13 @@ class FirestoreMethod {
               'commentId': commentId,
               'datePublished': DateTime.now(),
             });
+        res = 'success';
       } else {
-        avoidPrint('Text is empty');
+        res="Please enter text";
       }
     } catch (e) {
       avoidPrint(e.toString());
     }
+    return res;
   }
 }

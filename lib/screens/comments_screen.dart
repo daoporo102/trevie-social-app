@@ -1,14 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:social_media_app/models/user.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/comment_card.dart';
 
 class CommentsScreen extends StatefulWidget {
-  final snap;
-  const CommentsScreen({super.key, required this.snap});
+  final String postId;
+  const CommentsScreen({super.key, required this.postId});
 
   @override
   State<CommentsScreen> createState() => _CommentsScreenState();
@@ -17,11 +19,23 @@ class CommentsScreen extends StatefulWidget {
 class _CommentsScreenState extends State<CommentsScreen> {
   final TextEditingController _commentController = TextEditingController();
 
-  @override
-  void dispose() {
-    super.dispose();
-    _commentController.dispose();
+  void postComment(String uid, String name, String profilePic) async {
+    try {
+      String res = await FirestoreMethod().postComment(widget.postId, _commentController.text, uid, name, profilePic);
+      if(res!='success'){
+        if (context.mounted) {
+          showSnackBar(res, context);
+          
+        }
+      }
+      setState(() {
+        _commentController.text = "";
+      });
+    } catch (e) {
+      showSnackBar(e.toString(), context);
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +46,26 @@ class _CommentsScreenState extends State<CommentsScreen> {
         title: const Text('Bình luận'),
         centerTitle: false,
       ),
-      body: CommentCard(),
+      body: StreamBuilder(
+        stream: FirebaseFirestore.instance
+            .collection('posts')
+            .doc(widget.postId)
+            .collection('comments')
+            .orderBy('datePublished', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          return ListView.builder(
+            itemBuilder: (context, index) => CommentCard(
+              snap: (snapshot.data! as dynamic).docs[index].data(),
+            ),
+            itemCount: (snapshot.data! as dynamic).docs.length,
+          );
+        },
+      ),
       bottomNavigationBar: SafeArea(
         child: Container(
           height: kToolbarHeight,
@@ -43,7 +76,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
           child: Row(
             children: [
               CircleAvatar(
-                backgroundImage: NetworkImage(user!.photoUrl),
+                backgroundImage: user!.photoUrl.isNotEmpty
+                    ? NetworkImage(user.photoUrl)
+                    : null,
                 radius: 16,
               ),
               Expanded(
@@ -58,15 +93,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   ),
                 ),
               ),
-              InkWell(
+                InkWell(
                 onTap: () async {
-                  await FirestoreMethod().postComment(
-                    widget.snap['postId'],
-                    _commentController.text,
-                    user.uid,
-                    user.displayName,
-                    user.photoUrl,
-                  );
+                  postComment(user.uid, user.displayName, user.photoUrl);
                 },
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
