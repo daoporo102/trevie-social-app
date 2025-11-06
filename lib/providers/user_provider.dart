@@ -1,18 +1,29 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/widgets.dart';
-import 'package:social_media_app/models/user.dart';
+import 'package:social_media_app/models/user.dart' as model;
 import 'package:social_media_app/resources/auth_methods.dart';
 
 class UserProvider with ChangeNotifier {
-  User? _user;
+  model.User? _user;
   final AuthMethods _authMethod = AuthMethods();
 
+  UserProvider() {
+    FirebaseAuth.instance.authStateChanges().listen((firebaseUser) {
+      if (firebaseUser == null) {
+        _user = null;
+        notifyListeners();
+      } else {
+        refreshUser();
+      }
+    });
+  }
+
   // Getter that can return null if user is not loaded
-  User? get getUserrOrNull => _user;
+  model.User? get getUserrOrNull => _user;
 
   Future<void> refreshUser() async {
-    User user = await _authMethod.getUserDetails();
+    model.User user = await _authMethod.getUserDetails();
     _user = user;
     notifyListeners();
   }
-
 }

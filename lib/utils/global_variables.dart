@@ -7,12 +7,17 @@ import 'package:social_media_app/screens/search_screen.dart';
 
 const webScreenSize = 600;
 
-final userId = FirebaseAuth.instance.currentUser!.uid;
+// final userId = FirebaseAuth.instance.currentUser!.uid;
 
-final homeScreenItems = [
-  const FeedScreen(),
-  const SearchScreen(),
-  const AddPostScreen(),
-  const Text('Favorites'),
-  ProfileScreen(uid: userId),
-];
+String? currentUserId() => FirebaseAuth.instance.currentUser?.uid;
+
+List<Widget> homeScreenItems() {
+  final uid = currentUserId() ?? '';
+  return [
+    const FeedScreen(),
+    const SearchScreen(),
+    const AddPostScreen(),
+    const Text('Notifications'),
+    ProfileScreen(uid: uid),
+  ];
+}
