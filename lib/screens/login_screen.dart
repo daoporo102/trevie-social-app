@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
+import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/auth_methods.dart';
 import 'package:social_media_app/responsive/mobile_screen_layout.dart';
 import 'package:social_media_app/responsive/responsive_layout_screen.dart';
@@ -37,9 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordController.text,
     );
     if (res == "success") {
-      // ignore: use_build_context_synchronously
+      //refresh provider so UI updates immediately
+      Provider.of<UserProvider>(context, listen: false).refreshUser();
       showSnackBar('Login successful!', context);
-      // ignore: use_build_context_synchronously
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const ResponsiveLayout(

@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/auth_methods.dart';
 import 'package:social_media_app/responsive/mobile_screen_layout.dart';
 import 'package:social_media_app/responsive/responsive_layout_screen.dart';
@@ -54,6 +56,8 @@ class _SignupScreenState extends State<SignupScreen> {
 
       if (!mounted) return;
       if (res == "success") {
+        //refresh provider so UI updates immediately
+        Provider.of<UserProvider>(context, listen: false).refreshUser();
         showSnackBar('Sign up successful!', context);
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(

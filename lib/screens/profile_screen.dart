@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:social_media_app/providers/user_provider.dart';
+import 'package:social_media_app/resources/auth_methods.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
+import 'package:social_media_app/screens/login_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/follow_button.dart';
@@ -82,6 +86,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void signOutUser() async {
+    await AuthMethods().signOut();
+    //ensure user provider is refreshed
+    Provider.of<UserProvider>(context, listen: false).refreshUser();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+    showSnackBar("Đăng xuất thành công", context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayName = (userData['displayName'] as String?) ?? 'Loading...';
@@ -103,6 +117,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: LinearProgressIndicator(minHeight: 3),
               )
             : null,
+        actions: [
+          IconButton(
+            onPressed: signOutUser, icon: const Icon(Icons.logout),
+          ),
+        ],
       ),
       body: CustomScrollView(
         slivers: [
