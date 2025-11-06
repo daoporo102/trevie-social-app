@@ -42,7 +42,7 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
         physics: const BouncingScrollPhysics(),
         controller: pageController,
         onPageChanged: onPageChanged,
-        children: homeScreenItems(),
+        children: homeMobileScreenItems(),
       ),
       bottomNavigationBar: CupertinoTabBar(
         backgroundColor: mobileBackgroundColor,

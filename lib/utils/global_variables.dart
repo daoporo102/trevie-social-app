@@ -11,12 +11,24 @@ const webScreenSize = 600;
 
 String? currentUserId() => FirebaseAuth.instance.currentUser?.uid;
 
-List<Widget> homeScreenItems() {
+List<Widget> homeMobileScreenItems() {
   final uid = currentUserId() ?? '';
   return [
     const FeedScreen(),
     const SearchScreen(),
     const AddPostScreen(),
+    const Text('Notifications'),
+    ProfileScreen(uid: uid),
+  ];
+}
+
+List<Widget> homeWebScreenItems() {
+  final uid = currentUserId() ?? '';
+  return [
+    const FeedScreen(),
+    const SearchScreen(),
+    const AddPostScreen(),
+    const Text('Chat'),
     const Text('Notifications'),
     ProfileScreen(uid: uid),
   ];

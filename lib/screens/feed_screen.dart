@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/widgets/compose_widget.dart';
 import 'package:social_media_app/widgets/post_card.dart';
 
@@ -14,21 +15,27 @@ class FeedScreen extends StatelessWidget {
         .collection('posts')
         .orderBy('datePublished', descending: true)
         .snapshots();
+
+    final width = MediaQuery.of(context).size.width;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: mobileBackgroundColor,
-        centerTitle: false,
-        title: SvgPicture.asset('assets/images/trevie.svg', height: 32),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.messenger_outline_rounded,
-              color: primaryTextColor,
+      appBar: width > webScreenSize
+          ? null
+          : AppBar(
+              backgroundColor: width > webScreenSize
+                  ? webBackgroundColor
+                  : mobileBackgroundColor,
+              centerTitle: false,
+              title: SvgPicture.asset('assets/images/trevie.svg', height: 32),
+              actions: [
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(
+                    Icons.messenger_outline_rounded,
+                    color: primaryTextColor,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: postStream,
         builder: (context, snapshot) {
@@ -49,13 +56,29 @@ class FeedScreen extends StatelessWidget {
             itemCount: totalItems,
             itemBuilder: (context, index) {
               if (index == 0) {
-                return Column(children: const [ComposePostCard()]);
+                return Column(
+                  children: [
+                    Container(
+                      margin: EdgeInsets.symmetric(
+                        horizontal: width > webScreenSize ? width * 0.3 : 0,
+                        vertical: width > webScreenSize ? 15 : 0,
+                      ),
+                      child: ComposePostCard(),
+                    ),
+                  ],
+                );
               }
 
               //Post start from index 1
               final doc = docs[index - 1];
 
-              return PostCard(snap: doc);
+              return Container(
+                margin: EdgeInsets.symmetric(
+                  horizontal: width > webScreenSize ? width * 0.3 : 0,
+                  vertical: width > webScreenSize ? 15 : 0,
+                ),
+                child: PostCard(snap: doc),
+              );
             },
           );
         },
