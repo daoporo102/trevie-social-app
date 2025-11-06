@@ -7,6 +7,7 @@ import 'package:social_media_app/resources/auth_methods.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/screens/login_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/follow_button.dart';
 import 'package:social_media_app/widgets/post_card.dart';
@@ -106,29 +107,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
         .where('uid', isEqualTo: widget.uid)
         .orderBy('datePublished', descending: true)
         .snapshots();
+
+    final width = MediaQuery.of(context).size.width;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: mobileBackgroundColor,
-        title: Text(displayName),
-        centerTitle: false,
-        bottom: _isLoading
-            ? const PreferredSize(
-                preferredSize: Size.fromHeight(3),
-                child: LinearProgressIndicator(minHeight: 3),
-              )
-            : null,
-        actions: [
-          IconButton(
-            onPressed: signOutUser, icon: const Icon(Icons.logout),
-          ),
-        ],
-      ),
+      appBar: width > webScreenSize
+          ? null
+          : AppBar(
+              backgroundColor: mobileBackgroundColor,
+              title: Text(displayName),
+              centerTitle: false,
+              bottom: _isLoading
+                  ? const PreferredSize(
+                      preferredSize: Size.fromHeight(3),
+                      child: LinearProgressIndicator(minHeight: 3),
+                    )
+                  : null,
+              actions: [
+                IconButton(
+                  onPressed: signOutUser,
+                  icon: const Icon(Icons.logout),
+                ),
+              ],
+            ),
       body: CustomScrollView(
         slivers: [
           //Header
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              // padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.symmetric(
+                horizontal: width > webScreenSize ? width * 0.3 : 0,
+                vertical: width > webScreenSize ? 15 : 0,
+              ),
               child: Column(
                 children: [
                   CircleAvatar(
@@ -272,7 +282,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final doc = docs[index];
-                  return PostCard(snap: doc);
+                  return Container(
+                    margin: EdgeInsets.symmetric(
+                      horizontal: width > webScreenSize ? width * 0.3 : 0,
+                      vertical: width > webScreenSize ? 15 : 0,
+                    ),
+                    child: PostCard(snap: doc),
+                  );
                 }, childCount: docs.length),
               );
             },
