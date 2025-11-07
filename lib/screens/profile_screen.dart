@@ -175,62 +175,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 buildStatColumn(following, 'đang theo dõi'),
                               ],
                             ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                FirebaseAuth.instance.currentUser!.uid ==
-                                        widget.uid
-                                    ? FollowButton(
-                                        backgroundColor: mobileBackgroundColor,
-                                        borderColor: secondaryColor,
-                                        text: 'Chỉnh sửa hồ sơ',
-                                        textColor: primaryTextColor,
-                                        function: () {},
-                                      )
-                                    : isFollowing
-                                    ? FollowButton(
-                                        backgroundColor: mobileBackgroundColor,
-                                        borderColor: secondaryColor,
-                                        text: 'Huỷ theo dõi',
-                                        textColor: primaryTextColor,
-                                        function: () async {
-                                          //unfollow user
-                                          await FirestoreMethod().followUser(
-                                            FirebaseAuth
-                                                .instance
-                                                .currentUser!
-                                                .uid,
-                                            userData['uid'],
-                                          );
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                // Never exceed the available width; cap at 420 on large screens
+                                final double buttonWidth =
+                                    constraints.maxWidth > 420
+                                    ? 420
+                                    : constraints.maxWidth;
 
-                                          setState(() {
-                                            isFollowing = false;
-                                            followers--;
-                                          });
-                                        },
-                                      )
-                                    : FollowButton(
-                                        backgroundColor: mobileBackgroundColor,
-                                        borderColor: appPrimaryColor,
-                                        text: 'Theo dõi',
-                                        textColor: appPrimaryColor,
-                                        function: () async {
-                                          //follow user
-                                          await FirestoreMethod().followUser(
-                                            FirebaseAuth
-                                                .instance
-                                                .currentUser!
-                                                .uid,
-                                            userData['uid'],
-                                          );
+                                Widget btn;
+                                if (FirebaseAuth.instance.currentUser!.uid ==
+                                    widget.uid) {
+                                  btn = FollowButton(
+                                    backgroundColor: mobileBackgroundColor,
+                                    borderColor: secondaryColor,
+                                    text: 'Chỉnh sửa hồ sơ',
+                                    textColor: primaryTextColor,
+                                    function: () {},
+                                  );
+                                } else if (isFollowing) {
+                                  btn = FollowButton(
+                                    backgroundColor: mobileBackgroundColor,
+                                    borderColor: secondaryColor,
+                                    text: 'Huỷ theo dõi',
+                                    textColor: primaryTextColor,
+                                    function: () async {
+                                      //unfollow user
+                                      await FirestoreMethod().followUser(
+                                        FirebaseAuth.instance.currentUser!.uid,
+                                        userData['uid'],
+                                      );
 
-                                          setState(() {
-                                            isFollowing = true;
-                                            followers++;
-                                          });
-                                        },
-                                      ),
-                              ],
+                                      setState(() {
+                                        isFollowing = false;
+                                        followers--;
+                                      });
+                                    },
+                                  );
+                                } else {
+                                  btn = FollowButton(
+                                    backgroundColor: mobileBackgroundColor,
+                                    borderColor: appPrimaryColor,
+                                    text: 'Theo dõi',
+                                    textColor: appPrimaryColor,
+                                    function: () async {
+                                      //follow user
+                                      await FirestoreMethod().followUser(
+                                        FirebaseAuth.instance.currentUser!.uid,
+                                        userData['uid'],
+                                      );
+
+                                      setState(() {
+                                        isFollowing = true;
+                                        followers++;
+                                      });
+                                    },
+                                  );
+                                }
+                                return Align(
+                                  alignment: Alignment.center,
+                                  child: SizedBox(
+                                    width: buttonWidth,
+                                    height: 80,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: btn,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
