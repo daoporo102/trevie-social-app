@@ -231,7 +231,6 @@ class _PostCardState extends State<PostCard> {
                                 ),
                         ),
                       ),
-                      const SizedBox(width: 6),
                       //NUMBER OF LIKES CAN GO HERE
                       Flexible(
                         child: Text(
@@ -257,7 +256,6 @@ class _PostCardState extends State<PostCard> {
                         ),
                         icon: const Icon(Icons.comment_outlined),
                       ),
-                      const SizedBox(width: 6),
                       //NUMBER OF COMMENTS CAN GO HERE (live)
                       Flexible(
                         child:
@@ -289,7 +287,6 @@ class _PostCardState extends State<PostCard> {
                         onPressed: () {},
                         icon: const Icon(Icons.share),
                       ),
-                      const SizedBox(width: 6),
                       Flexible(
                         child: const Text(
                           '9 chia sẻ',
@@ -301,14 +298,10 @@ class _PostCardState extends State<PostCard> {
                   ),
                 ),
 
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.bottomRight,
-                    child: IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.bookmark_border),
-                    ),
-                  ),
+                // Bookmark stays fixed on the right
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.bookmark_border),
                 ),
               ],
             ),
