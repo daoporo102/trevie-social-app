@@ -7,9 +7,9 @@ import 'package:social_media_app/responsive/mobile_screen_layout.dart';
 import 'package:social_media_app/responsive/responsive_layout_screen.dart';
 import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/screens/signup_screen.dart';
-import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_inkwell.dart';
 import 'package:social_media_app/widgets/text_field_input.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -101,29 +101,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
               //button login
-              InkWell(
-                onTap: () {
-                  // Handle login logic
-                  loginUser();
-                },
-                child: Container(
-                  width: double.infinity,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: const ShapeDecoration(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(4)),
-                    ),
-                    color: appPrimaryColor,
-                  ),
-                  child: _isLoading
-                      ? Center(
-                          child: const CircularProgressIndicator(
-                            color: onPrimaryColor,
-                          ),
-                        )
-                      : const Text('Login'),
-                ),
+              CustomInkwell(
+                title: 'Đăng nhập',
+                onTap: loginUser,
+                isLoading: _isLoading,
               ),
               const SizedBox(height: 12),
               Flexible(flex: 2, child: Container()),

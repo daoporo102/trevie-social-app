@@ -11,6 +11,7 @@ import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/screens/login_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_inkwell.dart';
 import 'package:social_media_app/widgets/text_field_input.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -174,28 +175,10 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 24),
                         //button login
-                        InkWell(
+                        CustomInkwell(
+                          title: 'Đăng ký',
                           onTap: signUpUser,
-                          child: Container(
-                            width: double.infinity,
-                            alignment: Alignment.center,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: const ShapeDecoration(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(4),
-                                ),
-                              ),
-                              color: appPrimaryColor,
-                            ),
-                            child: _isLoading
-                                ? Center(
-                                    child: const CircularProgressIndicator(
-                                      color: onPrimaryColor,
-                                    ),
-                                  )
-                                : const Text('Sign up'),
-                          ),
+                          isLoading: _isLoading,
                         ),
                         const SizedBox(height: 12),
                         Flexible(flex: 2, child: Container()),
