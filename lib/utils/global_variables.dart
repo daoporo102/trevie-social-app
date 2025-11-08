@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:social_media_app/screens/add_post_screen.dart';
 import 'package:social_media_app/screens/feed_screen.dart';
+import 'package:social_media_app/screens/more_screen.dart';
 import 'package:social_media_app/screens/profile_screen.dart';
 import 'package:social_media_app/screens/search_screen.dart';
 
@@ -19,6 +20,7 @@ List<Widget> homeMobileScreenItems() {
     const AddPostScreen(),
     const Text('Notifications'),
     ProfileScreen(uid: uid),
+    MoreScreen(uid: uid),
   ];
 }
 
@@ -31,5 +33,6 @@ List<Widget> homeWebScreenItems() {
     const Text('Chat'),
     const Text('Notifications'),
     ProfileScreen(uid: uid),
+    MoreScreen(uid: uid),
   ];
 }

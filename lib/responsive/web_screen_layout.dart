@@ -97,6 +97,13 @@ class _WebScreenLayoutState extends State<WebScreenLayout> {
               color: _page == 5 ? appPrimaryColor : secondaryColor,
             ),
           ),
+          IconButton(
+            onPressed: () => navigationTapped(6),
+            icon: Icon(
+              Icons.more_vert_outlined,
+              color: _page == 6 ? appPrimaryColor : secondaryColor,
+            ),
+          ),
         ],
       ),
       body: PageView(
