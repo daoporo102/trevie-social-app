@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:social_media_app/screens/profile_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
@@ -22,6 +23,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: mobileBackgroundColor,
@@ -38,40 +41,52 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       body: isShowUsers
           ? FutureBuilder(
+              // Search for users whose displayName starts with the search query
               future: FirebaseFirestore.instance
                   .collection('users')
-                  .where(
-                    'displayName',
-                    isGreaterThanOrEqualTo: searchController.text,
-                  )
+                  .orderBy('displayName')
+                  .startAt([searchController.text])
+                  .endAt(['${searchController.text}\uf8ff'])
                   .get(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                // Filter out the current user from the results
+                final docs = snapshot.data!.docs
+                    .where((d) => d.data()['uid'] != currentUid)
+                    .toList();
+
+                if (docs.isEmpty) {
+                  return const Center(
+                    child: Text('Không tìm thấy người dùng nào'),
+                  );
+                }
+
                 return ListView.builder(
-                  itemCount: (snapshot.data! as dynamic).docs.length,
+                  itemCount: docs.length,
                   itemBuilder: (context, index) {
+                    final data = docs[index].data();
+                    final uid = data['uid'] as String;
+                    final displayName = (data['displayName'] as String);
+                    final photoUrl = data['photoUrl'] as String?;
+
                     return InkWell(
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => ProfileScreen(
-                            uid: (snapshot.data! as dynamic).docs[index]['uid'],
-                          ),
+                          builder: (context) => ProfileScreen(uid: uid),
                         ),
                       ),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundImage: NetworkImage(
-                            (snapshot.data! as dynamic).docs[index]['photoUrl']??'assets/images/default_avatar.png',
-                          ),
+                          backgroundImage: photoUrl!.isNotEmpty
+                              ? NetworkImage(photoUrl)
+                              : null,
                           radius: 16,
+                          backgroundColor: secondaryColor,
                         ),
-                        title: Text(
-                          (snapshot.data! as dynamic)
-                              .docs[index]['displayName'],
-                        ),
+                        title: Text(displayName),
                       ),
                     );
                   },
