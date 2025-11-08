@@ -58,6 +58,7 @@ class _PostCardState extends State<PostCard> {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Container(
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: width > webScreenSize
                 ? primaryTextColor
