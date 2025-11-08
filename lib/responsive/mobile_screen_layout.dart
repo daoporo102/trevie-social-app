@@ -89,6 +89,14 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
             label: 'Profile',
             backgroundColor: mobileBackgroundColor,
           ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.person,
+              color: _page == 5 ? appPrimaryColor : secondaryColor,
+            ),
+            label: 'More',
+            backgroundColor: mobileBackgroundColor,
+          ),
         ],
         onTap: navigationTapped,
       ),

@@ -33,7 +33,7 @@ class ComposePostCard extends StatelessWidget {
           : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Padding(
         padding: width > webScreenSize
-            ? const EdgeInsets.fromLTRB(24, 20, 24, 16)
+            ? const EdgeInsets.fromLTRB(24, 10, 24, 8)
             : const EdgeInsets.fromLTRB(12, 10, 12, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
