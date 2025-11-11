@@ -38,7 +38,10 @@ class FirestoreMethod {
         profImage: profImage,
       );
 
-      _firestore.collection('posts').doc(postId).set(post.toJson());
+      await _firestore.collection('posts').doc(postId).set({
+        ...post.toJson(),
+        'datePublished': FieldValue.serverTimestamp(),// consistent across clients
+      });
 
       res = "success";
     } catch (e) {
@@ -129,7 +132,7 @@ class FirestoreMethod {
         await _firestore.collection('users').doc(uid).update({
           'following': FieldValue.arrayRemove([followId]),
         });
-      }else{
+      } else {
         //add follower
         await _firestore.collection('users').doc(followId).update({
           'followers': FieldValue.arrayUnion([uid]),
