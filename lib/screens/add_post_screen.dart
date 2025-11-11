@@ -4,6 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
+import 'package:social_media_app/responsive/mobile_screen_layout.dart';
+import 'package:social_media_app/responsive/responsive_layout_screen.dart';
+import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/utils.dart';
 
@@ -82,12 +85,25 @@ class _AddPostScreenState extends State<AddPostScreen> {
         displayName,
         profImage,
       );
+
+      if (!mounted) return; // guard context after async
+
       if (res == "success") {
         setState(() {
           _isLoading = false;
         });
         showSnackBar('Đăng bài thành công!', context);
         clearImage();
+        // ...inside success branch...
+Navigator.of(context).pushAndRemoveUntil(
+  MaterialPageRoute(
+    builder: (_) => const ResponsiveLayout(
+      webScreenLayout: WebScreenLayout(),
+      mobileScreenLayout: MobileScreenLayout(),
+    ),
+  ),
+  (route) => false,
+);
       } else {
         setState(() {
           _isLoading = false;
