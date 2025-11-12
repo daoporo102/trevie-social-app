@@ -79,7 +79,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         displaySnackBar(e.toString(), context, SnackBarType.error);
-      };
+      }
       setState(() {
         _isLoading = false;
       });

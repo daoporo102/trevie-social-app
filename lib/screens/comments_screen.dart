@@ -32,7 +32,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
         _commentController.text = "";
       });
     } catch (e) {
-      displaySnackBar(e.toString(), context, SnackBarType.error);
+      avoidPrint(e.toString());
+      displaySnackBar("Có lỗi xảy ra, vui lòng thử lại sau.", context, SnackBarType.error);
     }
   }
 

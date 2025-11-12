@@ -17,7 +17,7 @@ class FirestoreMethod {
     String profImage,
   ) async {
     // asking uid here because we dont want to make extra calls to firebase auth when we can just get from our state management
-    String res = "Some error occurred";
+    String res = "Một lỗi đã xảy ra";
     try {
       String photoUrl = await StorageMethod().uploadImageToStorage(
         'posts',
@@ -46,6 +46,8 @@ class FirestoreMethod {
       res = "success";
     } catch (e) {
       res = e.toString();
+      avoidPrint(res);
+      res ="Đã có lỗi xảy ra, vui lòng thử lại";
     }
     return res;
   }
@@ -76,7 +78,7 @@ class FirestoreMethod {
     String name,
     String profilePic,
   ) async {
-    String res = "Some error occurred";
+    String res = "Một lỗi đã xảy ra";
     try {
       if (text.isNotEmpty) {
         String commentId = const Uuid().v1();
@@ -95,10 +97,11 @@ class FirestoreMethod {
             });
         res = 'success';
       } else {
-        res = "Please enter text";
+        res = "Vui lòng nhập bình luận";
       }
     } catch (e) {
       avoidPrint(e.toString());
+      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
     }
     return res;
   }
