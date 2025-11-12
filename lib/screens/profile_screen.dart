@@ -5,6 +5,7 @@ import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/follow_button.dart';
 import 'package:social_media_app/widgets/post_card.dart';
 
@@ -76,7 +77,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      if (mounted) showSnackBar(e.toString(), context);
+      if (mounted) {
+        displaySnackBar(e.toString(), context, SnackBarType.error);
+      };
       setState(() {
         _isLoading = false;
       });

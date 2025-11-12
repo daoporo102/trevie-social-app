@@ -9,6 +9,7 @@ import 'package:social_media_app/responsive/responsive_layout_screen.dart';
 import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 
 class AddPostScreen extends StatefulWidget {
   const AddPostScreen({super.key});
@@ -92,7 +93,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
         setState(() {
           _isLoading = false;
         });
-        showSnackBar('Đăng bài thành công!', context);
+        displaySnackBar('Đăng bài thành công!', context, SnackBarType.success);
         clearImage();
         // ...inside success branch...
 Navigator.of(context).pushAndRemoveUntil(
@@ -108,10 +109,10 @@ Navigator.of(context).pushAndRemoveUntil(
         setState(() {
           _isLoading = false;
         });
-        showSnackBar(res, context);
+        displaySnackBar(res, context, SnackBarType.error);
       }
     } catch (e) {
-      showSnackBar(e.toString(), context);
+      displaySnackBar(e.toString(), context, SnackBarType.error);
     }
   }
 

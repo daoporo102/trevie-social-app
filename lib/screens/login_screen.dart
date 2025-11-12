@@ -10,6 +10,7 @@ import 'package:social_media_app/screens/signup_screen.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/custom_inkwell.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/text_field_input.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -42,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (res == "success") {
       //refresh provider so UI updates immediately
       Provider.of<UserProvider>(context, listen: false).refreshUser();
-      showSnackBar('Login successful!', context);
+      displaySnackBar('Đăng nhập thành công', context, SnackBarType.success);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const ResponsiveLayout(
@@ -52,8 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } else {
-      // ignore: use_build_context_synchronously
-      showSnackBar(res, context);
+      displaySnackBar('Đăng nhập thất bại', context, SnackBarType.error);
     }
     setState(() {
       _isLoading = false;

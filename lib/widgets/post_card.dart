@@ -9,6 +9,7 @@ import 'package:social_media_app/screens/comments_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/like_animation.dart';
 
 class PostCard extends StatefulWidget {
@@ -125,10 +126,7 @@ class _PostCardState extends State<PostCard> {
                                             widget.snap['postId'],
                                           );
                                           Navigator.of(context).pop();
-                                          showSnackBar(
-                                            "Xoá bài thành công",
-                                            context,
-                                          );
+                                          displaySnackBar("Xoá bài thành công", context, SnackBarType.success);
                                         },
                                         child: Container(
                                           padding: EdgeInsets.symmetric(
