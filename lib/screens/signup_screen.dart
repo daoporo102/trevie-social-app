@@ -12,6 +12,7 @@ import 'package:social_media_app/screens/login_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/custom_inkwell.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/text_field_input.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -39,7 +40,7 @@ class _SignupScreenState extends State<SignupScreen> {
   void signUpUser() async {
     if (_isLoading) return;
     if (_image == null) {
-      showSnackBar('Please select a profile image', context);
+      displaySnackBar('Vui lòng chọn hình ảnh đại diện', context, SnackBarType.error);
       return;
     }
 
@@ -59,7 +60,7 @@ class _SignupScreenState extends State<SignupScreen> {
       if (res == "success") {
         //refresh provider so UI updates immediately
         Provider.of<UserProvider>(context, listen: false).refreshUser();
-        showSnackBar('Sign up successful!', context);
+        displaySnackBar('Đăng ký thành công!', context, SnackBarType.success);
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => const ResponsiveLayout(
@@ -69,11 +70,11 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         );
       } else {
-        showSnackBar(res, context);
+        displaySnackBar(res, context, SnackBarType.error);
       }
     } catch (e) {
       if (!mounted) return;
-      showSnackBar(e.toString(), context);
+      displaySnackBar(e.toString(), context, SnackBarType.error);
     } finally {
       if (mounted) {
         setState(() {
@@ -94,7 +95,7 @@ class _SignupScreenState extends State<SignupScreen> {
       final Uint8List? im = await pickImage(ImageSource.gallery);
       if (!mounted) return;
       if (im == null) {
-        showSnackBar('No image selected', context);
+        displaySnackBar('Không có hình ảnh nào được chọn', context, SnackBarType.error);
         return;
       }
       setState(() {
@@ -102,7 +103,7 @@ class _SignupScreenState extends State<SignupScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      showSnackBar('Failed to pick image: $e', context);
+      displaySnackBar('Lỗi chọn hình ảnh: $e', context, SnackBarType.error);
     }
   }
 

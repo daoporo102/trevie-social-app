@@ -29,3 +29,6 @@ const primaryTextColor = Color.fromRGBO(
 ); // dark text for contrast on light bg
 const secondaryColor = Color.fromRGBO(107, 114, 128, 1); // muted slate gray
 const onPrimaryColor = Color.fromRGBO(255, 255, 255, 1); // white text color
+
+const errorBackgroundColor = Color.fromRGBO(220, 38, 38, 1); // bright red for errors
+const infoBackgroundColor = Color.fromRGBO(59, 130, 246, 1); // blue for informational messages

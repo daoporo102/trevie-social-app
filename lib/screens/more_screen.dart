@@ -6,6 +6,7 @@ import 'package:social_media_app/screens/login_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key, required this.uid});
@@ -26,8 +27,8 @@ class _MoreScreenState extends State<MoreScreen> {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
-    //show snackbar
-    showSnackBar('Đăng xuất thành công!', context);
+    //Display snackbar
+    displaySnackBar('Đăng xuất thành công!', context, SnackBarType.success);
   }
 
   @override
