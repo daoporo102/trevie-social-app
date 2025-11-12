@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } else {
-      displaySnackBar('Đăng nhập thất bại', context, SnackBarType.error);
+      displaySnackBar(res, context, SnackBarType.error);
     }
     setState(() {
       _isLoading = false;

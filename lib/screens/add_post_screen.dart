@@ -95,16 +95,16 @@ class _AddPostScreenState extends State<AddPostScreen> {
         });
         displaySnackBar('Đăng bài thành công!', context, SnackBarType.success);
         clearImage();
-        // ...inside success branch...
-Navigator.of(context).pushAndRemoveUntil(
-  MaterialPageRoute(
-    builder: (_) => const ResponsiveLayout(
-      webScreenLayout: WebScreenLayout(),
-      mobileScreenLayout: MobileScreenLayout(),
-    ),
-  ),
-  (route) => false,
-);
+        // Navigate to the feed screen
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => const ResponsiveLayout(
+              webScreenLayout: WebScreenLayout(),
+              mobileScreenLayout: MobileScreenLayout(),
+            ),
+          ),
+          (route) => false,
+        );
       } else {
         setState(() {
           _isLoading = false;
@@ -112,7 +112,8 @@ Navigator.of(context).pushAndRemoveUntil(
         displaySnackBar(res, context, SnackBarType.error);
       }
     } catch (e) {
-      displaySnackBar(e.toString(), context, SnackBarType.error);
+      avoidPrint(e.toString());
+      displaySnackBar("Có lỗi xảy ra, vui lòng thử lại sau.", context, SnackBarType.error);
     }
   }
 
