@@ -22,27 +22,12 @@ class PostCard extends StatefulWidget {
 
 class _PostCardState extends State<PostCard> {
   bool isLikeAnimating = false;
-  // int commentLen = 0;
 
   @override
   void initState() {
     super.initState();
     // getComments();
   }
-
-  // void getComments() async {
-  //   try {
-  //     QuerySnapshot snap = await FirebaseFirestore.instance
-  //         .collection('posts')
-  //         .doc(widget.snap['postId'])
-  //         .collection('comments')
-  //         .get();
-  //     commentLen = snap.docs.length;
-  //   } catch (e) {
-  //     avoidPrint(e.toString());
-  //     showSnackBar(e.toString(), context);
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +111,11 @@ class _PostCardState extends State<PostCard> {
                                             widget.snap['postId'],
                                           );
                                           Navigator.of(context).pop();
-                                          displaySnackBar("Xoá bài thành công", context, SnackBarType.success);
+                                          displaySnackBar(
+                                            "Xoá bài thành công",
+                                            context,
+                                            SnackBarType.success,
+                                          );
                                         },
                                         child: Container(
                                           padding: EdgeInsets.symmetric(
@@ -162,6 +151,30 @@ class _PostCardState extends State<PostCard> {
             ),
             //IMAGE SECTION OF THE POST
             GestureDetector(
+              onTap: () async {
+                // View image in full screen
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => Scaffold(
+                      appBar: AppBar(
+                        backgroundColor: mobileBackgroundColor,
+                        title: Text('Hình ảnh'),
+                      ),
+                      body: Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Image.network(
+                            widget.snap['postUrl'] ?? '',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
               onDoubleTap: () async {
                 await FirestoreMethod().likePost(
                   widget.snap['postId'],
@@ -181,7 +194,7 @@ class _PostCardState extends State<PostCard> {
                     child: Image.network(
                       //check if disconnect network
                       widget.snap['postUrl'] ?? '',
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                     ),
                   ),
 
