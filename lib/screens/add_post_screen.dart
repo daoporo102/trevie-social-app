@@ -8,6 +8,7 @@ import 'package:social_media_app/responsive/mobile_screen_layout.dart';
 import 'package:social_media_app/responsive/responsive_layout_screen.dart';
 import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
 
@@ -28,30 +29,69 @@ class _AddPostScreenState extends State<AddPostScreen> {
       context: context,
       builder: (context) {
         return SimpleDialog(
-          title: const Text('Tạo bài đăng'),
+          backgroundColor: mobileBackgroundColor,
+          title: const Text('Chọn ảnh cho bài đăng'),
           children: [
             SimpleDialogOption(
               padding: const EdgeInsets.all(20),
               child: const Text('Chụp ảnh'),
               onPressed: () async {
                 Navigator.of(context).pop();
-                Uint8List? file = await pickImage(ImageSource.camera);
-                if (!mounted) return;
-                setState(() {
-                  _image = file;
-                });
+                try {
+                  Uint8List? file = await pickImage(ImageSource.camera);
+                  if (!mounted) return;
+                  if (file == null) {
+                    displaySnackBar(
+                      'Không thể chụp ảnh',
+                      context,
+                      SnackBarType.error,
+                    );
+                    return;
+                  }
+                  ;
+                  setState(() {
+                    _image = file;
+                  });
+                } catch (e) {
+                  if (!mounted) return;
+                  displaySnackBar(
+                    'Có lỗi xảy ra khi chụp ảnh',
+                    context,
+                    SnackBarType.error,
+                  );
+                  avoidPrint(e.toString());
+                }
               },
             ),
             SimpleDialogOption(
               padding: const EdgeInsets.all(20),
               child: const Text('Chọn ảnh từ thư viện'),
               onPressed: () async {
-                Navigator.of(context).pop();
-                Uint8List? file = await pickImage(ImageSource.gallery);
-                if (!mounted) return;
-                setState(() {
-                  _image = file;
-                });
+                try {
+                  Navigator.of(context).pop();
+                  Uint8List? file = await pickImage(ImageSource.gallery);
+                  if (!mounted) return;
+                  if (file == null) {
+                    displaySnackBar(
+                      'Không thể chọn ảnh từ thư viện',
+                      context,
+                      SnackBarType.error,
+                    );
+                    return;
+                  }
+                  ;
+                  setState(() {
+                    _image = file;
+                  });
+                } catch (e) {
+                  if (!mounted) return;
+                  displaySnackBar(
+                    'Có lỗi xảy ra khi chọn ảnh',
+                    context,
+                    SnackBarType.error,
+                  );
+                  avoidPrint(e.toString());
+                }
               },
             ),
             SimpleDialogOption(
@@ -74,6 +114,25 @@ class _AddPostScreenState extends State<AddPostScreen> {
   }
 
   void postImage(String uid, String displayName, String profImage) async {
+    // Validate inputs
+    if (_textController.text.isEmpty) {
+      displaySnackBar(
+        'Vui lòng nhập mô tả cho bài đăng',
+        context,
+        SnackBarType.error,
+      );
+      return;
+    }
+
+    if (_image == null) {
+      displaySnackBar(
+        'Vui lòng chọn ảnh để đăng bài',
+        context,
+        SnackBarType.error,
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -95,25 +154,30 @@ class _AddPostScreenState extends State<AddPostScreen> {
         });
         displaySnackBar('Đăng bài thành công!', context, SnackBarType.success);
         clearImage();
+        _textController.clear();
         // Navigate to the feed screen
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => const ResponsiveLayout(
-              webScreenLayout: WebScreenLayout(),
-              mobileScreenLayout: MobileScreenLayout(),
-            ),
-          ),
-          (route) => false,
-        );
       } else {
         setState(() {
           _isLoading = false;
         });
-        displaySnackBar(res, context, SnackBarType.error);
+        displaySnackBar(
+          "Có lỗi xảy ra, vui lòng thử lại sau.",
+          context,
+          SnackBarType.error,
+        );
+        avoidPrint(res);
       }
     } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
       avoidPrint(e.toString());
-      displaySnackBar("Có lỗi xảy ra, vui lòng thử lại sau.", context, SnackBarType.error);
+      displaySnackBar(
+        "Có lỗi xảy ra, vui lòng thử lại sau.",
+        context,
+        SnackBarType.error,
+      );
     }
   }
 
@@ -125,6 +189,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
     // final User user = Provider.of<UserProvider>(context).getUser;
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.getUserrOrNull; // safer getter (see below)
@@ -132,26 +197,55 @@ class _AddPostScreenState extends State<AddPostScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return _image == null
-        ? Scaffold(
-            backgroundColor: mobileBackgroundColor,
-            body: Center(
-              child: IconButton(
-                onPressed: () => _selectImage(context),
-                icon: Icon(Icons.upload),
-              ),
-            ),
-          )
-        : Scaffold(
-            appBar: AppBar(
-              backgroundColor: mobileBackgroundColor,
-              leading: IconButton(
-                onPressed: () => clearImage(),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: mobileBackgroundColor,
+        leading: width > webScreenSize
+            ? null
+            : IconButton(
+                onPressed: () {
+                  clearImage();
+                  // Navigate to the feed screen
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => const ResponsiveLayout(
+                        mobileScreenLayout: MobileScreenLayout(),
+                        webScreenLayout: WebScreenLayout(),
+                      ),
+                    ),
+                    // remove all previous routes
+                    (route) => false,
+                  );
+                },
                 icon: const Icon(Icons.arrow_back),
               ),
-              title: const Text('Tạo bài đăng'),
-              centerTitle: false,
-              actions: [
+        title: width > webScreenSize
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Spacer(), // Push title to center
+                  Text('Tạo bài đăng'),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () =>
+                        postImage(user.uid, user.displayName, user.photoUrl),
+                    child: const Text(
+                      'Đăng bài',
+                      style: TextStyle(
+                        color: appPrimaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  const Spacer(), // Push title to center
+                ],
+              )
+            : const Text('Tạo bài đăng'),
+        centerTitle: width > webScreenSize ? true : false,
+        actions: width > webScreenSize
+            ? null
+            : [
                 TextButton(
                   onPressed: () =>
                       postImage(user.uid, user.displayName, user.photoUrl),
@@ -165,19 +259,47 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   ),
                 ),
               ],
+      ),
+      body: SingleChildScrollView(
+        child: Container(
+          margin: EdgeInsets.symmetric(
+            horizontal: width > webScreenSize ? width * 0.3 : 0,
+            vertical: width > webScreenSize ? 15 : 0,
+          ),
+          decoration: BoxDecoration(
+            color: width > webScreenSize
+                ? webBackgroundColor
+                : mobileBackgroundColor,
+            borderRadius: width > webScreenSize
+                ? BorderRadius.circular(12)
+                : null,
+            border: Border.all(
+              color: width > webScreenSize
+                  ? primaryTextColor
+                  : mobileBackgroundColor,
+              width: 1,
             ),
-            body: Column(
-              children: [
-                _isLoading
-                    ? const LinearProgressIndicator(
-                        backgroundColor: secondaryColor,
-                        color: appPrimaryColor,
-                      )
-                    : Padding(padding: EdgeInsets.only(top: 0)),
-                const Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          child: Column(
+            children: [
+              _isLoading
+                  ? const LinearProgressIndicator(
+                      backgroundColor: secondaryColor,
+                      color: appPrimaryColor,
+                    )
+                  : Padding(padding: EdgeInsets.only(top: 0)),
+              ?width > webScreenSize
+                  ? null
+                  : const Divider(color: secondaryColor),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  spacing: 12,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     CircleAvatar(
                       radius: 24,
@@ -193,38 +315,77 @@ class _AddPostScreenState extends State<AddPostScreen> {
                             )
                           : null,
                     ),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.45,
-                      child: TextField(
-                        controller: _textController,
-                        decoration: const InputDecoration(
-                          hintText: 'Viết mô tả của bạn...',
-                          border: InputBorder.none,
-                        ),
-                        maxLines: 8,
+                    Text(
+                      user.displayName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: primaryTextColor,
                       ),
                     ),
-                    SizedBox(
-                      height: 45,
-                      width: 45,
-                      child: AspectRatio(
-                        aspectRatio: 487 / 451,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            image: DecorationImage(
-                              fit: BoxFit.fill,
-                              alignment: FractionalOffset.topCenter,
-                              image: MemoryImage(_image!),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const Divider(),
                   ],
                 ),
-              ],
-            ),
-          );
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: SizedBox(
+                  width: width > webScreenSize ? width * 0.3 : double.infinity,
+                  child: TextField(
+                    controller: _textController,
+                    decoration: const InputDecoration(
+                      hintText: 'Viết mô tả của bạn...',
+                      border: InputBorder.none,
+                    ),
+                    maxLines: 8,
+                  ),
+                ),
+              ),
+              const Divider(color: secondaryColor),
+              // show the selected image preview
+              _image == null
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        customTextButton(
+                          icon: Icons.photo_library,
+                          label: 'Ảnh',
+                          onPressed: () => _selectImage(context),
+                        ),
+                        customTextButton(
+                          icon: Icons.videocam,
+                          label: 'Video',
+                          onPressed: () {},
+                        ),
+                        customTextButton(
+                          icon: Icons.file_copy,
+                          label: 'Tài liệu',
+                          onPressed: () {},
+                        ),
+                      ],
+                    )
+                  : Center(
+                      child: Stack(
+                        alignment: Alignment.topRight,
+                        children: [
+                          Image.memory(
+                            _image!,
+                            width: double.infinity,
+                            fit: BoxFit.contain,
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.cancel,
+                              color: secondaryColor,
+                            ),
+                            onPressed: clearImage,
+                          ),
+                        ],
+                      ),
+                    ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
