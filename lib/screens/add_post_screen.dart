@@ -37,23 +37,61 @@ class _AddPostScreenState extends State<AddPostScreen> {
               child: const Text('Chụp ảnh'),
               onPressed: () async {
                 Navigator.of(context).pop();
-                Uint8List? file = await pickImage(ImageSource.camera);
-                if (!mounted) return;
-                setState(() {
-                  _image = file;
-                });
+                try {
+                  Uint8List? file = await pickImage(ImageSource.camera);
+                  if (!mounted) return;
+                  if (file == null) {
+                    displaySnackBar(
+                      'Không thể chụp ảnh',
+                      context,
+                      SnackBarType.error,
+                    );
+                    return;
+                  }
+                  ;
+                  setState(() {
+                    _image = file;
+                  });
+                } catch (e) {
+                  if (!mounted) return;
+                  displaySnackBar(
+                    'Có lỗi xảy ra khi chụp ảnh',
+                    context,
+                    SnackBarType.error,
+                  );
+                  avoidPrint(e.toString());
+                }
               },
             ),
             SimpleDialogOption(
               padding: const EdgeInsets.all(20),
               child: const Text('Chọn ảnh từ thư viện'),
               onPressed: () async {
-                Navigator.of(context).pop();
-                Uint8List? file = await pickImage(ImageSource.gallery);
-                if (!mounted) return;
-                setState(() {
-                  _image = file;
-                });
+                try {
+                  Navigator.of(context).pop();
+                  Uint8List? file = await pickImage(ImageSource.gallery);
+                  if (!mounted) return;
+                  if (file == null) {
+                    displaySnackBar(
+                      'Không thể chọn ảnh từ thư viện',
+                      context,
+                      SnackBarType.error,
+                    );
+                    return;
+                  }
+                  ;
+                  setState(() {
+                    _image = file;
+                  });
+                } catch (e) {
+                  if (!mounted) return;
+                  displaySnackBar(
+                    'Có lỗi xảy ra khi chọn ảnh',
+                    context,
+                    SnackBarType.error,
+                  );
+                  avoidPrint(e.toString());
+                }
               },
             ),
             SimpleDialogOption(
@@ -76,6 +114,25 @@ class _AddPostScreenState extends State<AddPostScreen> {
   }
 
   void postImage(String uid, String displayName, String profImage) async {
+    // Validate inputs
+    if (_textController.text.isEmpty) {
+      displaySnackBar(
+        'Vui lòng nhập mô tả cho bài đăng',
+        context,
+        SnackBarType.error,
+      );
+      return;
+    }
+
+    if (_image == null) {
+      displaySnackBar(
+        'Vui lòng chọn ảnh để đăng bài',
+        context,
+        SnackBarType.error,
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -97,14 +154,24 @@ class _AddPostScreenState extends State<AddPostScreen> {
         });
         displaySnackBar('Đăng bài thành công!', context, SnackBarType.success);
         clearImage();
+        _textController.clear();
         // Navigate to the feed screen
       } else {
         setState(() {
           _isLoading = false;
         });
-        displaySnackBar(res, context, SnackBarType.error);
+        displaySnackBar(
+          "Có lỗi xảy ra, vui lòng thử lại sau.",
+          context,
+          SnackBarType.error,
+        );
+        avoidPrint(res);
       }
     } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
       avoidPrint(e.toString());
       displaySnackBar(
         "Có lỗi xảy ra, vui lòng thử lại sau.",
