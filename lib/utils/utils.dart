@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 
-void showSnackBar(String content, BuildContext context) {
+void displaySnackBar(String text, BuildContext context, SnackBarType type) {
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(content),
+    CustomSnackBar.buildSnackBar(
+      text: text,
+      type: type,
     ),
   );
 }

@@ -23,7 +23,7 @@ Future<void> main() async {
 
   await FirebaseAppCheck.instance.activate(
     providerWeb: ReCaptchaV3Provider(
-      '6LdacPUrAAAAADkYOpcKcFH7ZjwPcCXc-YYOkxMw',
+      '6Lf1_ggsAAAAAIWDcI-DLcClxfDs_F9DH2BDcJVb',
     ),
     providerAndroid:
         AndroidDebugProvider(), // switch to PlayIntegrity for release

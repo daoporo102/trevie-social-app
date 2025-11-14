@@ -47,7 +47,7 @@ class AuthMethods {
     required String password,
     required Uint8List file,
   }) async {
-    String res = "Some error occurred";
+    String res = "Một lỗi đã xảy ra";
     try {
       if (email.isNotEmpty && password.isNotEmpty && displayName.isNotEmpty) {
         //register user in auth with email and password
@@ -83,19 +83,21 @@ class AuthMethods {
 
         res = "success";
       } else {
-        res = "Please enter all the fields";
+        res = "Vui lòng điền tất cả các thông tin";
       }
     } on FirebaseAuthException catch (err) {
       if (err.code == 'email-already-in-use') {
-        res = "Email is already in use";
+        res = "Email đã được sử dụng";
       } else if (err.code == 'invalid-email') {
-        res = "The email address is badly formatted";
+        res = "Địa chỉ email không hợp lệ";
       } else if (err.code == 'weak-password') {
-        res = "The password must be at least 6 characters";
+        res = "Mật khẩu phải có ít nhất 6 ký tự";
       } else if (err.code == 'network-request-failed') {
-        res = "Network error, please try again later";
+        res = "Lỗi mạng, vui lòng thử lại sau";
       } else {
         res = err.toString();
+        avoidPrint(res);
+        res = "Đã xảy ra lỗi, vui lòng thử lại sau";
       }
     }
     return res;
@@ -106,7 +108,7 @@ class AuthMethods {
     required String email,
     required String password,
   }) async {
-    String res = "Some error occurred";
+    String res = "Một lỗi đã xảy ra";
     try {
       if (email.isNotEmpty && password.isNotEmpty) {
         //login user in auth with email and password
@@ -116,30 +118,31 @@ class AuthMethods {
         );
         res = "success";
       } else {
-        res = "Please enter all the fields";
+        res = "Vui lòng điền tất cả các thông tin";
       }
     } on FirebaseAuthException catch (err) {
       if (err.code == 'user-not-found') {
-        res = "No user found for that email";
+        res = "Không tìm thấy người dùng với email này";
       } else if (err.code == 'invalid-email') {
-        res = "The email address is badly formatted";
+        res = "Địa chỉ email không hợp lệ";
       } else if (err.code == 'wrong-password') {
-        res = "Wrong password provided for that user";
+        res = "Mật khẩu không đúng";
       } else if (err.code == 'network-request-failed') {
-        res = "Network error, please try again later";
+        res = "Lỗi mạng, vui lòng thử lại sau";
       } else if (err.code == 'too-many-requests') {
-        res = "Too many login attempts. Please try again later.";
+        res = "Quá nhiều lần đăng nhập. Vui lòng thử lại sau.";
       } else if (err.code == 'invalid-credential') {
-        res = "The email or password is invalid.";
+        res = "Email hoặc mật khẩu không hợp lệ.";
       } else {
         res = err.toString();
         avoidPrint(res);
+        res = "Đã xảy ra lỗi, vui lòng thử lại sau";
       }
     }
     return res;
   }
 
-  //sign out
+  //sign out method
   Future<void> signOut() async {
     await _auth.signOut();
   }

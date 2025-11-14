@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
+import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/auth_methods.dart';
 import 'package:social_media_app/responsive/mobile_screen_layout.dart';
 import 'package:social_media_app/responsive/responsive_layout_screen.dart';
 import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/screens/signup_screen.dart';
-import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_inkwell.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/text_field_input.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -37,9 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordController.text,
     );
     if (res == "success") {
-      // ignore: use_build_context_synchronously
-      showSnackBar('Login successful!', context);
-      // ignore: use_build_context_synchronously
+      //refresh provider so UI updates immediately
+      Provider.of<UserProvider>(context, listen: false).refreshUser();
+      displaySnackBar('Đăng nhập thành công', context, SnackBarType.success);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const ResponsiveLayout(
@@ -49,8 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } else {
-      // ignore: use_build_context_synchronously
-      showSnackBar(res, context);
+      displaySnackBar(res, context, SnackBarType.error);
     }
     setState(() {
       _isLoading = false;
@@ -69,7 +72,11 @@ class _LoginScreenState extends State<LoginScreen> {
       resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+          padding: MediaQuery.of(context).size.width > webScreenSize
+              ? EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width / 3,
+                )
+              : const EdgeInsets.symmetric(horizontal: 32),
           width: double.infinity,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -94,29 +101,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
               //button login
-              InkWell(
-                onTap: () {
-                  // Handle login logic
-                  loginUser();
-                },
-                child: Container(
-                  width: double.infinity,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: const ShapeDecoration(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(4)),
-                    ),
-                    color: appPrimaryColor,
-                  ),
-                  child: _isLoading
-                      ? Center(
-                          child: const CircularProgressIndicator(
-                            color: onPrimaryColor,
-                          ),
-                        )
-                      : const Text('Login'),
-                ),
+              CustomInkwell(
+                title: 'Đăng nhập',
+                onTap: loginUser,
+                isLoading: _isLoading,
               ),
               const SizedBox(height: 12),
               Flexible(flex: 2, child: Container()),

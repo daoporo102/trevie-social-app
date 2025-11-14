@@ -7,7 +7,9 @@ import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/screens/comments_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/like_animation.dart';
 
 class PostCard extends StatefulWidget {
@@ -20,27 +22,12 @@ class PostCard extends StatefulWidget {
 
 class _PostCardState extends State<PostCard> {
   bool isLikeAnimating = false;
-  // int commentLen = 0;
 
   @override
   void initState() {
     super.initState();
     // getComments();
   }
-
-  // void getComments() async {
-  //   try {
-  //     QuerySnapshot snap = await FirebaseFirestore.instance
-  //         .collection('posts')
-  //         .doc(widget.snap['postId'])
-  //         .collection('comments')
-  //         .get();
-  //     commentLen = snap.docs.length;
-  //   } catch (e) {
-  //     avoidPrint(e.toString());
-  //     showSnackBar(e.toString(), context);
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +37,8 @@ class _PostCardState extends State<PostCard> {
         .doc(widget.snap['postId'])
         .collection('comments')
         .snapshots();
+
+    final width = MediaQuery.of(context).size.width;
     return Container(
       color: mobileBackgroundColor,
       padding: const EdgeInsets.symmetric(vertical: 10),

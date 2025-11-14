@@ -19,7 +19,7 @@ class FirestoreMethod {
     String profImage,
   ) async {
     // asking uid here because we dont want to make extra calls to firebase auth when we can just get from our state management
-    String res = "Some error occurred";
+    String res = "Một lỗi đã xảy ra";
     try {
       String photoUrl = await StorageMethod().uploadImageToStorage(
         'posts',
@@ -40,24 +40,11 @@ class FirestoreMethod {
         profImage: profImage,
       );
 
-<<<<<<< Updated upstream
       _firestore.collection('posts').doc(postId).set(post.toJson());
-=======
-      await _firestore.collection('posts').doc(postId).set({
-        ...post.toJson(),
-        'datePublished':
-            FieldValue.serverTimestamp(), // consistent across clients
-      });
->>>>>>> Stashed changes
 
       res = "success";
     } catch (e) {
       res = e.toString();
-<<<<<<< Updated upstream
-=======
-      avoidPrint(res);
-      res = "Đã có lỗi xảy ra, vui lòng thử lại";
->>>>>>> Stashed changes
     }
     return res;
   }
@@ -76,8 +63,12 @@ class FirestoreMethod {
           'likes': FieldValue.arrayUnion([uid]),
         });
       }
+    } on FirebaseException catch (e) {
+      avoidPrint("Firebase error in likePost: ${e.code} - ${e.message}");
+      throw 'Đã có lỗi xảy ra, vui lòng thử lại sau: ${e.message ?? e.code}';
     } catch (e) {
-      avoidPrint(e.toString());
+      avoidPrint("Unknown error in likePost: $e");
+      throw 'Đã có lỗi xảy ra, vui lòng thử lại sau';
     }
   }
 
@@ -88,7 +79,7 @@ class FirestoreMethod {
     String name,
     String profilePic,
   ) async {
-    String res = "Some error occurred";
+    String res = "Một lỗi đã xảy ra";
     try {
       if (text.isNotEmpty) {
         String commentId = const Uuid().v1();
@@ -107,10 +98,11 @@ class FirestoreMethod {
             });
         res = 'success';
       } else {
-        res="Please enter text";
+        res = "Vui lòng nhập bình luận";
       }
     } catch (e) {
       avoidPrint(e.toString());
+      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
     }
     return res;
   }
@@ -139,6 +131,76 @@ class FirestoreMethod {
     } catch (e) {
       avoidPrint(e.toString());
       rethrow;
+    }
+  }
+
+  Future<void> followUser(String uid, String followId) async {
+    try {
+      //fetching all user data
+      DocumentSnapshot snap = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get();
+      //getting following list
+      List following = (snap.data()! as dynamic)['following'];
+
+      //if already following then unfollow
+      if (following.contains(followId)) {
+        //remove follower
+        await _firestore.collection('users').doc(followId).update({
+          'followers': FieldValue.arrayRemove([uid]),
+        });
+        //remove following
+        await _firestore.collection('users').doc(uid).update({
+          'following': FieldValue.arrayRemove([followId]),
+        });
+      } else {
+        //add follower
+        await _firestore.collection('users').doc(followId).update({
+          'followers': FieldValue.arrayUnion([uid]),
+        });
+        //add following
+        await _firestore.collection('users').doc(uid).update({
+          'following': FieldValue.arrayUnion([followId]),
+        });
+      }
+    } catch (e) {
+      avoidPrint(e.toString());
+    }
+  }
+
+  Future<void> followUser(String uid, String followId) async {
+    try {
+      //fetching all user data
+      DocumentSnapshot snap = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get();
+      //getting following list
+      List following = (snap.data()! as dynamic)['following'];
+
+      //if already following then unfollow
+      if (following.contains(followId)) {
+        //remove follower
+        await _firestore.collection('users').doc(followId).update({
+          'followers': FieldValue.arrayRemove([uid]),
+        });
+        //remove following
+        await _firestore.collection('users').doc(uid).update({
+          'following': FieldValue.arrayRemove([followId]),
+        });
+      } else {
+        //add follower
+        await _firestore.collection('users').doc(followId).update({
+          'followers': FieldValue.arrayUnion([uid]),
+        });
+        //add following
+        await _firestore.collection('users').doc(uid).update({
+          'following': FieldValue.arrayUnion([followId]),
+        });
+      }
+    } catch (e) {
+      avoidPrint(e.toString());
     }
   }
 }

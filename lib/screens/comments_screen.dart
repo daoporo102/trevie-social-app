@@ -7,6 +7,7 @@ import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/comment_card.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 
 class CommentsScreen extends StatefulWidget {
   final String postId;
@@ -24,15 +25,15 @@ class _CommentsScreenState extends State<CommentsScreen> {
       String res = await FirestoreMethod().postComment(widget.postId, _commentController.text, uid, name, profilePic);
       if(res!='success'){
         if (context.mounted) {
-          showSnackBar(res, context);
-          
+          displaySnackBar(res, context, SnackBarType.error);
         }
       }
       setState(() {
         _commentController.text = "";
       });
     } catch (e) {
-      showSnackBar(e.toString(), context);
+      avoidPrint(e.toString());
+      displaySnackBar("Có lỗi xảy ra, vui lòng thử lại sau.", context, SnackBarType.error);
     }
   }
 

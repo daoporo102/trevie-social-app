@@ -42,7 +42,7 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
         physics: const BouncingScrollPhysics(),
         controller: pageController,
         onPageChanged: onPageChanged,
-        children: homeScreenItems,
+        children: homeMobileScreenItems(),
       ),
       bottomNavigationBar: CupertinoTabBar(
         backgroundColor: mobileBackgroundColor,
@@ -87,6 +87,14 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
               color: _page == 4 ? appPrimaryColor : secondaryColor,
             ),
             label: 'Profile',
+            backgroundColor: mobileBackgroundColor,
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.person,
+              color: _page == 5 ? appPrimaryColor : secondaryColor,
+            ),
+            label: 'More',
             backgroundColor: mobileBackgroundColor,
           ),
         ],

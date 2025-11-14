@@ -13,17 +13,18 @@ class StorageMethod {
     Uint8List file,
     bool isPost,
   ) async {
-    Reference ref = _storage
-        .ref()
-        .child(childName)
-        .child(_auth.currentUser!.uid);
+    try {
+      Reference ref = _storage
+          .ref()
+          .child(childName)
+          .child(_auth.currentUser!.uid);
 
-    if (isPost) {
-      String id = const Uuid().v1();
-      ref = ref.child(id);
-    }
+      if (isPost) {
+        String id = const Uuid().v1();
+        ref = ref.child(id);
+      }
 
-    UploadTask uploadTask = ref.putData(file);
+      UploadTask uploadTask = ref.putData(file);
 
     TaskSnapshot snap = await uploadTask;
     String downloadUrl = await snap.ref.getDownloadURL();
@@ -42,9 +43,9 @@ class StorageMethod {
       Reference ref = _storage.refFromURL(imageUrl);
       await ref.delete();
     } on FirebaseException catch (e) {
-      throw 'Lỗi xóa ảnh: ${e.message ?? e.code}';
+      throw 'Lỗi tải lên: ${e.message ?? e.code}';
     } catch (e) {
-      throw 'Lỗi không xác định khi xóa ảnh: $e';
+      throw 'Lỗi không xác định khi tải ảnh: $e';
     }
   }
 }

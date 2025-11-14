@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/auth_methods.dart';
 import 'package:social_media_app/responsive/mobile_screen_layout.dart';
 import 'package:social_media_app/responsive/responsive_layout_screen.dart';
@@ -9,6 +11,8 @@ import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/screens/login_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_inkwell.dart';
+import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/text_field_input.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -36,7 +40,7 @@ class _SignupScreenState extends State<SignupScreen> {
   void signUpUser() async {
     if (_isLoading) return;
     if (_image == null) {
-      showSnackBar('Please select a profile image', context);
+      displaySnackBar('Vui lòng chọn hình ảnh đại diện', context, SnackBarType.error);
       return;
     }
 
@@ -54,7 +58,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
       if (!mounted) return;
       if (res == "success") {
-        showSnackBar('Sign up successful!', context);
+        //refresh provider so UI updates immediately
+        Provider.of<UserProvider>(context, listen: false).refreshUser();
+        displaySnackBar('Đăng ký thành công!', context, SnackBarType.success);
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => const ResponsiveLayout(
@@ -64,11 +70,11 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         );
       } else {
-        showSnackBar(res, context);
+        displaySnackBar(res, context, SnackBarType.error);
       }
     } catch (e) {
       if (!mounted) return;
-      showSnackBar(e.toString(), context);
+      displaySnackBar(e.toString(), context, SnackBarType.error);
     } finally {
       if (mounted) {
         setState(() {
@@ -89,7 +95,7 @@ class _SignupScreenState extends State<SignupScreen> {
       final Uint8List? im = await pickImage(ImageSource.gallery);
       if (!mounted) return;
       if (im == null) {
-        showSnackBar('No image selected', context);
+        displaySnackBar('Không có hình ảnh nào được chọn', context, SnackBarType.error);
         return;
       }
       setState(() {
@@ -97,7 +103,7 @@ class _SignupScreenState extends State<SignupScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      showSnackBar('Failed to pick image: $e', context);
+      displaySnackBar('Lỗi chọn hình ảnh: $e', context, SnackBarType.error);
     }
   }
 
@@ -170,28 +176,10 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 24),
                         //button login
-                        InkWell(
+                        CustomInkwell(
+                          title: 'Đăng ký',
                           onTap: signUpUser,
-                          child: Container(
-                            width: double.infinity,
-                            alignment: Alignment.center,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: const ShapeDecoration(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(4),
-                                ),
-                              ),
-                              color: appPrimaryColor,
-                            ),
-                            child: _isLoading
-                                ? Center(
-                                    child: const CircularProgressIndicator(
-                                      color: onPrimaryColor,
-                                    ),
-                                  )
-                                : const Text('Sign up'),
-                          ),
+                          isLoading: _isLoading,
                         ),
                         const SizedBox(height: 12),
                         Flexible(flex: 2, child: Container()),
