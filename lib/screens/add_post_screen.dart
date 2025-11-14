@@ -37,13 +37,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
               child: const Text('Chụp ảnh'),
               onPressed: () async {
                 Navigator.of(context).pop();
-<<<<<<< Updated upstream
-                Uint8List? file = await pickImage(ImageSource.camera);
-                if (!mounted) return;
-                setState(() {
-                  _image = file;
-                });
-=======
                 try {
                   Uint8List? file = await pickImage(ImageSource.camera);
                   if (!mounted) return;
@@ -67,21 +60,12 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   );
                   avoidPrint(e.toString());
                 }
->>>>>>> Stashed changes
               },
             ),
             SimpleDialogOption(
               padding: const EdgeInsets.all(20),
               child: const Text('Chọn ảnh từ thư viện'),
               onPressed: () async {
-<<<<<<< Updated upstream
-                Navigator.of(context).pop();
-                Uint8List? file = await pickImage(ImageSource.gallery);
-                if (!mounted) return;
-                setState(() {
-                  _image = file;
-                });
-=======
                 try {
                   Navigator.of(context).pop();
                   Uint8List? file = await pickImage(ImageSource.gallery);
@@ -106,7 +90,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   );
                   avoidPrint(e.toString());
                 }
->>>>>>> Stashed changes
               },
             ),
             SimpleDialogOption(
@@ -169,8 +152,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
         });
         displaySnackBar('Đăng bài thành công!', context, SnackBarType.success);
         clearImage();
-<<<<<<< Updated upstream
-=======
         _textController.clear();
         // Navigate to the feed screen
         Navigator.of(context).pushAndRemoveUntil(
@@ -183,7 +164,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
           // remove all previous routes
           (route) => false,
         );
->>>>>>> Stashed changes
       } else {
         setState(() {
           _isLoading = false;

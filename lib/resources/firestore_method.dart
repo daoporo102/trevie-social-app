@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:social_media_app/models/post.dart';
 import 'package:social_media_app/resources/storage_method.dart';
@@ -8,7 +7,6 @@ import 'package:uuid/uuid.dart';
 
 class FirestoreMethod {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   //upload post
   Future<String> uploadPost(
@@ -109,7 +107,6 @@ class FirestoreMethod {
 
   //Deleting post
   Future<void> deletePost(String postId) async {
-    final uid = _auth.currentUser!.uid;
     try {
       // Get the post document to retrieve the postUrl
       DocumentSnapshot postDoc = await _firestore
@@ -117,6 +114,7 @@ class FirestoreMethod {
           .doc(postId)
           .get();
 
+      // Check if the document exists
       if (postDoc.exists) {
         String postUrl = (postDoc.data() as Map<String, dynamic>)['postUrl'];
 
@@ -124,48 +122,13 @@ class FirestoreMethod {
         await _firestore.collection('posts').doc(postId).delete();
 
         // Delete post's image in storage if it exists
-        if (postUrl != null && postUrl.isNotEmpty) {
+        if (postUrl.isNotEmpty) {
           await StorageMethod().deleteImageFromStorage(postUrl);
         }
       }
     } catch (e) {
       avoidPrint(e.toString());
       rethrow;
-    }
-  }
-
-  Future<void> followUser(String uid, String followId) async {
-    try {
-      //fetching all user data
-      DocumentSnapshot snap = await _firestore
-          .collection('users')
-          .doc(uid)
-          .get();
-      //getting following list
-      List following = (snap.data()! as dynamic)['following'];
-
-      //if already following then unfollow
-      if (following.contains(followId)) {
-        //remove follower
-        await _firestore.collection('users').doc(followId).update({
-          'followers': FieldValue.arrayRemove([uid]),
-        });
-        //remove following
-        await _firestore.collection('users').doc(uid).update({
-          'following': FieldValue.arrayRemove([followId]),
-        });
-      } else {
-        //add follower
-        await _firestore.collection('users').doc(followId).update({
-          'followers': FieldValue.arrayUnion([uid]),
-        });
-        //add following
-        await _firestore.collection('users').doc(uid).update({
-          'following': FieldValue.arrayUnion([followId]),
-        });
-      }
-    } catch (e) {
-      avoidPrint(e.toString());
     }
   }
 

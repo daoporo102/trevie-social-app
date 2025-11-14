@@ -42,17 +42,6 @@ class _PostCardState extends State<PostCard> {
     return Container(
       color: mobileBackgroundColor,
       padding: const EdgeInsets.symmetric(vertical: 10),
-<<<<<<< Updated upstream
-      child: Column(
-        children: [
-          //HEADER SECTION OF THE POST
-          Container(
-            padding: const EdgeInsets.symmetric(
-              vertical: 4,
-              horizontal: 16,
-            ).copyWith(right: 0),
-            child: Column(
-=======
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
@@ -118,27 +107,53 @@ class _PostCardState extends State<PostCard> {
                               children: [
                                 SimpleDialogOption(
                                   padding: const EdgeInsets.all(16),
-                                  child: const Text('Xoá bài viết'),
+                                  child: const Text(
+                                    'Xóa bài viết',
+                                    style: TextStyle(color: primaryTextColor),
+                                  ),
                                   onPressed: () async {
-                                    FirestoreMethod().deletePost(
-                                      widget.snap['postId'],
-                                    );
-                                    Navigator.of(context).pop();
-                                    displaySnackBar(
-                                      "Xoá bài viết thành công",
-                                      context,
-                                      SnackBarType.success,
-                                    );
+                                    try {
+                                      await FirestoreMethod().deletePost(
+                                        widget.snap['postId'],
+                                      );
+                                      if (context.mounted) {
+                                        displaySnackBar(
+                                          'Đã xóa bài viết thành công',
+                                          context,
+                                          SnackBarType.success,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        avoidPrint(
+                                          "Error to delete post: ${e.toString()}",
+                                        );
+                                        displaySnackBar(
+                                          "Xóa bài viết thất bại, vui lòng thử lại sau",
+                                          context,
+                                          SnackBarType.error,
+                                        );
+                                      }
+                                    }
                                   },
                                 ),
                                 SimpleDialogOption(
                                   padding: const EdgeInsets.all(16),
-                                  child: const Text('Chỉnh sửa bài viết'),
-                                  onPressed: () {},
+                                  child: const Text(
+                                    'Chỉnh sửa bài viết',
+                                    style: TextStyle(color: primaryTextColor),
+                                  ),
+                                  onPressed: () {
+                                    // Implement edit functionality here
+                                    Navigator.of(context).pop();
+                                  },
                                 ),
                                 SimpleDialogOption(
                                   padding: const EdgeInsets.all(16),
-                                  child: const Text('Hủy'),
+                                  child: const Text(
+                                    'Hủy',
+                                    style: TextStyle(color: primaryTextColor),
+                                  ),
                                   onPressed: () {
                                     Navigator.of(context).pop();
                                   },
@@ -234,207 +249,107 @@ class _PostCardState extends State<PostCard> {
 
             //LIKE, COMMENT, SHARE SECTION OF THE POST
             Row(
->>>>>>> Stashed changes
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundImage: NetworkImage(widget.snap['profImage']),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.snap['displayName'],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              DateFormat.yMMMd().format(
-                                widget.snap['datePublished'].toDate(),
-                              ),
-                              style: TextStyle(
-                                color: secondaryColor,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                // Like group (flexible)
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      LikeAnimation(
+                        isAnimating: widget.snap['likes'].contains(user?.uid),
+                        smallLike: true,
+                        child: IconButton(
+                          onPressed: () async {
+                            await FirestoreMethod().likePost(
+                              widget.snap['postId'],
+                              user!.uid,
+                              widget.snap['likes'],
+                            );
+                          },
+                          icon: widget.snap['likes'].contains(user?.uid)
+                              ? const Icon(Icons.favorite, color: Colors.red)
+                              : const Icon(
+                                  Icons.favorite_border,
+                                  color: primaryTextColor,
+                                ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => Dialog(
-                            child: ListView(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              shrinkWrap: true,
-                              children: ['Delete', 'Edit']
-                                  .map(
-                                    (e) => InkWell(
-                                      onTap: () async {
-                                        FirestoreMethod().deletePost(
-                                          widget.snap['postId'],
-                                        );
-                                        Navigator.of(context).pop();
-                                        showSnackBar(
-                                          "Xoá bài thành công",
-                                          context,
-                                        );
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: 12,
-                                          horizontal: 16,
-                                        ),
-                                        child: Text(e),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.more_vert),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.snap['postText'],
-                        style: TextStyle(color: primaryTextColor),
+                      //NUMBER OF LIKES CAN GO HERE
+                      Flexible(
+                        child: Text(
+                          '${widget.snap['likes'].length} thích',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
-          //IMAGE SECTION OF THE POST
-          GestureDetector(
-            onDoubleTap: () async {
-              await FirestoreMethod().likePost(
-                widget.snap['postId'],
-                user!.uid,
-                widget.snap['likes'],
-              );
-              setState(() {
-                isLikeAnimating = true;
-              });
-            },
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.35,
-                  width: double.infinity,
-                  child: Image.network(
-                    //check if disconnect network
-                    widget.snap['postUrl'] ?? '',
-                    fit: BoxFit.cover,
+                // Comment group (flexible)
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                CommentsScreen(postId: widget.snap['postId']),
+                          ),
+                        ),
+                        icon: const Icon(Icons.comment_outlined),
+                      ),
+                      //NUMBER OF COMMENTS CAN GO HERE (live)
+                      Flexible(
+                        child:
+                            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                              stream: commentStream,
+                              builder: (context, snapshot) {
+                                final totalComments = snapshot.hasData
+                                    ? snapshot.data!.size
+                                    : 0;
+                                return Text(
+                                  '$totalComments bình luận',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                );
+                              },
+                            ),
+                      ),
+                    ],
                   ),
                 ),
 
-                AnimatedOpacity(
-                  opacity: isLikeAnimating ? 1 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: LikeAnimation(
-                    isAnimating: isLikeAnimating,
-                    duration: const Duration(milliseconds: 400),
-                    onEnd: () {
-                      setState(() {
-                        isLikeAnimating = false;
-                      });
-                    },
-                    child: Icon(Icons.favorite, color: Colors.red, size: 120),
+                //Share group (flexible)
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      //NUMBER OF SHARES CAN GO HERE
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.share),
+                      ),
+                      Flexible(
+                        child: const Text(
+                          '9 chia sẻ',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+
+                // Bookmark stays fixed on the right
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.bookmark_border),
                 ),
               ],
             ),
-          ),
-
-          //LIKE, COMMENT, SHARE SECTION OF THE POST
-          Row(
-            children: [
-              LikeAnimation(
-                isAnimating: widget.snap['likes'].contains(user?.uid),
-                smallLike: true,
-                child: IconButton(
-                  onPressed: () async {
-                    await FirestoreMethod().likePost(
-                      widget.snap['postId'],
-                      user!.uid,
-                      widget.snap['likes'],
-                    );
-                  },
-                  icon: widget.snap['likes'].contains(user?.uid)
-                      ? const Icon(Icons.favorite, color: Colors.red)
-                      : const Icon(Icons.favorite_border, color: Colors.white),
-                ),
-              ),
-              //NUMBER OF LIKES CAN GO HERE
-              DefaultTextStyle(
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
-                child: Text('${widget.snap['likes'].length} thích'),
-              ),
-              //NUMBER OF COMMENTS CAN GO HERE
-              IconButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        CommentsScreen(postId: widget.snap['postId']),
-                  ),
-                ),
-                icon: const Icon(Icons.comment_outlined),
-              ),
-              //NUMBER OF COMMENTS CAN GO HERE (live)
-              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: commentStream,
-                builder: (context, snapshot) {
-                  final totalComments = snapshot.hasData
-                      ? snapshot.data!.size
-                      : 0;
-                  return DefaultTextStyle(
-                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    child: Text('$totalComments bình luận'),
-                  );
-                },
-              ),
-              //NUMBER OF SHARES CAN GO HERE
-              IconButton(onPressed: () {}, icon: const Icon(Icons.share)),
-              DefaultTextStyle(
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
-                child: const Text('9 chia sẻ'),
-              ),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.bottomRight,
-                  child: IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.bookmark_border),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
