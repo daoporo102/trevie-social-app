@@ -66,8 +66,12 @@ class FirestoreMethod {
           'likes': FieldValue.arrayUnion([uid]),
         });
       }
+    } on FirebaseException catch (e) {
+      avoidPrint("Firebase error in likePost: ${e.code} - ${e.message}");
+      throw 'Đã có lỗi xảy ra, vui lòng thử lại sau: ${e.message ?? e.code}';
     } catch (e) {
-      avoidPrint(e.toString());
+      avoidPrint("Unknown error in likePost: $e");
+      throw 'Đã có lỗi xảy ra, vui lòng thử lại sau';
     }
   }
 
