@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:social_media_app/models/post.dart';
 import 'package:social_media_app/resources/storage_method.dart';
@@ -7,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 class FirestoreMethod {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   //upload post
   Future<String> uploadPost(
@@ -38,11 +40,24 @@ class FirestoreMethod {
         profImage: profImage,
       );
 
+<<<<<<< Updated upstream
       _firestore.collection('posts').doc(postId).set(post.toJson());
+=======
+      await _firestore.collection('posts').doc(postId).set({
+        ...post.toJson(),
+        'datePublished':
+            FieldValue.serverTimestamp(), // consistent across clients
+      });
+>>>>>>> Stashed changes
 
       res = "success";
     } catch (e) {
       res = e.toString();
+<<<<<<< Updated upstream
+=======
+      avoidPrint(res);
+      res = "Đã có lỗi xảy ra, vui lòng thử lại";
+>>>>>>> Stashed changes
     }
     return res;
   }
@@ -102,10 +117,28 @@ class FirestoreMethod {
 
   //Deleting post
   Future<void> deletePost(String postId) async {
+    final uid = _auth.currentUser!.uid;
     try {
-      await _firestore.collection('posts').doc(postId).delete();
+      // Get the post document to retrieve the postUrl
+      DocumentSnapshot postDoc = await _firestore
+          .collection('posts')
+          .doc(postId)
+          .get();
+
+      if (postDoc.exists) {
+        String postUrl = (postDoc.data() as Map<String, dynamic>)['postUrl'];
+
+        // Delete post collection in Firestore database
+        await _firestore.collection('posts').doc(postId).delete();
+
+        // Delete post's image in storage if it exists
+        if (postUrl != null && postUrl.isNotEmpty) {
+          await StorageMethod().deleteImageFromStorage(postUrl);
+        }
+      }
     } catch (e) {
       avoidPrint(e.toString());
+      rethrow;
     }
   }
 }

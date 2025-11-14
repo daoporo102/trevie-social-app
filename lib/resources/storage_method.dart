@@ -29,4 +29,22 @@ class StorageMethod {
     String downloadUrl = await snap.ref.getDownloadURL();
     return downloadUrl;
   }
+
+  //Delete post's image in storage
+  Future<void> deleteImageFromStorage(String imageUrl) async {
+    try {
+      // Validate the URL format
+      if (!imageUrl.startsWith('gs://') && !imageUrl.startsWith('http')) {
+        throw 'URL ảnh không hợp lệ: $imageUrl';
+      }
+      
+      //get a reference 
+      Reference ref = _storage.refFromURL(imageUrl);
+      await ref.delete();
+    } on FirebaseException catch (e) {
+      throw 'Lỗi xóa ảnh: ${e.message ?? e.code}';
+    } catch (e) {
+      throw 'Lỗi không xác định khi xóa ảnh: $e';
+    }
+  }
 }

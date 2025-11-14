@@ -53,6 +53,7 @@ class _PostCardState extends State<PostCard> {
     return Container(
       color: mobileBackgroundColor,
       padding: const EdgeInsets.symmetric(vertical: 10),
+<<<<<<< Updated upstream
       child: Column(
         children: [
           //HEADER SECTION OF THE POST
@@ -62,6 +63,189 @@ class _PostCardState extends State<PostCard> {
               horizontal: 16,
             ).copyWith(right: 0),
             child: Column(
+=======
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: width > webScreenSize
+                ? primaryTextColor
+                : mobileBackgroundColor,
+          ),
+          color: mobileBackgroundColor,
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          children: [
+            //HEADER SECTION OF THE POST
+            Container(
+              padding: const EdgeInsets.symmetric(
+                vertical: 4,
+                horizontal: 16,
+              ).copyWith(right: 0),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundImage: NetworkImage(widget.snap['profImage']),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.snap['displayName'],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                DateFormat.yMMMd().format(
+                                  widget.snap['datePublished'].toDate(),
+                                ),
+                                style: TextStyle(
+                                  color: secondaryColor,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => SimpleDialog(
+                              backgroundColor: width > webScreenSize
+                                  ? webBackgroundColor
+                                  : mobileBackgroundColor,
+                              title: const Text('Tùy chọn'),
+                              children: [
+                                SimpleDialogOption(
+                                  padding: const EdgeInsets.all(16),
+                                  child: const Text('Xoá bài viết'),
+                                  onPressed: () async {
+                                    FirestoreMethod().deletePost(
+                                      widget.snap['postId'],
+                                    );
+                                    Navigator.of(context).pop();
+                                    displaySnackBar(
+                                      "Xoá bài viết thành công",
+                                      context,
+                                      SnackBarType.success,
+                                    );
+                                  },
+                                ),
+                                SimpleDialogOption(
+                                  padding: const EdgeInsets.all(16),
+                                  child: const Text('Chỉnh sửa bài viết'),
+                                  onPressed: () {},
+                                ),
+                                SimpleDialogOption(
+                                  padding: const EdgeInsets.all(16),
+                                  child: const Text('Hủy'),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.more_vert),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.snap['postText'],
+                          style: TextStyle(color: primaryTextColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            //IMAGE SECTION OF THE POST
+            GestureDetector(
+              onTap: () async {
+                // View image in full screen
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => Scaffold(
+                      appBar: AppBar(
+                        backgroundColor: mobileBackgroundColor,
+                        title: Text('Hình ảnh'),
+                      ),
+                      body: Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Image.network(
+                            widget.snap['postUrl'] ?? '',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              onDoubleTap: () async {
+                await FirestoreMethod().likePost(
+                  widget.snap['postId'],
+                  user!.uid,
+                  widget.snap['likes'],
+                );
+                setState(() {
+                  isLikeAnimating = true;
+                });
+              },
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.35,
+                    width: double.infinity,
+                    child: Image.network(
+                      //check if disconnect network
+                      widget.snap['postUrl'] ?? '',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+
+                  AnimatedOpacity(
+                    opacity: isLikeAnimating ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: LikeAnimation(
+                      isAnimating: isLikeAnimating,
+                      duration: const Duration(milliseconds: 400),
+                      onEnd: () {
+                        setState(() {
+                          isLikeAnimating = false;
+                        });
+                      },
+                      child: Icon(Icons.favorite, color: Colors.red, size: 120),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            //LIKE, COMMENT, SHARE SECTION OF THE POST
+            Row(
+>>>>>>> Stashed changes
               children: [
                 Row(
                   children: [
