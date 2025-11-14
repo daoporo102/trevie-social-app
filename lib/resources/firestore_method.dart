@@ -40,14 +40,15 @@ class FirestoreMethod {
 
       await _firestore.collection('posts').doc(postId).set({
         ...post.toJson(),
-        'datePublished': FieldValue.serverTimestamp(),// consistent across clients
+        'datePublished':
+            FieldValue.serverTimestamp(), // consistent across clients
       });
 
       res = "success";
     } catch (e) {
       res = e.toString();
       avoidPrint(res);
-      res ="Đã có lỗi xảy ra, vui lòng thử lại";
+      res = "Đã có lỗi xảy ra, vui lòng thử lại";
     }
     return res;
   }
@@ -114,6 +115,41 @@ class FirestoreMethod {
   Future<void> deletePost(String postId) async {
     try {
       await _firestore.collection('posts').doc(postId).delete();
+    } catch (e) {
+      avoidPrint(e.toString());
+    }
+  }
+
+  Future<void> followUser(String uid, String followId) async {
+    try {
+      //fetching all user data
+      DocumentSnapshot snap = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get();
+      //getting following list
+      List following = (snap.data()! as dynamic)['following'];
+
+      //if already following then unfollow
+      if (following.contains(followId)) {
+        //remove follower
+        await _firestore.collection('users').doc(followId).update({
+          'followers': FieldValue.arrayRemove([uid]),
+        });
+        //remove following
+        await _firestore.collection('users').doc(uid).update({
+          'following': FieldValue.arrayRemove([followId]),
+        });
+      } else {
+        //add follower
+        await _firestore.collection('users').doc(followId).update({
+          'followers': FieldValue.arrayUnion([uid]),
+        });
+        //add following
+        await _firestore.collection('users').doc(uid).update({
+          'following': FieldValue.arrayUnion([followId]),
+        });
+      }
     } catch (e) {
       avoidPrint(e.toString());
     }
