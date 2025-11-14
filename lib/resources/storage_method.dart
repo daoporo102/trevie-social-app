@@ -26,9 +26,14 @@ class StorageMethod {
 
       UploadTask uploadTask = ref.putData(file);
 
-    TaskSnapshot snap = await uploadTask;
-    String downloadUrl = await snap.ref.getDownloadURL();
-    return downloadUrl;
+      TaskSnapshot snap = await uploadTask;
+      String downloadUrl = await snap.ref.getDownloadURL();
+      return downloadUrl;
+    } on FirebaseException catch (e) {
+      throw 'Lỗi tải lên: ${e.message ?? e.code}';
+    } catch (e) {
+      throw 'Lỗi không xác định khi tải ảnh: $e';
+    }
   }
 
   //Delete post's image in storage
