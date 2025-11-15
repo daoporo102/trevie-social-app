@@ -202,7 +202,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.getUserrOrNull; // safer getter (see below)
     if (user == null) {
-      return const Center(child: CircularProgressIndicator());
+      return customCircularProgressIndicator();
     }
 
     return Scaffold(

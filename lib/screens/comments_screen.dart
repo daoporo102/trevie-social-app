@@ -5,6 +5,7 @@ import 'package:social_media_app/models/user.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/comment_card.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
@@ -56,7 +57,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return customCircularProgressIndicator();
           }
 
           return ListView.builder(

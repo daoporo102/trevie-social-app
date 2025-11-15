@@ -47,7 +47,7 @@ class _WebScreenLayoutState extends State<WebScreenLayout> {
     final user = userProvider.getUserrOrNull; // safer getter (see below)
 
     if (user == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: customCircularProgressIndicator());
     }
     return Scaffold(
       appBar: AppBar(

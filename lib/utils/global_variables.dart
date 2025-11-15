@@ -44,14 +44,16 @@ Widget customTextButton({
   required VoidCallback onPressed,
 }) {
   return TextButton(
-    onHover:(value) => {
+    onHover: (value) => {
       // You can add hover effects
-      if (value) {
-        // Mouse is hovering
-
-      } else {
-        // Mouse is not hovering
-      }
+      if (value)
+        {
+          // Mouse is hovering
+        }
+      else
+        {
+          // Mouse is not hovering
+        },
     },
     onPressed: onPressed,
     child: Row(
@@ -67,6 +69,15 @@ Widget customTextButton({
           ),
         ),
       ],
+    ),
+  );
+}
+
+Widget customCircularProgressIndicator() {
+  return Center(
+    child: CircularProgressIndicator(
+      backgroundColor: secondaryColor,
+      color: appPrimaryColor,
     ),
   );
 }

@@ -258,7 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: const Center(child: CircularProgressIndicator()),
+                    child: customCircularProgressIndicator(),
                   ),
                 );
               }

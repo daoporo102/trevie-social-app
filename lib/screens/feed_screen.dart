@@ -48,7 +48,7 @@ class FeedScreen extends StatelessWidget {
           final totalItems = docs.length + 1;
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return customCircularProgressIndicator();
           }
 
           return ListView.builder(
