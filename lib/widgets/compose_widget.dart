@@ -21,7 +21,7 @@ class ComposePostCard extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.getUserrOrNull; // nullable getter
     if (user == null) {
-      return const Center(child: CircularProgressIndicator());
+      return customCircularProgressIndicator();
     }
 
     return Card(

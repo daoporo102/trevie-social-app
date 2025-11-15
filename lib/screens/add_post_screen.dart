@@ -202,7 +202,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.getUserrOrNull; // safer getter (see below)
     if (user == null) {
-      return const Center(child: CircularProgressIndicator());
+      return customCircularProgressIndicator();
     }
 
     return Scaffold(
@@ -291,10 +291,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           child: Column(
             children: [
               _isLoading
-                  ? const LinearProgressIndicator(
-                      backgroundColor: secondaryColor,
-                      color: appPrimaryColor,
-                    )
+                  ? customLinearProgressIndicator()
                   : Padding(padding: EdgeInsets.only(top: 0)),
               ?width > webScreenSize
                   ? null

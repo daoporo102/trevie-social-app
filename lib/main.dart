@@ -6,6 +6,7 @@ import 'package:social_media_app/responsive/responsive_layout_screen.dart';
 import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/screens/login_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/utils/global_variables.dart';
 import 'firebase_options.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:social_media_app/providers/user_provider.dart';
@@ -64,9 +65,7 @@ class MyApp extends StatelessWidget {
               }
             }
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(
-                child: CircularProgressIndicator(color: onPrimaryColor),
-              );
+              return customCircularProgressIndicator();
             }
             return const LoginScreen();
           },

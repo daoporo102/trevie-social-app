@@ -106,9 +106,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: Text(displayName),
               centerTitle: false,
               bottom: _isLoading
-                  ? const PreferredSize(
+                  ?  PreferredSize(
                       preferredSize: Size.fromHeight(3),
-                      child: LinearProgressIndicator(minHeight: 3),
+                      child: customLinearProgressIndicator(),
                     )
                   : null,
             ),
@@ -258,7 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: const Center(child: CircularProgressIndicator()),
+                    child: customCircularProgressIndicator(),
                   ),
                 );
               }
