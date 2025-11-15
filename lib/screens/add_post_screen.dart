@@ -291,10 +291,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           child: Column(
             children: [
               _isLoading
-                  ? const LinearProgressIndicator(
-                      backgroundColor: secondaryColor,
-                      color: appPrimaryColor,
-                    )
+                  ? customLinearProgressIndicator()
                   : Padding(padding: EdgeInsets.only(top: 0)),
               ?width > webScreenSize
                   ? null

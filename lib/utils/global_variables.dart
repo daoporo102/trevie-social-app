@@ -81,3 +81,11 @@ Widget customCircularProgressIndicator() {
     ),
   );
 }
+
+Widget customLinearProgressIndicator() {
+  return LinearProgressIndicator(
+    backgroundColor: secondaryColor,
+    color: appPrimaryColor,
+    minHeight: 3,
+  );
+}

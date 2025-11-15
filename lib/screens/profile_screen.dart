@@ -106,9 +106,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: Text(displayName),
               centerTitle: false,
               bottom: _isLoading
-                  ? const PreferredSize(
+                  ?  PreferredSize(
                       preferredSize: Size.fromHeight(3),
-                      child: LinearProgressIndicator(minHeight: 3),
+                      child: customLinearProgressIndicator(),
                     )
                   : null,
             ),
