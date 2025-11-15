@@ -117,6 +117,7 @@ class _PostCardState extends State<PostCard> {
                                         widget.snap['postId'],
                                       );
                                       if (context.mounted) {
+                                        Navigator.of(context).pop();
                                         displaySnackBar(
                                           'Đã xóa bài viết thành công',
                                           context,
