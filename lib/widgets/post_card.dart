@@ -6,6 +6,7 @@ import 'package:social_media_app/models/user.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/screens/comments_screen.dart';
+import 'package:social_media_app/screens/update_post_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
@@ -145,8 +146,15 @@ class _PostCardState extends State<PostCard> {
                                     style: TextStyle(color: primaryTextColor),
                                   ),
                                   onPressed: () {
-                                    // Implement edit functionality here
+                                    // Navigate to update post screen
                                     Navigator.of(context).pop();
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            UpdatePostScreen(
+                                          snap: widget.snap,),
+                                      ),
+                                    );
                                   },
                                 ),
                                 SimpleDialogOption(

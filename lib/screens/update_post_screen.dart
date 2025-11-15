@@ -12,17 +12,28 @@ import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
 
-class AddPostScreen extends StatefulWidget {
-  const AddPostScreen({super.key});
+class UpdatePostScreen extends StatefulWidget {
+  final snap;
+  const UpdatePostScreen({super.key, required this.snap});
 
   @override
-  State<AddPostScreen> createState() => _AddPostScreenState();
+  State<UpdatePostScreen> createState() => _UpdatePostScreenState();
 }
 
-class _AddPostScreenState extends State<AddPostScreen> {
-  Uint8List? _image;
+class _UpdatePostScreenState extends State<UpdatePostScreen> {
+  var _image;
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final postData = widget.snap;
+    // Initialize text controller with existing post text
+    _textController.text = postData['postText'];
+    // Initialize _image with existing post URL
+    _image = postData['postUrl'];
+  }
 
   Future<void> _selectImage(BuildContext context) async {
     return showDialog(
@@ -105,26 +116,11 @@ class _AddPostScreenState extends State<AddPostScreen> {
     );
   }
 
-  void clearImage() {
-    setState(() {
-      _image = null;
-    });
-  }
-
-  void postImage(String uid, String displayName, String profImage) async {
+  Future<void> updatePost(String postId) async {
     // Validate inputs
     if (_textController.text.isEmpty) {
       displaySnackBar(
-        'Vui lòng nhập mô tả cho bài đăng',
-        context,
-        SnackBarType.error,
-      );
-      return;
-    }
-
-    if (_image == null) {
-      displaySnackBar(
-        'Vui lòng chọn ảnh để đăng bài',
+        'Vui lòng nhập nội dung cho bài đăng',
         context,
         SnackBarType.error,
       );
@@ -135,25 +131,42 @@ class _AddPostScreenState extends State<AddPostScreen> {
       _isLoading = true;
     });
     try {
-      // upload to storage and db
-      String res = await FirestoreMethod().uploadPost(
+      // Determine if we have a new image (Uint8List) or existing URL (String)
+      Uint8List? fileToUpload;
+      String? existingUrl;
+
+      if (_image is Uint8List) {
+        // User selected a new image
+        fileToUpload = _image;
+        existingUrl = widget.snap['postUrl']; // Pass the old URL to delete it
+      } else if (_image is String) {
+        // User kept the existing image
+        fileToUpload = null;
+        existingUrl = null;
+      }
+
+      // Update post's text and image
+      String res = await FirestoreMethod().updatePost(
+        postId,
         _textController.text.trim(),
-        _image!,
-        uid,
-        displayName,
-        profImage,
+        fileToUpload,
+        existingUrl,
       );
 
       if (!mounted) return; // guard context after async
 
-      if (res == "success") {
+      if (res == 'success') {
         setState(() {
           _isLoading = false;
         });
-        displaySnackBar('Đăng bài thành công!', context, SnackBarType.success);
+        displaySnackBar(
+          'Cập nhật bài đăng thành công!',
+          context,
+          SnackBarType.success,
+        );
         clearImage();
         _textController.clear();
-        // Navigate to the feed screen
+        //Navigate back to feed screen
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => const ResponsiveLayout(
@@ -169,24 +182,30 @@ class _AddPostScreenState extends State<AddPostScreen> {
           _isLoading = false;
         });
         displaySnackBar(
-          "Có lỗi xảy ra, vui lòng thử lại sau.",
+          'Có lỗi xảy ra, vui lòng thử lại sau.',
           context,
           SnackBarType.error,
         );
-        avoidPrint(res);
+        avoidPrint("Update post failed: $res");
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) return; // guard context after async
       setState(() {
         _isLoading = false;
       });
-      avoidPrint(e.toString());
+      avoidPrint("Exception in updatePost: $e");
       displaySnackBar(
-        "Có lỗi xảy ra, vui lòng thử lại sau.",
+        'Có lỗi xảy ra khi cập nhật bài đăng',
         context,
         SnackBarType.error,
       );
     }
+  }
+
+  void clearImage() {
+    setState(() {
+      _image = null;
+    });
   }
 
   @override
@@ -199,22 +218,26 @@ class _AddPostScreenState extends State<AddPostScreen> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    // final User user = Provider.of<UserProvider>(context).getUser;
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.getUserrOrNull; // safer getter (see below)
     if (user == null) {
       return customCircularProgressIndicator();
     }
 
+    final postData = widget.snap;
+    final postId = postData['postId'];
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: mobileBackgroundColor,
+        backgroundColor: width > webScreenSize
+            ? webBackgroundColor
+            : mobileBackgroundColor,
         leading: width > webScreenSize
             ? null
             : IconButton(
                 onPressed: () {
                   clearImage();
-                  // Navigate to the feed screen
+                  //Navigate back to feed screen
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
                       builder: (context) => const ResponsiveLayout(
@@ -233,13 +256,14 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Spacer(), // Push title to center
-                  Text('Tạo bài đăng'),
+                  Text('Cập nhật bài đăng'),
                   const Spacer(),
                   TextButton(
-                    onPressed: () =>
-                        postImage(user.uid, user.displayName, user.photoUrl),
+                    onPressed: () {
+                      updatePost(postId);
+                    },
                     child: const Text(
-                      'Đăng bài',
+                      'Cập nhật',
                       style: TextStyle(
                         color: appPrimaryColor,
                         fontWeight: FontWeight.bold,
@@ -250,16 +274,17 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   const Spacer(), // Push title to center
                 ],
               )
-            : const Text('Tạo bài đăng'),
+            : const Text('Cập nhật bài đăng'),
         centerTitle: width > webScreenSize ? true : false,
         actions: width > webScreenSize
             ? null
             : [
                 TextButton(
-                  onPressed: () =>
-                      postImage(user.uid, user.displayName, user.photoUrl),
+                  onPressed: () {
+                    updatePost(postId);
+                  },
                   child: const Text(
-                    'Đăng bài',
+                    'Cập nhật',
                     style: TextStyle(
                       color: appPrimaryColor,
                       fontWeight: FontWeight.bold,
@@ -293,7 +318,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
             children: [
               _isLoading
                   ? customLinearProgressIndicator()
-                  : Padding(padding: EdgeInsets.only(top: 0)),
+                  : const Padding(padding: EdgeInsets.only(top: 0)),
               ?width > webScreenSize
                   ? null
                   : const Divider(color: secondaryColor),
@@ -347,47 +372,50 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 ),
               ),
               const Divider(color: secondaryColor),
-              // show the selected image preview
-              _image == null
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        customTextButton(
-                          icon: Icons.photo_library,
-                          label: 'Ảnh',
-                          onPressed: () => _selectImage(context),
+              // show the post's image
+              Center(
+                child: Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    if (_isLoading)
+                      customCircularProgressIndicator()
+                    else if (_image == null)
+                      Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: const Text(
+                          'Không có ảnh cho bài đăng',
+                          style: TextStyle(color: primaryTextColor),
                         ),
-                        customTextButton(
-                          icon: Icons.videocam,
-                          label: 'Video',
-                          onPressed: () {},
-                        ),
-                        customTextButton(
-                          icon: Icons.file_copy,
-                          label: 'Tài liệu',
-                          onPressed: () {},
-                        ),
-                      ],
-                    )
-                  : Center(
-                      child: Stack(
-                        alignment: Alignment.topRight,
-                        children: [
-                          Image.memory(
-                            _image!,
-                            width: double.infinity,
-                            fit: BoxFit.contain,
+                      )
+                    else if (_image is Uint8List)
+                      Image.memory(
+                        _image as Uint8List,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                      )
+                    else if (_image is String)
+                      Image.network(
+                        _image as String,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: const Text(
+                            'Không thể tải ảnh',
+                            style: TextStyle(color: primaryTextColor),
                           ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.cancel,
-                              color: secondaryColor,
-                            ),
-                            onPressed: clearImage,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                    if (_image != null && !_isLoading)
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: secondaryColor),
+                        onPressed: () {
+                          _selectImage(context);
+                        },
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
