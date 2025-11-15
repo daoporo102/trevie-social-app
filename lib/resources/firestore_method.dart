@@ -166,4 +166,44 @@ class FirestoreMethod {
       avoidPrint(e.toString());
     }
   }
+
+  //update post
+  Future<String> updatePost(
+    String postId,
+    String postText,
+    Uint8List? file,
+    String? existingImageUrl,
+  ) async {
+    String res = "Một lỗi đã xảy ra";
+    try {
+      if (file != null) {
+        // Delete the old image from storage if it exists
+        if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
+          await StorageMethod().deleteImageFromStorage(existingImageUrl);
+        }
+
+        // Upload the new image to storage
+        String newPhotoUrl = await StorageMethod().uploadImageToStorage(
+          'posts',
+          file,
+          true,
+        );
+
+        // Update the post document with the new image URL and text
+        await _firestore.collection('posts').doc(postId).update({
+          'postUrl': newPhotoUrl,
+          'postText': postText,
+        });
+      }else{
+        // If no new file is provided, just update the text
+        await _firestore.collection('posts').doc(postId).update({
+          'postText': postText,
+        });
+      }
+      res = 'success';
+    } catch (e) {
+      avoidPrint(e.toString());
+    }
+    return res;
+  }
 }

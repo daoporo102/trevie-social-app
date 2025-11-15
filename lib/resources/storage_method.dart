@@ -53,4 +53,30 @@ class StorageMethod {
       throw 'Lỗi không xác định khi tải ảnh: $e';
     }
   }
+
+  //update post's image to Storage
+  Future<String> updateImageInStorage(
+    String childName,
+    Uint8List file,
+    String existingImageUrl,
+    bool isPost,
+  ) async {
+    try {
+      // First, delete the existing image
+      await deleteImageFromStorage(existingImageUrl);
+
+      // Then, upload the new image
+      String newImageUrl = await uploadImageToStorage(
+        childName,
+        file,
+        isPost,
+      );
+
+      return newImageUrl;
+    } catch (e) {
+      throw 'Lỗi khi cập nhật ảnh: $e';
+    }
+  }
+  
+
 }
