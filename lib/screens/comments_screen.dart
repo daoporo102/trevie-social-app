@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -78,10 +79,18 @@ class _CommentsScreenState extends State<CommentsScreen> {
           child: Row(
             children: [
               CircleAvatar(
-                backgroundImage: user!.photoUrl.isNotEmpty
-                    ? NetworkImage(user.photoUrl)
-                    : null,
+                backgroundColor: secondaryColor,
                 radius: 16,
+                child: user!.photoUrl.isNotEmpty? ClipOval(
+                  child: CachedNetworkImage(
+                    imageUrl:user.photoUrl,
+                  width: 32,
+                    height:32,
+                    fit:BoxFit.cover,
+                    placeholder: (context, url) => customCircularProgressIndicator(),
+                    errorWidget: (context, url, error) => const Icon(Icons.error_outline_outlined, size: 32,color:primaryTextColor),
+                  ),
+                ):const Icon(Icons.person,size:40,color:primaryTextColor)
               ),
               Expanded(
                 child: Padding(
@@ -89,7 +98,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   child: TextField(
                     controller: _commentController,
                     decoration: InputDecoration(
-                      hintText: 'Bình luận như ${user.displayName}',
+                      hintText: 'Bình luận với tư cách ${user.displayName}',
                       border: InputBorder.none,
                     ),
                   ),

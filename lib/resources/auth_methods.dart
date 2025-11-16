@@ -146,4 +146,150 @@ class AuthMethods {
   Future<void> signOut() async {
     await _auth.signOut();
   }
+
+  // update user profile
+  Future<String> updateUserProfile(
+    String uid,
+    String displayName,
+    Uint8List? file,
+    String? existingImageUrl,
+    // String? bio,
+  ) async {
+    String res = "Một lỗi đã xảy ra";
+
+    try {
+      if (file != null) {
+        // Delete the old profile picture in firestore if it exists
+        if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
+          await StorageMethod().deleteImageFromStorage(existingImageUrl);
+        }
+
+        // Upload the new profile picture
+        String newPhotoUrl = await StorageMethod().uploadImageToStorage(
+          'profilePics',
+          file,
+          false,
+        );
+
+        // Update the user document with the new display name, bio and photo URL
+        await _firestore.collection('users').doc(uid).update({
+          'displayName': displayName,
+          // 'bio': bio,
+          'photoUrl': newPhotoUrl,
+        });
+        // Update all posts with the new display name and profile image
+        await _updateUserPosts(uid, displayName, newPhotoUrl);
+
+        // Update all comments with the new display name and profile image
+        await _updateUserComments(uid, displayName, newPhotoUrl);
+        res = "success";
+      } else {
+        // If no new file is provided, only update the display name
+        // on theuser document
+        await _firestore.collection('users').doc(uid).update({
+          'displayName': displayName,
+        });
+
+        // Update all posts with the new display name and profile image
+        await _updateUserPosts(uid, displayName, null);
+
+        // Update all comments with the new display name and profile image
+        await _updateUserComments(uid, displayName, null);
+        res = "success";
+      }
+    } catch (e) {
+      avoidPrint(e.toString());
+    }
+    return res;
+  }
+}
+
+Future<void> _updateUserPosts(
+  String uid,
+  String displayName,
+  String? newPhotoUrl,
+) async {
+  try {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    // Fetch all posts made by the user
+    QuerySnapshot userPostsSnapshot = await firestore
+        .collection('posts')
+        .where('uid', isEqualTo: uid)
+        .get();
+
+    // Update each post
+    WriteBatch batch = firestore.batch();
+
+    for (var doc in userPostsSnapshot.docs) {
+      Map<String, dynamic> updateData = {'displayName': displayName};
+
+      // Only update proImage if a new photo was uploaded
+      if (newPhotoUrl != null) {
+        updateData['profImage'] = newPhotoUrl;
+      }
+
+      batch.update(doc.reference, updateData);
+    }
+
+    //Commit all updates at once
+    await batch.commit();
+  } catch (e) {
+    avoidPrint("Error updating user posts: $e");
+    rethrow;
+  }
+}
+
+Future<void> _updateUserComments(
+  String uid,
+  String displayName,
+  String? newPhotoUrl,
+) async {
+  try {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    // Fetch all posts to find comments made by the user
+    QuerySnapshot allPostsSnapshot = await firestore.collection('posts').get();
+
+    WriteBatch batch = firestore.batch();
+    int operationCount = 0;
+    int totalUpdated = 0;
+
+    for (var postDoc in allPostsSnapshot.docs) {
+      // Get comments subcollection for each post
+      QuerySnapshot commentsSnapshot = await postDoc.reference
+          .collection('comments')
+          .where('uid', isEqualTo: uid)
+          .get();
+
+      for (var commentDoc in commentsSnapshot.docs) {
+        Map<String, dynamic> updateData = {'name': displayName};
+
+        // Only update profImage if a new photo was uploaded
+        if (newPhotoUrl != null) {
+          updateData['profImage'] = newPhotoUrl;
+        }
+
+        batch.update(commentDoc.reference, updateData);
+        operationCount++;
+        totalUpdated++;
+
+        // Commit batch if operation count reaches 500
+        if (operationCount >= 500) {
+          await batch.commit();
+          batch = firestore.batch();
+          operationCount = 0;
+        }
+      }
+    }
+
+    //Commit remaining operations
+    if (operationCount > 0) {
+      await batch.commit();
+    }
+
+     avoidPrint("Updated $totalUpdated comments for user $uid");
+  } catch (e) {
+    avoidPrint("Error updating user comments: $e");
+    rethrow;
+  }
 }
