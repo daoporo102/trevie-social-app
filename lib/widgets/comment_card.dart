@@ -1,6 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/utils/global_variables.dart';
 
 class CommentCard extends StatefulWidget {
   final snap;
@@ -19,8 +21,19 @@ class _CommentCardState extends State<CommentCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            backgroundImage: NetworkImage(widget.snap['profilePic']),
-            radius: 16,
+            radius:16,
+            backgroundColor: secondaryColor,
+            child: (widget.snap['profilePic'] !=null && widget.snap['profilePic'].toString().isNotEmpty)?
+            ClipOval(
+              child: CachedNetworkImage(
+                imageUrl: widget.snap['profilePic'],
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => customCircularProgressIndicator(),
+                errorWidget: (context, url, error) => Icon(Icons.error_outline_outlined, size: 16, color: primaryTextColor),
+              ),
+            ):const Icon(Icons.person,size:16,color:primaryTextColor,)
           ),
           Expanded(
             child: Padding(

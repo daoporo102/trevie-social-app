@@ -1,7 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
+import 'package:social_media_app/screens/edit_profile_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
@@ -106,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: Text(displayName),
               centerTitle: false,
               bottom: _isLoading
-                  ?  PreferredSize(
+                  ? PreferredSize(
                       preferredSize: Size.fromHeight(3),
                       child: customLinearProgressIndicator(),
                     )
@@ -126,13 +130,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   CircleAvatar(
                     backgroundColor: secondaryColor,
-                    backgroundImage: photoUrl.isNotEmpty
-                        ? NetworkImage(photoUrl)
-                        : null,
                     radius: 40,
                     child: photoUrl.isEmpty
                         ? Icon(Icons.person, size: 40, color: primaryTextColor)
-                        : null,
+                        : ClipOval(
+                            child: CachedNetworkImage(
+                              imageUrl: photoUrl,
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) =>
+                                  customCircularProgressIndicator(),
+                              errorWidget: (context, url, error) => Icon(
+                                Icons.person,
+                                size: 40,
+                                color: primaryTextColor,
+                              ),
+                            ),
+                          ),
                   ),
                   Container(
                     alignment: Alignment.center,
@@ -174,7 +189,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     borderColor: secondaryColor,
                                     text: 'Chỉnh sửa hồ sơ',
                                     textColor: primaryTextColor,
-                                    function: () {},
+                                    function: () async {
+                                      // Wait for edit screen to close before refreshing
+                                      await Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              EditProfileScreen(),
+                                        ),
+                                      );
+                                      // Now these run AFTER returning from edit screen
+                                      if (mounted) {
+                                        await getData();
+                                        await Provider.of<UserProvider>(
+                                          context,
+                                          listen: false,
+                                        ).refreshUser();
+                                      }
+                                    },
                                   );
                                 } else if (isFollowing) {
                                   btn = FollowButton(
