@@ -44,61 +44,71 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
         onPageChanged: onPageChanged,
         children: homeMobileScreenItems(),
       ),
-      bottomNavigationBar: CupertinoTabBar(
-        backgroundColor: mobileBackgroundColor,
-        activeColor: appPrimaryColor,
-        currentIndex: _page,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.home,
-              color: _page == 0 ? appPrimaryColor : secondaryColor,
-            ),
-            label: 'Home',
-            backgroundColor: mobileBackgroundColor,
+      bottomNavigationBar: CupertinoTheme(
+        data: CupertinoThemeData(
+          textTheme: CupertinoTextThemeData(
+            tabLabelTextStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.search,
-              color: _page == 1 ? appPrimaryColor : secondaryColor,
+        ),
+        child: CupertinoTabBar(
+          backgroundColor: mobileBackgroundColor,
+          activeColor: appPrimaryColor,
+          inactiveColor: secondaryColor,
+          currentIndex: _page,
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.home,
+                color: _page == 0 ? appPrimaryColor : secondaryColor,
+              ),
+              label: 'Home',
+              backgroundColor: mobileBackgroundColor,
             ),
-            label: 'Search',
-            backgroundColor: mobileBackgroundColor,
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.post_add,
-              color: _page == 2 ? appPrimaryColor : secondaryColor,
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.search,
+                color: _page == 1 ? appPrimaryColor : secondaryColor,
+              ),
+              label: 'Search',
+              backgroundColor: mobileBackgroundColor,
             ),
-            label: 'Post',
-            backgroundColor: mobileBackgroundColor,
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.notification_add_outlined,
-              color: _page == 3 ? appPrimaryColor : secondaryColor,
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.post_add,
+                color: _page == 2 ? appPrimaryColor : secondaryColor,
+              ),
+              label: 'Post',
+              backgroundColor: mobileBackgroundColor,
             ),
-            label: 'Notifications',
-            backgroundColor: mobileBackgroundColor,
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.person,
-              color: _page == 4 ? appPrimaryColor : secondaryColor,
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.notification_add_outlined,
+                color: _page == 3 ? appPrimaryColor : secondaryColor,
+              ),
+              label: 'Notifications',
+              backgroundColor: mobileBackgroundColor,
             ),
-            label: 'Profile',
-            backgroundColor: mobileBackgroundColor,
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.person,
-              color: _page == 5 ? appPrimaryColor : secondaryColor,
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.person,
+                color: _page == 4 ? appPrimaryColor : secondaryColor,
+              ),
+              label: 'Profile',
+              backgroundColor: mobileBackgroundColor,
             ),
-            label: 'More',
-            backgroundColor: mobileBackgroundColor,
-          ),
-        ],
-        onTap: navigationTapped,
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.person,
+                color: _page == 5 ? appPrimaryColor : secondaryColor,
+              ),
+              label: 'More',
+              backgroundColor: mobileBackgroundColor,
+            ),
+          ],
+          onTap: navigationTapped,
+        ),
       ),
     );
   }
