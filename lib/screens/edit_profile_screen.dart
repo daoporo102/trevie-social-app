@@ -273,6 +273,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 textEditingController: _displayNameController,
                 hintText: 'Vui lòng nhập tên hiển thị',
                 textInputType: TextInputType.text,
+                prefixIcon: Icons.person_outline,
+                labelText: 'Tên hiển thị',
               ),
               // const SizedBox(height: 24),
               // TextFieldInput(

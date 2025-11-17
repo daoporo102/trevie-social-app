@@ -88,16 +88,20 @@ class _LoginScreenState extends State<LoginScreen> {
               //text field input for email
               TextFieldInput(
                 textEditingController: _emailController,
-                hintText: 'Enter your email',
+                hintText: 'Nhập địa chỉ email của bạn',
                 textInputType: TextInputType.emailAddress,
+                prefixIcon: Icons.email_outlined,
+                labelText: 'Địa chỉ Email',
               ),
               const SizedBox(height: 24),
               //text field input for password
               TextFieldInput(
                 textEditingController: _passwordController,
-                hintText: 'Enter your password',
+                hintText: 'Nhập mật khẩu của bạn',
                 textInputType: TextInputType.text,
                 isPass: true,
+                prefixIcon: Icons.lock_outline,
+                labelText: 'Mật khẩu',
               ),
               const SizedBox(height: 24),
               //button login
