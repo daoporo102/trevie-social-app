@@ -95,6 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final displayName = (userData['displayName'] as String?) ?? 'Loading...';
     final photoUrl = (userData['photoUrl'] as String?) ?? '';
     final bio = (userData['bio'] as String?) ?? 'Chưa có tiểu sử';
+    final dateOfBirth = (userData['dateOfBirth'] as Timestamp?)?.toDate();
     final postStream = FirebaseFirestore.instance
         .collection('posts')
         .where('uid', isEqualTo: widget.uid)
@@ -154,10 +155,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.only(top: 16),
                     child: Text(
                       displayName,
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: primaryTextColor,
+                      ),
                     ),
                   ),
-                  Container(alignment: Alignment.center, child: Text(bio)),
+                  const SizedBox(height: 8),
+                  Container(
+                    alignment: Alignment.center,
+                    child: Text('Tiểu sử: ${bio}'),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    alignment: Alignment.center,
+                    child: dateOfBirth != null
+                        ? Text(
+                            'Ngày sinh: ${dateOfBirth.day}/${dateOfBirth.month}/${dateOfBirth.year}',
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(

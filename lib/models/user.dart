@@ -5,8 +5,8 @@ class User {
   final String displayName;
   final String email;
   final String photoUrl;
-  final String bio;
-  // final DateTime dateOfBirth;
+  final String? bio;
+  final DateTime? dateOfBirth;
   final List followers;
   final List following;
 
@@ -15,8 +15,8 @@ class User {
     required this.displayName,
     required this.email,
     required this.photoUrl,
-    required this.bio,
-    // required this.dateOfBirth,
+    this.bio,
+    this.dateOfBirth,
     required this.followers,
     required this.following,
   });
@@ -25,6 +25,8 @@ class User {
     "uid": uid,
     "displayName": displayName,
     "email": email,
+    "bio": bio,
+    "dateOfBirth": dateOfBirth?.toIso8601String(),
     "photoUrl": photoUrl,
     "followers": followers,
     "following": following,
@@ -32,6 +34,14 @@ class User {
 
   static User fromSnap(DocumentSnapshot spapshot) {
     var snapshotData = spapshot.data() as Map<String, dynamic>;
+
+    // Helper function to safely convert Timestamp to DateTime
+    DateTime? parseDateOfBirth(dynamic value){
+      if(value == null) return null;
+      if(value is Timestamp) return value.toDate();
+      if(value is String) return DateTime.tryParse(value);
+      return null;
+    }
 
     return User(
       uid: snapshotData.containsKey("uid") ? snapshotData["uid"] : '',
@@ -48,9 +58,8 @@ class User {
       following: snapshotData.containsKey("following")
           ? snapshotData["following"]
           : [],
-      bio: snapshotData.containsKey("bio")
-          ? snapshotData["bio"]
-          : '',
+      bio: snapshotData.containsKey("bio") ? snapshotData["bio"] : '',
+      dateOfBirth: parseDateOfBirth(snapshotData["dateOfBirth"]),
     );
   }
 }
