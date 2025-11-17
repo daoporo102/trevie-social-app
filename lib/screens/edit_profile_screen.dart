@@ -24,7 +24,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _isLoading = false;
   final TextEditingController _displayNameController = TextEditingController();
   var _image;
-  // final TextEditingController _bioController = TextEditingController();
+  final TextEditingController _bioController = TextEditingController();
+  final TextEditingController _dateOfBirthController = TextEditingController();
+  DateTime? _dateOfBirth;
 
   @override
   void initState() {
@@ -47,11 +49,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'displayName': user.displayName,
           'email': user.email,
           'photoUrl': user.photoUrl,
-          // 'bio': user.bio,
+          'bio': user.bio,
+          'dateOfBirth': user.dateOfBirth,
         };
         _displayNameController.text = user.displayName;
-        // _bioController.text = user.bio;
+        _bioController.text = user.bio ?? '';
         _image = user.photoUrl; // Initialize with existing photo URL
+        _dateOfBirth = user.dateOfBirth; // dateOfBirth can be null
+
+        // Format and set the date of birth text only if it exists
+        if (_dateOfBirth != null) {
+          _dateOfBirthController.text =
+              '${_dateOfBirth!.day.toString().padLeft(2, '0')}/${_dateOfBirth!.month.toString().padLeft(2, '0')}/${_dateOfBirth!.year}';
+        }
         _isLoading = false;
       });
     } catch (e) {
@@ -65,6 +75,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         SnackBarType.error,
       );
       avoidPrint("Error fetching user data: $e");
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _dateOfBirth ?? DateTime(2000),
+      firstDate: DateTime(1990),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: appPrimaryColor, // header background color
+              onPrimary: onPrimaryColor, // header text color
+              onSurface: primaryTextColor, // body text color
+              surface: mobileBackgroundColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != _dateOfBirth) {
+      setState(() {
+        _dateOfBirth = picked;
+        _dateOfBirthController.text =
+            '${picked.day}/${picked.month}/${picked.year}';
+      });
     }
   }
 
@@ -100,14 +140,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return;
     }
 
-    // if (_bioController.text.length > 150) {
-    //   displaySnackBar(
-    //     'Tiểu sử không được vượt quá 150 ký tự',
-    //     context,
-    //     SnackBarType.error,
-    //   );
-    //   return;
-    // }
+    if (_bioController.text.length > 150) {
+      displaySnackBar(
+        'Tiểu sử không được vượt quá 150 ký tự',
+        context,
+        SnackBarType.error,
+      );
+      return;
+    }
+
+    if (_dateOfBirth != null) {
+      final currentDate = DateTime.now();
+      if (_dateOfBirth!.isAfter(currentDate)) {
+        displaySnackBar('Ngày sinh không hợp lệ', context, SnackBarType.error);
+        return;
+      }
+    }
 
     setState(() {
       _isLoading = true;
@@ -132,7 +180,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         uid,
         _displayNameController.text.trim(),
         fileToUpload,
-        existingUrl /*_bioController.text.trim()*/,
+        existingUrl,
+        _bioController.text.trim(),
+        _dateOfBirth,
       );
 
       if (!mounted) return; // Check if the widget is still mounted
@@ -143,7 +193,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
         if (!mounted) return;
 
-        if(fileToUpload!=null){
+        if (fileToUpload != null) {
           imageCache.clear();
           imageCache.clearLiveImages();
         }
@@ -158,7 +208,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
         clearImage();
         _displayNameController.clear();
-        // _bioController.clear();
+        _bioController.clear();
         // Navigate back to the previous screen
         Navigator.pop(context);
       } else {
@@ -196,8 +246,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     super.dispose();
     _displayNameController.dispose();
-    // _bioController.dispose();
+    _bioController.dispose();
     _image = null;
+    _dateOfBirthController.dispose();
   }
 
   @override
@@ -276,12 +327,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 prefixIcon: Icons.person_outline,
                 labelText: 'Tên hiển thị',
               ),
-              // const SizedBox(height: 24),
-              // TextFieldInput(
-              //   textEditingController: _bioController,
-              //   hintText: 'Vui lòng nhập tiểu sử',
-              //   textInputType: TextInputType.text,
-              // ),
+              const SizedBox(height: 24),
+              TextFieldInput(
+                textEditingController: _bioController,
+                hintText: 'Vui lòng nhập tiểu sử',
+                textInputType: TextInputType.text,
+                prefixIcon: Icons.person_outline,
+                labelText: 'Tiểu sử',
+              ),
+              const SizedBox(height: 24),
+              GestureDetector(
+                onTap: () => _selectDate(context),
+                child: AbsorbPointer(
+                  child: TextFieldInput(
+                    textEditingController: _dateOfBirthController,
+                    hintText: 'Vui lòng chọn ngày sinh',
+                    textInputType: TextInputType.datetime,
+                    prefixIcon: Icons.cake_outlined,
+                    labelText: 'Ngày sinh',
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               CustomInkwell(
                 title: 'Lưu',

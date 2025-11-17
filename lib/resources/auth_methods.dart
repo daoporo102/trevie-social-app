@@ -20,6 +20,8 @@ class AuthMethods {
         photoUrl: '',
         followers: [],
         following: [],
+        bio: '',
+        dateOfBirth: DateTime.now(),
       );
     }
 
@@ -35,6 +37,8 @@ class AuthMethods {
         photoUrl: currentUser.photoURL ?? '',
         followers: [],
         following: [],
+        bio: '',
+        dateOfBirth: DateTime.now(),
       );
     }
     return model.User.fromSnap(snap);
@@ -73,6 +77,8 @@ class AuthMethods {
           photoUrl: photoUrl,
           followers: [],
           following: [],
+          bio: '',
+          dateOfBirth: DateTime.now(),
         );
 
         //adding user in our database
@@ -153,11 +159,24 @@ class AuthMethods {
     String displayName,
     Uint8List? file,
     String? existingImageUrl,
-    // String? bio,
+    String? bio,
+    DateTime? dateOfBirth,
   ) async {
     String res = "Một lỗi đã xảy ra";
 
     try {
+      String? newPhotoUrl;
+      Map<String, dynamic> updateData = {'displayName': displayName};
+
+      // Add bio if provided
+      if (bio != null && bio.isNotEmpty) {
+        updateData['bio'] = bio;
+      }
+
+      // Add dateOfBirth if provided
+      if (dateOfBirth != null) {
+        updateData['dateOfBirth'] = Timestamp.fromDate(dateOfBirth);
+      }
       if (file != null) {
         // Delete the old profile picture in firestore if it exists
         if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
@@ -165,18 +184,16 @@ class AuthMethods {
         }
 
         // Upload the new profile picture
-        String newPhotoUrl = await StorageMethod().uploadImageToStorage(
+        newPhotoUrl = await StorageMethod().uploadImageToStorage(
           'profilePics',
           file,
           false,
         );
 
-        // Update the user document with the new display name, bio and photo URL
-        await _firestore.collection('users').doc(uid).update({
-          'displayName': displayName,
-          // 'bio': bio,
-          'photoUrl': newPhotoUrl,
-        });
+        updateData['photoUrl'] = newPhotoUrl;
+
+        // Update the user document with the new display name, bio, photo URL and date of birth
+        await _firestore.collection('users').doc(uid).update(updateData);
         // Update all posts with the new display name and profile image
         await _updateUserPosts(uid, displayName, newPhotoUrl);
 
@@ -184,11 +201,9 @@ class AuthMethods {
         await _updateUserComments(uid, displayName, newPhotoUrl);
         res = "success";
       } else {
-        // If no new file is provided, only update the display name
-        // on theuser document
-        await _firestore.collection('users').doc(uid).update({
-          'displayName': displayName,
-        });
+        // If no new file is provided, update the display name ,bio and date of birth
+        // on the user document
+        await _firestore.collection('users').doc(uid).update(updateData);
 
         // Update all posts with the new display name and profile image
         await _updateUserPosts(uid, displayName, null);
@@ -198,7 +213,7 @@ class AuthMethods {
         res = "success";
       }
     } catch (e) {
-      avoidPrint(e.toString());
+      avoidPrint("Error updating user profile: ${e.toString()}");
     }
     return res;
   }
@@ -287,7 +302,7 @@ Future<void> _updateUserComments(
       await batch.commit();
     }
 
-     avoidPrint("Updated $totalUpdated comments for user $uid");
+    avoidPrint("Updated $totalUpdated comments for user $uid");
   } catch (e) {
     avoidPrint("Error updating user comments: $e");
     rethrow;
