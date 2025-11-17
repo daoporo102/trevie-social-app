@@ -5,7 +5,7 @@ class User {
   final String displayName;
   final String email;
   final String photoUrl;
-  // final String bio;
+  final String bio;
   // final DateTime dateOfBirth;
   final List followers;
   final List following;
@@ -15,7 +15,7 @@ class User {
     required this.displayName,
     required this.email,
     required this.photoUrl,
-    // required this.bio,
+    required this.bio,
     // required this.dateOfBirth,
     required this.followers,
     required this.following,
@@ -48,6 +48,9 @@ class User {
       following: snapshotData.containsKey("following")
           ? snapshotData["following"]
           : [],
+      bio: snapshotData.containsKey("bio")
+          ? snapshotData["bio"]
+          : '',
     );
   }
 }

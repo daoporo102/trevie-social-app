@@ -24,7 +24,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _isLoading = false;
   final TextEditingController _displayNameController = TextEditingController();
   var _image;
-  // final TextEditingController _bioController = TextEditingController();
+  final TextEditingController _bioController = TextEditingController();
 
   @override
   void initState() {
@@ -47,10 +47,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'displayName': user.displayName,
           'email': user.email,
           'photoUrl': user.photoUrl,
-          // 'bio': user.bio,
+          'bio': user.bio,
         };
         _displayNameController.text = user.displayName;
-        // _bioController.text = user.bio;
+        _bioController.text = user.bio;
         _image = user.photoUrl; // Initialize with existing photo URL
         _isLoading = false;
       });
@@ -100,14 +100,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return;
     }
 
-    // if (_bioController.text.length > 150) {
-    //   displaySnackBar(
-    //     'Tiểu sử không được vượt quá 150 ký tự',
-    //     context,
-    //     SnackBarType.error,
-    //   );
-    //   return;
-    // }
+    if (_bioController.text.length > 150) {
+      displaySnackBar(
+        'Tiểu sử không được vượt quá 150 ký tự',
+        context,
+        SnackBarType.error,
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -132,7 +132,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         uid,
         _displayNameController.text.trim(),
         fileToUpload,
-        existingUrl /*_bioController.text.trim()*/,
+        existingUrl,
+        _bioController.text.trim(),
       );
 
       if (!mounted) return; // Check if the widget is still mounted
@@ -158,7 +159,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
         clearImage();
         _displayNameController.clear();
-        // _bioController.clear();
+        _bioController.clear();
         // Navigate back to the previous screen
         Navigator.pop(context);
       } else {
@@ -196,7 +197,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     super.dispose();
     _displayNameController.dispose();
-    // _bioController.dispose();
+    _bioController.dispose();
     _image = null;
   }
 
@@ -276,12 +277,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 prefixIcon: Icons.person_outline,
                 labelText: 'Tên hiển thị',
               ),
-              // const SizedBox(height: 24),
-              // TextFieldInput(
-              //   textEditingController: _bioController,
-              //   hintText: 'Vui lòng nhập tiểu sử',
-              //   textInputType: TextInputType.text,
-              // ),
+              const SizedBox(height: 24),
+              TextFieldInput(
+                textEditingController: _bioController,
+                hintText: 'Vui lòng nhập tiểu sử',
+                textInputType: TextInputType.text,
+                prefixIcon: Icons.person_outline,
+                labelText: 'Tiểu sử',
+              ),
               const SizedBox(height: 24),
               CustomInkwell(
                 title: 'Lưu',

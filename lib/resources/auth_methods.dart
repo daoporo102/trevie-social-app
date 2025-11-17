@@ -20,6 +20,7 @@ class AuthMethods {
         photoUrl: '',
         followers: [],
         following: [],
+        bio: '',
       );
     }
 
@@ -35,6 +36,7 @@ class AuthMethods {
         photoUrl: currentUser.photoURL ?? '',
         followers: [],
         following: [],
+        bio: '',
       );
     }
     return model.User.fromSnap(snap);
@@ -73,6 +75,7 @@ class AuthMethods {
           photoUrl: photoUrl,
           followers: [],
           following: [],
+          bio: '',
         );
 
         //adding user in our database
@@ -153,7 +156,7 @@ class AuthMethods {
     String displayName,
     Uint8List? file,
     String? existingImageUrl,
-    // String? bio,
+    String? bio,
   ) async {
     String res = "Một lỗi đã xảy ra";
 
@@ -174,7 +177,7 @@ class AuthMethods {
         // Update the user document with the new display name, bio and photo URL
         await _firestore.collection('users').doc(uid).update({
           'displayName': displayName,
-          // 'bio': bio,
+          'bio': bio,
           'photoUrl': newPhotoUrl,
         });
         // Update all posts with the new display name and profile image
@@ -184,10 +187,11 @@ class AuthMethods {
         await _updateUserComments(uid, displayName, newPhotoUrl);
         res = "success";
       } else {
-        // If no new file is provided, only update the display name
-        // on theuser document
+        // If no new file is provided, update the display name and bio only
+        // on the user document
         await _firestore.collection('users').doc(uid).update({
           'displayName': displayName,
+          'bio': bio,
         });
 
         // Update all posts with the new display name and profile image
@@ -287,7 +291,7 @@ Future<void> _updateUserComments(
       await batch.commit();
     }
 
-     avoidPrint("Updated $totalUpdated comments for user $uid");
+    avoidPrint("Updated $totalUpdated comments for user $uid");
   } catch (e) {
     avoidPrint("Error updating user comments: $e");
     rethrow;
