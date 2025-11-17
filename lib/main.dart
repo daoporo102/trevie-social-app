@@ -47,9 +47,13 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData.light().copyWith(
           scaffoldBackgroundColor: mobileBackgroundColor,
+          appBarTheme: AppBarTheme(
+            surfaceTintColor: mobileBackgroundColor.withValues(alpha: 0.95),
+            // Enable scroll effects on AppBar
+            scrolledUnderElevation: 4.0,
+          ),
         ),
         title: 'TreVie',
-        // home: ResponsiveLayout(webScreenLayout: WebScreenLayout(), mobileScreenLayout: MobileScreenLayout()),
         home: StreamBuilder(
           // Use injected stream in tests, real FirebaseAuth stream in app
           stream: authStream ?? FirebaseAuth.instance.authStateChanges(),

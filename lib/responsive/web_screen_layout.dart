@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
+import 'package:social_media_app/widgets/nav_bar_button.dart';
 
 class WebScreenLayout extends StatefulWidget {
   const WebScreenLayout({super.key});
@@ -55,55 +56,13 @@ class _WebScreenLayoutState extends State<WebScreenLayout> {
         centerTitle: false,
         title: SvgPicture.asset('assets/images/trevie.svg', height: 32),
         actions: [
-          IconButton(
-            onPressed: () => navigationTapped(0),
-            icon: Icon(
-              Icons.home,
-              color: _page == 0 ? appPrimaryColor : secondaryColor,
-            ),
-          ),
-          IconButton(
-            onPressed: () => navigationTapped(1),
-            icon: Icon(
-              Icons.search,
-              color: _page == 1 ? appPrimaryColor : secondaryColor,
-            ),
-          ),
-          IconButton(
-            onPressed: () => navigationTapped(2),
-            icon: Icon(
-              Icons.post_add,
-              color: _page == 2 ? appPrimaryColor : secondaryColor,
-            ),
-          ),
-          IconButton(
-            onPressed: () => navigationTapped(3),
-            icon: Icon(
-              Icons.messenger_outline_rounded,
-              color: _page == 3 ? appPrimaryColor : secondaryColor,
-            ),
-          ),
-          IconButton(
-            onPressed: () => navigationTapped(4),
-            icon: Icon(
-              Icons.notification_add_outlined,
-              color: _page == 4 ? appPrimaryColor : secondaryColor,
-            ),
-          ),
-          IconButton(
-            onPressed: () => navigationTapped(5),
-            icon: Icon(
-              Icons.person,
-              color: _page == 5 ? appPrimaryColor : secondaryColor,
-            ),
-          ),
-          IconButton(
-            onPressed: () => navigationTapped(6),
-            icon: Icon(
-              Icons.more_vert_outlined,
-              color: _page == 6 ? appPrimaryColor : secondaryColor,
-            ),
-          ),
+          NavBarButton(icon: Icons.home, label: 'Trang chủ', isActive: _page == 0, onPress: () => navigationTapped(0)),
+          NavBarButton(icon: Icons.search, label: 'Tìm kiếm', isActive: _page == 1, onPress: () => navigationTapped(1)),
+          NavBarButton(icon: Icons.post_add, label: 'Thêm bài viết', isActive: _page == 2, onPress: () => navigationTapped(2)),
+          NavBarButton(icon: Icons.messenger_outline_outlined, label: 'Trò chuyện', isActive: _page == 3, onPress: () => navigationTapped(3)),
+          NavBarButton(icon: Icons.notification_add_outlined, label: 'Thông báo', isActive: _page == 4, onPress: () => navigationTapped(4)),
+          NavBarButton(icon: Icons.person_outlined, label: 'Hồ sơ', isActive: _page == 5, onPress: () => navigationTapped(5)),
+          NavBarButton(icon: Icons.more_vert_outlined, label: 'Cài đặt', isActive: _page == 6, onPress: () => navigationTapped(6)),
         ],
       ),
       body: PageView(
