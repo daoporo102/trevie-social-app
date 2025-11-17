@@ -31,7 +31,17 @@ class _SearchScreenState extends State<SearchScreen> {
         backgroundColor: mobileBackgroundColor,
         title: TextFormField(
           controller: searchController,
-          decoration: const InputDecoration(labelText: 'Tìm kiếm người dùng'),
+          decoration: const InputDecoration(
+            labelText: 'Tìm kiếm người dùng',
+            hintStyle: TextStyle(color: primaryTextColor),
+            fillColor: textFieldBackgroundColor,
+            labelStyle: TextStyle(color: secondaryColor),
+            contentPadding: EdgeInsets.symmetric(
+              vertical: 14,
+              horizontal: 12,
+            ),
+          ),
+          cursorColor: appPrimaryColor,
           onFieldSubmitted: (String _) {
             setState(() {
               isShowUsers = true;
