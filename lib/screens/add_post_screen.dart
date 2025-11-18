@@ -361,19 +361,62 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        customTextButton(
-                          icon: Icons.photo_library,
-                          label: 'Ảnh',
+                        IconButton(
+                          icon: Row(
+                            children: const [
+                              Icon(
+                                Icons.image_outlined,
+                                color: primaryTextColor,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Ảnh',
+                                style: TextStyle(
+                                  color: primaryTextColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                           onPressed: () => _selectImage(context),
                         ),
-                        customTextButton(
-                          icon: Icons.videocam,
-                          label: 'Video',
+                        IconButton(
+                          icon: Row(
+                            children: const [
+                              Icon(
+                                Icons.video_camera_back_outlined,
+                                color: primaryTextColor,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Video',
+                                style: TextStyle(
+                                  color: primaryTextColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                           onPressed: () {},
                         ),
-                        customTextButton(
-                          icon: Icons.file_copy,
-                          label: 'Tài liệu',
+                        IconButton(
+                          icon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(
+                                Icons.file_open_outlined,
+                                color: primaryTextColor,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Tài liệu',
+                                style: TextStyle(
+                                  color: primaryTextColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                           onPressed: () {},
                         ),
                       ],
