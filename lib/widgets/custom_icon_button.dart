@@ -13,7 +13,8 @@ class CustomIconButton extends StatelessWidget {
     required this.icon,
     this.iconColor = primaryTextColor,
     required this.label,
-    this.labelColor = primaryTextColor, required this.onPress,
+    this.labelColor = primaryTextColor,
+    required this.onPress,
   });
 
   @override
@@ -26,7 +27,11 @@ class CustomIconButton extends StatelessWidget {
           SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(color: labelColor, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: labelColor,
+              fontWeight: FontWeight.bold,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),

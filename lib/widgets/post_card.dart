@@ -10,6 +10,7 @@ import 'package:social_media_app/screens/update_post_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_icon_button.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/like_animation.dart';
 
@@ -42,7 +43,7 @@ class _PostCardState extends State<PostCard> {
     final width = MediaQuery.of(context).size.width;
     return Container(
       color: mobileBackgroundColor,
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
@@ -53,7 +54,7 @@ class _PostCardState extends State<PostCard> {
           ),
           color: mobileBackgroundColor,
         ),
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
           children: [
             //HEADER SECTION OF THE POST
@@ -151,8 +152,7 @@ class _PostCardState extends State<PostCard> {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            UpdatePostScreen(
-                                          snap: widget.snap,),
+                                            UpdatePostScreen(snap: widget.snap),
                                       ),
                                     );
                                   },
@@ -257,105 +257,112 @@ class _PostCardState extends State<PostCard> {
             ),
 
             //LIKE, COMMENT, SHARE SECTION OF THE POST
-            Row(
-              children: [
-                // Like group (flexible)
-                Expanded(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      LikeAnimation(
-                        isAnimating: widget.snap['likes'].contains(user?.uid),
-                        smallLike: true,
-                        child: IconButton(
-                          onPressed: () async {
-                            await FirestoreMethod().likePost(
-                              widget.snap['postId'],
-                              user!.uid,
-                              widget.snap['likes'],
-                            );
-                          },
-                          icon: widget.snap['likes'].contains(user?.uid)
-                              ? const Icon(Icons.favorite, color: Colors.red)
-                              : const Icon(
-                                  Icons.favorite_border,
-                                  color: primaryTextColor,
-                                ),
-                        ),
-                      ),
-                      //NUMBER OF LIKES CAN GO HERE
-                      Flexible(
-                        child: Text(
-                          '${widget.snap['likes'].length} thích',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Comment group (flexible)
-                Expanded(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                CommentsScreen(postId: widget.snap['postId']),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  // Like group (flexible)
+                  Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        LikeAnimation(
+                          isAnimating: widget.snap['likes'].contains(user?.uid),
+                          smallLike: true,
+                          child: IconButton(
+                            onPressed: () async {
+                              await FirestoreMethod().likePost(
+                                widget.snap['postId'],
+                                user!.uid,
+                                widget.snap['likes'],
+                              );
+                            },
+                            icon: widget.snap['likes'].contains(user?.uid)
+                                ? const Icon(Icons.favorite, color: Colors.red)
+                                : const Icon(
+                                    Icons.favorite_border,
+                                    color: primaryTextColor,
+                                  ),
                           ),
                         ),
-                        icon: const Icon(Icons.comment_outlined),
-                      ),
-                      //NUMBER OF COMMENTS CAN GO HERE (live)
-                      Flexible(
-                        child:
-                            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                              stream: commentStream,
-                              builder: (context, snapshot) {
-                                final totalComments = snapshot.hasData
-                                    ? snapshot.data!.size
-                                    : 0;
-                                return Text(
-                                  '$totalComments bình luận',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                );
-                              },
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                //Share group (flexible)
-                Expanded(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      //NUMBER OF SHARES CAN GO HERE
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.share),
-                      ),
-                      Flexible(
-                        child: const Text(
-                          '9 chia sẻ',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        //NUMBER OF LIKES CAN GO HERE
+                        Flexible(
+                          child: Text(
+                            '${widget.snap['likes'].length} thích',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                  // Comment group (flexible)
+                  Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  CommentsScreen(postId: widget.snap['postId']),
+                            ),
+                          ),
+                          icon: const Icon(Icons.comment_outlined),
+                        ),
+                        //NUMBER OF COMMENTS CAN GO HERE (live)
+                        Flexible(
+                          child:
+                              StreamBuilder<
+                                QuerySnapshot<Map<String, dynamic>>
+                              >(
+                                stream: commentStream,
+                                builder: (context, snapshot) {
+                                  final totalComments = snapshot.hasData
+                                      ? snapshot.data!.size
+                                      : 0;
+                                  return Text(
+                                    '$totalComments bình luận',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  );
+                                },
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
 
-                // Bookmark stays fixed on the right
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.bookmark_border),
-                ),
-              ],
+                  //Share group (flexible)
+                  Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        //NUMBER OF SHARES CAN GO HERE
+                        IconButton(
+                          onPressed: () {},
+                          icon: const Icon(Icons.share),
+                        ),
+                        Flexible(
+                          child: const Text(
+                            '9 chia sẻ',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  CustomIconButton(
+                    icon: Icons.bookmark_border,
+                    label: 'lưu',
+                    onPress: () {},
+                  ),
+                ],
+              ),
             ),
           ],
         ),
