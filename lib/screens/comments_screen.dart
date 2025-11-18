@@ -10,6 +10,7 @@ import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/comment_card.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
+import 'package:social_media_app/widgets/custom_text_button.dart';
 
 class CommentsScreen extends StatefulWidget {
   final String postId;
@@ -24,8 +25,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   void postComment(String uid, String name, String profilePic) async {
     try {
-      String res = await FirestoreMethod().postComment(widget.postId, _commentController.text, uid, name, profilePic);
-      if(res!='success'){
+      String res = await FirestoreMethod().postComment(
+        widget.postId,
+        _commentController.text,
+        uid,
+        name,
+        profilePic,
+      );
+      if (res != 'success') {
         if (context.mounted) {
           displaySnackBar(res, context, SnackBarType.error);
         }
@@ -35,10 +42,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
       });
     } catch (e) {
       avoidPrint(e.toString());
-      displaySnackBar("Có lỗi xảy ra, vui lòng thử lại sau.", context, SnackBarType.error);
+      displaySnackBar(
+        "Có lỗi xảy ra, vui lòng thử lại sau.",
+        context,
+        SnackBarType.error,
+      );
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -81,16 +91,27 @@ class _CommentsScreenState extends State<CommentsScreen> {
               CircleAvatar(
                 backgroundColor: secondaryColor,
                 radius: 16,
-                child: user!.photoUrl.isNotEmpty? ClipOval(
-                  child: CachedNetworkImage(
-                    imageUrl:user.photoUrl,
-                  width: 32,
-                    height:32,
-                    fit:BoxFit.cover,
-                    placeholder: (context, url) => customCircularProgressIndicator(),
-                    errorWidget: (context, url, error) => const Icon(Icons.error_outline_outlined, size: 32,color:primaryTextColor),
-                  ),
-                ):const Icon(Icons.person,size:40,color:primaryTextColor)
+                child: user!.photoUrl.isNotEmpty
+                    ? ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: user.photoUrl,
+                          width: 32,
+                          height: 32,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) =>
+                              customCircularProgressIndicator(),
+                          errorWidget: (context, url, error) => const Icon(
+                            Icons.error_outline_outlined,
+                            size: 32,
+                            color: primaryTextColor,
+                          ),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person,
+                        size: 40,
+                        color: primaryTextColor,
+                      ),
               ),
               Expanded(
                 child: Padding(
@@ -104,16 +125,18 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   ),
                 ),
               ),
-                InkWell(
-                onTap: () async {
-                  postComment(user.uid, user.displayName, user.photoUrl);
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                child: CustomTextButton(
+                  backgroundColor: appPrimaryColor,
+                  overlayColor: onPrimaryColor,
+                  onPressed: () async {
+                    postComment(user.uid, user.displayName, user.photoUrl);
+                  },
                   child: const Text(
                     'Gửi',
                     style: TextStyle(
-                      color: appPrimaryColor,
+                      color: onPrimaryColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
