@@ -30,5 +30,22 @@ const primaryTextColor = Color.fromRGBO(
 const secondaryColor = Color.fromRGBO(107, 114, 128, 1); // muted slate gray
 const onPrimaryColor = Color.fromRGBO(255, 255, 255, 1); // white text color
 
-const errorBackgroundColor = Color.fromRGBO(220, 38, 38, 1); // bright red for errors
-const infoBackgroundColor = Color.fromRGBO(59, 130, 246, 1); // blue for informational messages
+const errorBackgroundColor = Color.fromRGBO(
+  220,
+  38,
+  38,
+  1,
+); // bright red for errors
+const infoBackgroundColor = Color.fromRGBO(
+  59,
+  130,
+  246,
+  1,
+); // blue for informational messages
+
+const secondaryButtonBackgroundColor = Color.fromRGBO(
+  229,
+  231,
+  235,
+  1,
+); // light gray for secondary buttons
