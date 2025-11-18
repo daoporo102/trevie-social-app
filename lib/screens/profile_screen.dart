@@ -92,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = (userData['displayName'] as String?) ?? 'Loading...';
+    final displayName = (userData['displayName'] as String?) ?? 'Đang tải...';
     final photoUrl = (userData['photoUrl'] as String?) ?? '';
     final bio = (userData['bio'] as String?) ?? 'Chưa có tiểu sử';
     final dateOfBirth = (userData['dateOfBirth'] as Timestamp?)?.toDate();
@@ -104,6 +104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final width = MediaQuery.of(context).size.width;
     return Scaffold(
+      // Hide AppBar on web, show on mobile
       appBar: width > webScreenSize
           ? null
           : AppBar(
@@ -129,6 +130,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
+                  // Add back button for Web layout
+                  if (width > webScreenSize &&
+                      FirebaseAuth.instance.currentUser!.uid != widget.uid)
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: IconButton(
+                        icon: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_back, color: primaryTextColor),
+                              SizedBox(width: 8),
+                              Text('Quay lại'),
+                            ],
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ),
                   CircleAvatar(
                     backgroundColor: secondaryColor,
                     radius: 40,
@@ -373,9 +397,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: const Center(
-                      child: Text('Bạn chưa có bài đăng nào'),
-                    ),
+                    child: const Center(child: Text('Chưa có bài đăng nào')),
                   ),
                 );
               }
