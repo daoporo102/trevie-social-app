@@ -23,36 +23,98 @@ class _SearchScreenState extends State<SearchScreen> {
     searchController.dispose();
   }
 
+  // Search Users and Posts
+  Future<Map<String, dynamic>> _searchUserAndPosts(
+    String query,
+    String? currentUid,
+  ) async {
+    // Search users
+    final usersSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .orderBy('displayName')
+        .startAt([query])
+        .endAt(['$query\uf8ff'])
+        .get();
+
+    // Filter out the current user from the results
+    final users = usersSnapshot.docs
+        .where((d) => d.data()['uid'] != currentUid)
+        .toList();
+
+    // Search posts by postText
+    final postsSnapshot = await FirebaseFirestore.instance
+        .collection('posts')
+        .orderBy('postText')
+        .startAt([query])
+        .endAt(['$query\uf8ff'])
+        .get();
+
+    return {'users': users, 'posts': postsSnapshot.docs};
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
     final width = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: mobileBackgroundColor,
-        title: TextFormField(
-          controller: searchController,
-          decoration: const InputDecoration(
-            labelText: 'Tìm kiếm người dùng hoặc bài đăng ở đây',
-            hintStyle: TextStyle(color: primaryTextColor),
-            fillColor: textFieldBackgroundColor,
-            labelStyle: TextStyle(color: secondaryColor),
-            contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-          ),
-          cursorColor: appPrimaryColor,
-          onFieldSubmitted: (String _) {
-            setState(() {
-              isShowUsers = true;
-            });
-            // avoidPrint(value);
-          },
-        ),
-      ),
+      appBar: width > webScreenSize
+          ? AppBar(
+              backgroundColor: mobileBackgroundColor,
+              title: Align(
+                alignment: Alignment.center,
+                child: SizedBox(
+                  width: width * 0.3,
+                  child: TextFormField(
+                    controller: searchController,
+                    decoration: const InputDecoration(
+                      labelText: 'Tìm kiếm người dùng hoặc bài đăng ở đây',
+                      hintStyle: TextStyle(color: primaryTextColor),
+                      fillColor: textFieldBackgroundColor,
+                      labelStyle: TextStyle(color: secondaryColor),
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 12,
+                      ),
+                    ),
+                    cursorColor: appPrimaryColor,
+                    onFieldSubmitted: (String _) {
+                      setState(() {
+                        isShowUsers = true;
+                      });
+                      // avoidPrint(value);
+                    },
+                  ),
+                ),
+              ),
+            )
+          : AppBar(
+              backgroundColor: mobileBackgroundColor,
+              title: TextFormField(
+                controller: searchController,
+                decoration: const InputDecoration(
+                  labelText: 'Tìm kiếm người dùng hoặc bài đăng ở đây',
+                  hintStyle: TextStyle(color: primaryTextColor),
+                  fillColor: textFieldBackgroundColor,
+                  labelStyle: TextStyle(color: secondaryColor),
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 12,
+                  ),
+                ),
+                cursorColor: appPrimaryColor,
+                onFieldSubmitted: (String _) {
+                  setState(() {
+                    isShowUsers = true;
+                  });
+                  // avoidPrint(value);
+                },
+              ),
+            ),
       body: isShowUsers
           ? FutureBuilder<Map<String, dynamic>>(
               // Search for users whose displayName starts with the search query
-              future: searchUserAndPosts(searchController.text, currentUid),
+              future: _searchUserAndPosts(searchController.text, currentUid),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return customCircularProgressIndicator();
@@ -81,6 +143,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // User Section
                         if (users.isNotEmpty) ...[
                           Text(
                             'Người dùng (${users.length})',
@@ -139,7 +202,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           SizedBox(height: 16),
                         ],
 
-                        // Post Section
+                        // Post Section with StreamBuilder for real-time update
                         if (posts.isNotEmpty) ...[
                           Text(
                             'Bài đăng (${posts.length})',
@@ -150,17 +213,23 @@ class _SearchScreenState extends State<SearchScreen> {
                             ),
                           ),
                           SizedBox(height: 12),
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: posts.length,
-                            itemBuilder: (context, index) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: PostCard(snap: posts[index]),
-                              );
-                            },
-                          ),
+                          ...posts.map((postDoc) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: StreamBuilder<DocumentSnapshot>(
+                                stream: FirebaseFirestore.instance
+                                    .collection('posts')
+                                    .doc(postDoc.id)
+                                    .snapshots(),
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData) {
+                                    return PostCard(snap: postDoc);
+                                  }
+                                  return PostCard(snap: snapshot.data!);
+                                },
+                              ),
+                            );
+                          }),
                         ],
                       ],
                     ),
@@ -186,34 +255,5 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
     );
-  }
-
-  // Search Users and Posts
-  Future<Map<String, dynamic>> searchUserAndPosts(
-    String query,
-    String? currentUid,
-  ) async {
-    // Search users
-    final usersSnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .orderBy('displayName')
-        .startAt([query])
-        .endAt(['$query\uf8ff'])
-        .get();
-
-    // Filter out the current user from the results
-    final users = usersSnapshot.docs
-        .where((d) => d.data()['uid'] != currentUid)
-        .toList();
-
-    // Search posts by postText
-    final postsSnapshot = await FirebaseFirestore.instance
-        .collection('posts')
-        .orderBy('postText')
-        .startAt([query])
-        .endAt(['$query\uf8ff'])
-        .get();
-
-    return {'users': users, 'posts': postsSnapshot.docs};
   }
 }
