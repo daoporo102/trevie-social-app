@@ -82,7 +82,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       if (mounted) {
-        displaySnackBar(e.toString(), context, SnackBarType.error);
+        displaySnackBar(
+          "Có lỗi xảy ra, vui lòng thử lại sau",
+          context,
+          SnackBarType.error,
+        );
+        avoidPrint("Error to Display Profile Screen ${e.toString()}");
       }
       setState(() {
         _isLoading = false;
@@ -99,7 +104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final postStream = FirebaseFirestore.instance
         .collection('posts')
         .where('uid', isEqualTo: widget.uid)
-        .orderBy('datePublished', descending: true)
+        .orderBy('dateUpdated', descending: true)
         .snapshots();
 
     final width = MediaQuery.of(context).size.width;

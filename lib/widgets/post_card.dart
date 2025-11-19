@@ -86,7 +86,26 @@ class _PostCardState extends State<PostCard> {
                               ),
                               Text(
                                 DateFormat.yMMMd().format(
-                                  widget.snap['datePublished'].toDate(),
+                                  widget.snap.data().containsKey(
+                                            'dateUpdated',
+                                          ) &&
+                                          widget.snap.data().containsKey(
+                                                'dateUpdated',
+                                              ) !=
+                                              null
+                                      ? (widget.snap['dateUpdated'] is Timestamp
+                                            ? widget.snap['dateUpdated']
+                                                  .toDate()
+                                            : DateTime.parse(
+                                                widget.snap['dateUpdated'],
+                                              ))
+                                      : (widget.snap['datePublished']
+                                                is Timestamp
+                                            ? widget.snap['datePublished']
+                                                  .toDate()
+                                            : DateTime.parse(
+                                                widget.snap['datePublished'],
+                                              )),
                                 ),
                                 style: TextStyle(
                                   color: secondaryColor,

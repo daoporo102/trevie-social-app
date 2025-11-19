@@ -13,7 +13,7 @@ class FeedScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final postStream = FirebaseFirestore.instance
         .collection('posts')
-        .orderBy('datePublished', descending: true)
+        .orderBy('dateUpdated', descending: true)
         .snapshots();
 
     final width = MediaQuery.of(context).size.width;

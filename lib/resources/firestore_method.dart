@@ -26,16 +26,19 @@ class FirestoreMethod {
       );
       // creates unique id based on time
       String postId = const Uuid().v1();
+      // get current time
+      final now = DateTime.now();
 
       Post post = Post(
         postId: postId,
         uid: uid,
         postText: postText,
         postUrl: photoUrl,
-        datePublished: DateTime.now(),
+        datePublished: now,
         likes: [],
         displayName: displayName,
         profImage: profImage,
+        dateUpdated: now,
       );
 
       _firestore.collection('posts').doc(postId).set(post.toJson());
@@ -176,6 +179,11 @@ class FirestoreMethod {
   ) async {
     String res = "Một lỗi đã xảy ra";
     try {
+      final now = DateTime.now();
+      Map<String, dynamic> updateData = {
+        'postText': postText,
+        'dateUpdated': now.toIso8601String()
+      };
       if (file != null) {
         // Delete the old image from storage if it exists
         if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
@@ -189,16 +197,16 @@ class FirestoreMethod {
           true,
         );
 
-        // Update the post document with the new image URL and text
-        await _firestore.collection('posts').doc(postId).update({
-          'postUrl': newPhotoUrl,
-          'postText': postText,
-        });
+        // Add the new photo Url to updateData
+        updateData['postUrl'] = newPhotoUrl;
+
+        // Update the post document with the new image URL, text and date
+        await _firestore.collection('posts').doc(postId).update(updateData);
+
+        res = 'success';
       } else {
         // If no new file is provided, just update the text
-        await _firestore.collection('posts').doc(postId).update({
-          'postText': postText,
-        });
+        await _firestore.collection('posts').doc(postId).update(updateData);
       }
       res = 'success';
     } catch (e) {
