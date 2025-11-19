@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:social_media_app/models/post.dart';
 import 'package:social_media_app/resources/storage_method.dart';
@@ -26,16 +27,19 @@ class FirestoreMethod {
       );
       // creates unique id based on time
       String postId = const Uuid().v1();
+      // get current time
+      final now = DateTime.now();
 
       Post post = Post(
         postId: postId,
         uid: uid,
         postText: postText,
         postUrl: photoUrl,
-        datePublished: DateTime.now(),
+        datePublished: now,
         likes: [],
         displayName: displayName,
         profImage: profImage,
+        dateUpdated: now,
       );
 
       _firestore.collection('posts').doc(postId).set(post.toJson());
@@ -106,7 +110,8 @@ class FirestoreMethod {
   }
 
   //Deleting post
-  Future<void> deletePost(String postId) async {
+  Future<String> deletePost(String postId, String uid) async {
+    String res = "Một lỗi đã xảy ra";
     try {
       // Get the post document to retrieve the postUrl
       DocumentSnapshot postDoc = await _firestore
@@ -114,22 +119,34 @@ class FirestoreMethod {
           .doc(postId)
           .get();
 
-      // Check if the document exists
-      if (postDoc.exists) {
-        String postUrl = (postDoc.data() as Map<String, dynamic>)['postUrl'];
+      final userUid = FirebaseAuth.instance.currentUser?.uid;
+      if (userUid == postDoc['uid']) {
+        // Check if the document exists
+        if (postDoc.exists && postDoc.data() != null) {
+          String postUrl = (postDoc.data() as Map<String, dynamic>)['postUrl'];
 
-        // Delete post collection in Firestore database
-        await _firestore.collection('posts').doc(postId).delete();
+          // Delete post collection in Firestore database
+          await _firestore.collection('posts').doc(postId).delete();
 
-        // Delete post's image in storage if it exists
-        if (postUrl.isNotEmpty) {
-          await StorageMethod().deleteImageFromStorage(postUrl);
+          // Delete post's image in storage if it exists
+          if (postUrl.isNotEmpty) {
+            await StorageMethod().deleteImageFromStorage(postUrl);
+          }
+
+          res = 'success';
+          return res;
         }
+      } else {
+        res = 'Bạn không có quyền xoá bài viết này!';
+        avoidPrint(res);
+        return res;
       }
     } catch (e) {
-      avoidPrint(e.toString());
+      avoidPrint("Error in deletePost: ${e.toString()}");
       rethrow;
     }
+
+    return res;
   }
 
   Future<void> followUser(String uid, String followId) async {
@@ -176,6 +193,11 @@ class FirestoreMethod {
   ) async {
     String res = "Một lỗi đã xảy ra";
     try {
+      final now = DateTime.now();
+      Map<String, dynamic> updateData = {
+        'postText': postText,
+        'dateUpdated': now.toIso8601String(),
+      };
       if (file != null) {
         // Delete the old image from storage if it exists
         if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
@@ -189,16 +211,16 @@ class FirestoreMethod {
           true,
         );
 
-        // Update the post document with the new image URL and text
-        await _firestore.collection('posts').doc(postId).update({
-          'postUrl': newPhotoUrl,
-          'postText': postText,
-        });
+        // Add the new photo Url to updateData
+        updateData['postUrl'] = newPhotoUrl;
+
+        // Update the post document with the new image URL, text and date
+        await _firestore.collection('posts').doc(postId).update(updateData);
+
+        res = 'success';
       } else {
         // If no new file is provided, just update the text
-        await _firestore.collection('posts').doc(postId).update({
-          'postText': postText,
-        });
+        await _firestore.collection('posts').doc(postId).update(updateData);
       }
       res = 'success';
     } catch (e) {
