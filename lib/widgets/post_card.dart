@@ -31,6 +31,41 @@ class _PostCardState extends State<PostCard> {
     // getComments();
   }
 
+  Future<void> _deletePost(BuildContext context) async {
+    try {
+      final User? user = Provider.of<UserProvider>(
+        context,
+        listen: false,
+      ).getUserrOrNull;
+      String res = await FirestoreMethod().deletePost(
+        widget.snap['postId'],
+        user!.uid,
+      );
+      if (context.mounted && res == 'success') {
+        Navigator.of(context).pop();
+        displaySnackBar(
+          'Đã xóa bài viết thành công',
+          context,
+          SnackBarType.success,
+        );
+      } else {
+        if (context.mounted) {
+          Navigator.of(context).pop();
+          displaySnackBar(res, context, SnackBarType.error);
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        avoidPrint("Error to delete post: ${e.toString()}");
+        displaySnackBar(
+          "Xóa bài viết thất bại, vui lòng thử lại sau",
+          context,
+          SnackBarType.error,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final User? user = Provider.of<UserProvider>(context).getUserrOrNull;
@@ -126,56 +161,52 @@ class _PostCardState extends State<PostCard> {
                                   : mobileBackgroundColor,
                               title: const Text('Tùy chọn'),
                               children: [
-                                SimpleDialogOption(
-                                  padding: const EdgeInsets.all(16),
-                                  child: const Text(
-                                    'Xóa bài viết',
-                                    style: TextStyle(color: primaryTextColor),
-                                  ),
-                                  onPressed: () async {
-                                    try {
-                                      await FirestoreMethod().deletePost(
-                                        widget.snap['postId'],
+                                if (user!.uid == widget.snap['uid']) ...[
+                                  SimpleDialogOption(
+                                    padding: const EdgeInsets.all(16),
+                                    child: const Text(
+                                      'Chỉnh sửa bài viết',
+                                      style: TextStyle(color: primaryTextColor),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              UpdatePostScreen(
+                                                snap: widget.snap,
+                                              ),
+                                        ),
                                       );
-                                      if (context.mounted) {
-                                        Navigator.of(context).pop();
-                                        displaySnackBar(
-                                          'Đã xóa bài viết thành công',
-                                          context,
-                                          SnackBarType.success,
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        avoidPrint(
-                                          "Error to delete post: ${e.toString()}",
-                                        );
-                                        displaySnackBar(
-                                          "Xóa bài viết thất bại, vui lòng thử lại sau",
-                                          context,
-                                          SnackBarType.error,
-                                        );
-                                      }
-                                    }
-                                  },
-                                ),
-                                SimpleDialogOption(
-                                  padding: const EdgeInsets.all(16),
-                                  child: const Text(
-                                    'Chỉnh sửa bài viết',
-                                    style: TextStyle(color: primaryTextColor),
+                                    },
                                   ),
-                                  onPressed: () {
-                                    // Navigate to update post screen
-                                    Navigator.of(context).pop();
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            UpdatePostScreen(snap: widget.snap),
-                                      ),
-                                    );
-                                  },
-                                ),
+                                  SimpleDialogOption(
+                                    padding: const EdgeInsets.all(16),
+                                    child: const Text(
+                                      'Xóa bài viết',
+                                      style: TextStyle(color: primaryTextColor),
+                                    ),
+                                    onPressed: () {
+                                      _deletePost(context);
+                                    },
+                                  ),
+                                ] else ...[
+                                  SimpleDialogOption(
+                                    padding: const EdgeInsets.all(16),
+                                    child: const Text(
+                                      'Báo cáo bài viết',
+                                      style: TextStyle(color: primaryTextColor),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      displaySnackBar(
+                                        'Tính năng sẽ được phát triển trong thời gian tới',
+                                        context,
+                                        SnackBarType.info,
+                                      );
+                                    },
+                                  ),
+                                ],
                                 SimpleDialogOption(
                                   padding: const EdgeInsets.all(16),
                                   child: const Text(
