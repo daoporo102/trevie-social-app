@@ -38,41 +38,6 @@ List<Widget> homeWebScreenItems() {
   ];
 }
 
-Widget customTextButton({
-  required IconData icon,
-  required String label,
-  required VoidCallback onPressed,
-}) {
-  return TextButton(
-    onHover: (value) => {
-      // You can add hover effects
-      if (value)
-        {
-          // Mouse is hovering
-        }
-      else
-        {
-          // Mouse is not hovering
-        },
-    },
-    onPressed: onPressed,
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: primaryTextColor),
-        SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: primaryTextColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
 Widget customCircularProgressIndicator() {
   return Center(
     child: CircularProgressIndicator(

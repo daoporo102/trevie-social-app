@@ -56,8 +56,4 @@ macos/Runner/GoogleService-Info.plist
 ios/firebase_app_id_file.json
 macos/firebase_app_id_file.json
 
-# edit some custom widgets
-lib/widgets/text_button_custom.dart
-lib/widgets/custom_button.dart
-
 firebase.json

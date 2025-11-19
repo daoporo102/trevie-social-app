@@ -4,6 +4,7 @@ import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/screens/add_post_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
+import 'package:social_media_app/widgets/custom_text_button.dart';
 
 class ComposePostCard extends StatelessWidget {
   const ComposePostCard({super.key});
@@ -44,46 +45,15 @@ class ComposePostCard extends StatelessWidget {
                 CircleAvatar(backgroundImage: NetworkImage(user.photoUrl)),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: TextButton(
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.resolveWith((
-                        states,
-                      ) {
-                        if (states.contains(WidgetState.pressed)) {
-                          return textFieldBackgroundColor.withValues(
-                            alpha: 0.85,
-                          );
-                        }
-                        if (states.contains(WidgetState.hovered)) {
-                          return textFieldBackgroundColor.withValues(
-                            alpha: 0.95,
-                          );
-                        }
-                        return textFieldBackgroundColor;
-                      }),
-                      foregroundColor: WidgetStateProperty.all(
-                        primaryTextColor,
-                      ),
-                      overlayColor: WidgetStateProperty.resolveWith((states) {
-                        if (states.contains(WidgetState.hovered) ||
-                            states.contains(WidgetState.pressed)) {
-                          return appPrimaryColor.withValues(alpha: 0.08);
-                        }
-                        return Colors.transparent;
-                      }),
-                      shape: WidgetStateProperty.all(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      padding: WidgetStateProperty.all(
-                        const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 16,
-                        ),
-                      ),
-                    ),
+                  child: CustomTextButton(
                     onPressed: () => _goToCreatePost(context),
+                    backgroundColor: textFieldBackgroundColor,
+                    overlayColor: appPrimaryColor,
+                    borderRadius: BorderRadius.circular(16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
                     child: Row(
                       children: const [
                         Icon(

@@ -52,6 +52,35 @@ class MyApp extends StatelessWidget {
             // Enable scroll effects on AppBar
             scrolledUnderElevation: 4.0,
           ),
+          iconButtonTheme: IconButtonThemeData(
+            style: ButtonStyle(
+              overlayColor: WidgetStateProperty.resolveWith<Color?>((
+                Set<WidgetState> states,
+              ) {
+                if (states.contains(WidgetState.pressed)) {
+                  return appPrimaryColor.withValues(alpha: 0.18);
+                }
+                if (states.contains(WidgetState.hovered)) {
+                  return appPrimaryColor.withValues(alpha: 0.08);
+                }
+                if (states.contains(WidgetState.focused)) {
+                  return appPrimaryColor.withValues(alpha: 0.15);
+                }
+                return null;
+              }),
+              backgroundColor: WidgetStateProperty.resolveWith<Color?>((
+                Set<WidgetState> states,
+              ) {
+                if (states.contains(WidgetState.pressed)) {
+                  return textFieldBackgroundColor.withValues(alpha: 0.85);
+                }
+                if (states.contains(WidgetState.hovered)) {
+                  return textFieldBackgroundColor.withValues(alpha: 0.95);
+                }
+                return null;
+              }),
+            ),
+          ),
         ),
         title: 'TreVie',
         home: StreamBuilder(

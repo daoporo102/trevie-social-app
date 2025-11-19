@@ -47,9 +47,9 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
       bottomNavigationBar: CupertinoTheme(
         data: CupertinoThemeData(
           textTheme: CupertinoTextThemeData(
-            tabLabelTextStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            tabLabelTextStyle: Theme.of(
+              context,
+            ).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         child: CupertinoTabBar(
@@ -63,7 +63,7 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
                 Icons.home,
                 color: _page == 0 ? appPrimaryColor : secondaryColor,
               ),
-              label: 'Home',
+              label: 'Trang chủ',
               backgroundColor: mobileBackgroundColor,
             ),
             BottomNavigationBarItem(
@@ -71,7 +71,7 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
                 Icons.search,
                 color: _page == 1 ? appPrimaryColor : secondaryColor,
               ),
-              label: 'Search',
+              label: 'Tìm kiếm',
               backgroundColor: mobileBackgroundColor,
             ),
             BottomNavigationBarItem(
@@ -79,7 +79,7 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
                 Icons.post_add,
                 color: _page == 2 ? appPrimaryColor : secondaryColor,
               ),
-              label: 'Post',
+              label: 'Bài viết',
               backgroundColor: mobileBackgroundColor,
             ),
             BottomNavigationBarItem(
@@ -87,7 +87,7 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
                 Icons.notification_add_outlined,
                 color: _page == 3 ? appPrimaryColor : secondaryColor,
               ),
-              label: 'Notifications',
+              label: 'Thông báo',
               backgroundColor: mobileBackgroundColor,
             ),
             BottomNavigationBarItem(
@@ -95,7 +95,7 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
                 Icons.person,
                 color: _page == 4 ? appPrimaryColor : secondaryColor,
               ),
-              label: 'Profile',
+              label: 'Hồ sơ',
               backgroundColor: mobileBackgroundColor,
             ),
             BottomNavigationBarItem(
@@ -103,7 +103,7 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
                 Icons.person,
                 color: _page == 5 ? appPrimaryColor : secondaryColor,
               ),
-              label: 'More',
+              label: 'Thêm',
               backgroundColor: mobileBackgroundColor,
             ),
           ],

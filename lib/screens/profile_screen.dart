@@ -10,7 +10,7 @@ import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
-import 'package:social_media_app/widgets/follow_button.dart';
+import 'package:social_media_app/widgets/custom_text_button.dart';
 import 'package:social_media_app/widgets/post_card.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -92,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = (userData['displayName'] as String?) ?? 'Loading...';
+    final displayName = (userData['displayName'] as String?) ?? 'Đang tải...';
     final photoUrl = (userData['photoUrl'] as String?) ?? '';
     final bio = (userData['bio'] as String?) ?? 'Chưa có tiểu sử';
     final dateOfBirth = (userData['dateOfBirth'] as Timestamp?)?.toDate();
@@ -104,6 +104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final width = MediaQuery.of(context).size.width;
     return Scaffold(
+      // Hide AppBar on web, show on mobile
       appBar: width > webScreenSize
           ? null
           : AppBar(
@@ -129,6 +130,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
+                  // Add back button for Web layout
+                  if (width > webScreenSize &&
+                      FirebaseAuth.instance.currentUser!.uid != widget.uid)
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: IconButton(
+                        icon: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_back, color: primaryTextColor),
+                              SizedBox(width: 8),
+                              Text('Quay lại'),
+                            ],
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ),
                   CircleAvatar(
                     backgroundColor: secondaryColor,
                     radius: 40,
@@ -165,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 8),
                   Container(
                     alignment: Alignment.center,
-                    child: Text('Tiểu sử: ${bio}'),
+                    child: Text('Tiểu sử: $bio'),
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -203,12 +227,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Widget btn;
                                 if (FirebaseAuth.instance.currentUser!.uid ==
                                     widget.uid) {
-                                  btn = FollowButton(
-                                    backgroundColor: mobileBackgroundColor,
-                                    borderColor: secondaryColor,
-                                    text: 'Chỉnh sửa hồ sơ',
-                                    textColor: primaryTextColor,
-                                    function: () async {
+                                  btn = CustomTextButton(
+                                    backgroundColor:
+                                        secondaryButtonBackgroundColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                    overlayColor: appPrimaryColor,
+                                    onPressed: () async {
                                       // Wait for edit screen to close before refreshing
                                       await Navigator.of(context).push(
                                         MaterialPageRoute(
@@ -225,14 +249,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ).refreshUser();
                                       }
                                     },
+                                    child: Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+
+                                        children: [
+                                          Icon(
+                                            Icons.edit_outlined,
+                                            color: primaryTextColor,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Chỉnh sửa hồ sơ',
+                                            style: TextStyle(
+                                              color: primaryTextColor,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   );
                                 } else if (isFollowing) {
-                                  btn = FollowButton(
-                                    backgroundColor: mobileBackgroundColor,
-                                    borderColor: secondaryColor,
-                                    text: 'Huỷ theo dõi',
-                                    textColor: primaryTextColor,
-                                    function: () async {
+                                  btn = CustomTextButton(
+                                    onPressed: () async {
                                       //unfollow user
                                       await FirestoreMethod().followUser(
                                         FirebaseAuth.instance.currentUser!.uid,
@@ -244,25 +285,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         followers--;
                                       });
                                     },
+                                    child: Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.person_remove_alt_1_outlined,
+                                            color: primaryTextColor,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Huỷ theo dõi',
+                                            style: TextStyle(
+                                              color: primaryTextColor,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   );
                                 } else {
-                                  btn = FollowButton(
-                                    backgroundColor: mobileBackgroundColor,
-                                    borderColor: appPrimaryColor,
-                                    text: 'Theo dõi',
-                                    textColor: appPrimaryColor,
-                                    function: () async {
+                                  btn = CustomTextButton(
+                                    backgroundColor: appPrimaryColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                    overlayColor: onPrimaryColor,
+                                    onPressed: () async {
                                       //follow user
                                       await FirestoreMethod().followUser(
                                         FirebaseAuth.instance.currentUser!.uid,
                                         userData['uid'],
                                       );
-
                                       setState(() {
                                         isFollowing = true;
                                         followers++;
                                       });
                                     },
+                                    child: Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.person_add_alt_1_outlined,
+                                            color: onPrimaryColor,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Theo dõi',
+                                            style: TextStyle(
+                                              color: onPrimaryColor,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   );
                                 }
                                 return Align(
@@ -318,9 +397,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: const Center(
-                      child: Text('Bạn chưa có bài đăng nào'),
-                    ),
+                    child: const Center(child: Text('Chưa có bài đăng nào')),
                   ),
                 );
               }

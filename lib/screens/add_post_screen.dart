@@ -10,7 +10,9 @@ import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_icon_button.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
+import 'package:social_media_app/widgets/custom_text_button.dart';
 
 class AddPostScreen extends StatefulWidget {
   const AddPostScreen({super.key});
@@ -235,13 +237,15 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   const Spacer(), // Push title to center
                   Text('Tạo bài đăng'),
                   const Spacer(),
-                  TextButton(
+                  CustomTextButton(
+                    backgroundColor: appPrimaryColor,
+                    overlayColor: onPrimaryColor,
                     onPressed: () =>
                         postImage(user.uid, user.displayName, user.photoUrl),
                     child: const Text(
                       'Đăng bài',
                       style: TextStyle(
-                        color: appPrimaryColor,
+                        color: onPrimaryColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -255,15 +259,20 @@ class _AddPostScreenState extends State<AddPostScreen> {
         actions: width > webScreenSize
             ? null
             : [
-                TextButton(
-                  onPressed: () =>
-                      postImage(user.uid, user.displayName, user.photoUrl),
-                  child: const Text(
-                    'Đăng bài',
-                    style: TextStyle(
-                      color: appPrimaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0, right: 16.0),
+                  child: CustomTextButton(
+                    backgroundColor: appPrimaryColor,
+                    overlayColor: onPrimaryColor,
+                    onPressed: () =>
+                        postImage(user.uid, user.displayName, user.photoUrl),
+                    child: const Text(
+                      'Đăng bài',
+                      style: TextStyle(
+                        color: onPrimaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -353,20 +362,20 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        customTextButton(
-                          icon: Icons.photo_library,
+                        CustomIconButton(
+                          icon: Icons.image_outlined,
                           label: 'Ảnh',
-                          onPressed: () => _selectImage(context),
+                          onPress: () => _selectImage(context),
                         ),
-                        customTextButton(
-                          icon: Icons.videocam,
+                        CustomIconButton(
+                          icon: Icons.video_camera_back_outlined,
                           label: 'Video',
-                          onPressed: () {},
+                          onPress: () {},
                         ),
-                        customTextButton(
-                          icon: Icons.file_copy,
+                        CustomIconButton(
+                          icon: Icons.file_open_outlined,
                           label: 'Tài liệu',
-                          onPressed: () {},
+                          onPress: () {},
                         ),
                       ],
                     )

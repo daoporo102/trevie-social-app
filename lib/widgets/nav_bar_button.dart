@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/widgets/custom_text_button.dart';
 
 class NavBarButton extends StatelessWidget {
   final IconData icon;
@@ -16,48 +17,16 @@ class NavBarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
+    return CustomTextButton(
       onPressed: onPress,
-      style: ButtonStyle(
-        padding: WidgetStateProperty.all(
-          const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        ),
-        backgroundColor: WidgetStateProperty.resolveWith<Color>((
-          Set<WidgetState> states,
-        ) {
-          if (states.contains(WidgetState.hovered)) {
-            return isActive
-                ? webBackgroundColor.withValues(alpha: 0.85)
-                : mobileBackgroundColor.withValues(alpha: 0.85);
-          }
-          return isActive ? webBackgroundColor : mobileBackgroundColor;
-        }),
-        overlayColor: WidgetStateProperty.resolveWith<Color?>((
-          Set<WidgetState> states,
-        ) {
-          if (states.contains(WidgetState.hovered)) {
-            return isActive
-                ? appPrimaryColor.withValues(alpha: 0.08)
-                : secondaryColor.withValues(alpha: 0.08);
-          }
-          if (states.contains(WidgetState.pressed)) {
-            return isActive
-                ? appPrimaryColor.withValues(alpha: 0.18)
-                : secondaryColor.withValues(alpha: 0.18);
-          }
-          if (states.contains(WidgetState.focused)) {
-            return isActive
-                ? appPrimaryColor.withValues(alpha: 0.15)
-                : secondaryColor.withValues(alpha: 0.15);
-          }
-          return null;
-        }),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        minimumSize: WidgetStateProperty.all(const Size(60, 48)),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      backgroundColor: isActive? webBackgroundColor:mobileBackgroundColor,
+      overlayColor: isActive? appPrimaryColor:secondaryColor,
+      padding: const EdgeInsets.symmetric(
+        vertical: 8,
+        horizontal: 12,
       ),
+      borderRadius: BorderRadius.circular(8),
+      minimumSize: const Size(60, 48),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
