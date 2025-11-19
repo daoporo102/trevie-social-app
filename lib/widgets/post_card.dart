@@ -66,12 +66,26 @@ class _PostCardState extends State<PostCard> {
     }
   }
 
+  // Helper to safely get data from snap (handles both DocumentSnapshot and Map)
+  Map<String, dynamic> _getSnapData() {
+    if (widget.snap is DocumentSnapshot) {
+      return (widget.snap as DocumentSnapshot).data() as Map<String, dynamic>;
+    } else if (widget.snap is Map<String, dynamic>) {
+      return widget.snap as Map<String, dynamic>;
+    } else {
+      throw Exception('Unsupported snap type');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final User? user = Provider.of<UserProvider>(context).getUserrOrNull;
+
+    final snapData = _getSnapData();
+
     final commentStream = FirebaseFirestore.instance
         .collection('posts')
-        .doc(widget.snap['postId'])
+        .doc(snapData['postId'])
         .collection('comments')
         .snapshots();
 
@@ -104,7 +118,7 @@ class _PostCardState extends State<PostCard> {
                     children: [
                       CircleAvatar(
                         radius: 16,
-                        backgroundImage: NetworkImage(widget.snap['profImage']),
+                        backgroundImage: NetworkImage(snapData['profImage']),
                       ),
                       Expanded(
                         child: Padding(
@@ -114,32 +128,23 @@ class _PostCardState extends State<PostCard> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                widget.snap['displayName'],
+                                snapData['displayName'],
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               Text(
                                 DateFormat.yMMMd().format(
-                                  widget.snap.data().containsKey(
-                                            'dateUpdated',
-                                          ) &&
-                                          widget.snap.data().containsKey(
-                                                'dateUpdated',
-                                              ) !=
-                                              null
-                                      ? (widget.snap['dateUpdated'] is Timestamp
-                                            ? widget.snap['dateUpdated']
-                                                  .toDate()
+                                  snapData.containsKey('dateUpdated')
+                                      ? (snapData['dateUpdated'] is Timestamp
+                                            ? snapData['dateUpdated'].toDate()
                                             : DateTime.parse(
-                                                widget.snap['dateUpdated'],
+                                                snapData['dateUpdated'],
                                               ))
-                                      : (widget.snap['datePublished']
-                                                is Timestamp
-                                            ? widget.snap['datePublished']
-                                                  .toDate()
+                                      : (snapData['datePublished'] is Timestamp
+                                            ? snapData['datePublished'].toDate()
                                             : DateTime.parse(
-                                                widget.snap['datePublished'],
+                                                snapData['datePublished'],
                                               )),
                                 ),
                                 style: TextStyle(
@@ -161,7 +166,7 @@ class _PostCardState extends State<PostCard> {
                                   : mobileBackgroundColor,
                               title: const Text('Tùy chọn'),
                               children: [
-                                if (user!.uid == widget.snap['uid']) ...[
+                                if (user!.uid == snapData['uid']) ...[
                                   SimpleDialogOption(
                                     padding: const EdgeInsets.all(16),
                                     child: const Text(
@@ -173,9 +178,7 @@ class _PostCardState extends State<PostCard> {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
                                           builder: (context) =>
-                                              UpdatePostScreen(
-                                                snap: widget.snap,
-                                              ),
+                                              UpdatePostScreen(snap: snapData),
                                         ),
                                       );
                                     },
@@ -230,7 +233,7 @@ class _PostCardState extends State<PostCard> {
                     children: [
                       Expanded(
                         child: Text(
-                          widget.snap['postText'],
+                          snapData['postText'],
                           style: TextStyle(color: primaryTextColor),
                         ),
                       ),
@@ -256,7 +259,7 @@ class _PostCardState extends State<PostCard> {
                             Navigator.of(context).pop();
                           },
                           child: Image.network(
-                            widget.snap['postUrl'] ?? '',
+                            snapData['postUrl'] ?? '',
                             fit: BoxFit.contain,
                           ),
                         ),
@@ -267,9 +270,9 @@ class _PostCardState extends State<PostCard> {
               },
               onDoubleTap: () async {
                 await FirestoreMethod().likePost(
-                  widget.snap['postId'],
+                  snapData['postId'],
                   user!.uid,
-                  widget.snap['likes'],
+                  snapData['likes'],
                 );
                 setState(() {
                   isLikeAnimating = true;
@@ -283,7 +286,7 @@ class _PostCardState extends State<PostCard> {
                     width: double.infinity,
                     child: Image.network(
                       //check if disconnect network
-                      widget.snap['postUrl'] ?? '',
+                      snapData['postUrl'] ?? '',
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -317,17 +320,19 @@ class _PostCardState extends State<PostCard> {
                       mainAxisSize: MainAxisSize.max,
                       children: [
                         LikeAnimation(
-                          isAnimating: widget.snap['likes'].contains(user?.uid),
+                          isAnimating: (snapData['likes'] as List).contains(
+                            user?.uid,
+                          ),
                           smallLike: true,
                           child: IconButton(
                             onPressed: () async {
                               await FirestoreMethod().likePost(
-                                widget.snap['postId'],
-                                user!.uid,
-                                widget.snap['likes'],
+                                snapData['postId'],
+                                user.uid,
+                                snapData['likes'],
                               );
                             },
-                            icon: widget.snap['likes'].contains(user?.uid)
+                            icon: snapData['likes'].contains(user!.uid)
                                 ? const Icon(Icons.favorite, color: Colors.red)
                                 : const Icon(
                                     Icons.favorite_border,
@@ -338,7 +343,7 @@ class _PostCardState extends State<PostCard> {
                         //NUMBER OF LIKES CAN GO HERE
                         Flexible(
                           child: Text(
-                            '${widget.snap['likes'].length} thích',
+                            '${(snapData['likes'] as List).length} thích',
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
@@ -355,7 +360,7 @@ class _PostCardState extends State<PostCard> {
                           onPressed: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (context) =>
-                                  CommentsScreen(postId: widget.snap['postId']),
+                                  CommentsScreen(postId: snapData['postId']),
                             ),
                           ),
                           icon: const Icon(Icons.comment_outlined),
