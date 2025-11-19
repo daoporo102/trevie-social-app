@@ -194,7 +194,7 @@ class FirestoreMethod {
           'postUrl': newPhotoUrl,
           'postText': postText,
         });
-      }else{
+      } else {
         // If no new file is provided, just update the text
         await _firestore.collection('posts').doc(postId).update({
           'postText': postText,
