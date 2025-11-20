@@ -23,7 +23,12 @@ class CommentsScreen extends StatefulWidget {
 class _CommentsScreenState extends State<CommentsScreen> {
   final TextEditingController _commentController = TextEditingController();
 
-  void postComment(String uid, String name, String profilePic) async {
+  void postComment(
+    String uid,
+    String name,
+    String profilePic,
+    BuildContext context,
+  ) async {
     try {
       String res = await FirestoreMethod().postComment(
         widget.postId,
@@ -42,11 +47,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
       });
     } catch (e) {
       avoidPrint(e.toString());
-      displaySnackBar(
-        "Có lỗi xảy ra, vui lòng thử lại sau.",
-        context,
-        SnackBarType.error,
-      );
+      if (context.mounted) {
+        displaySnackBar(
+          "Có lỗi xảy ra, vui lòng thử lại sau.",
+          context,
+          SnackBarType.error,
+        );
+      }
     }
   }
 
@@ -131,7 +138,12 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   backgroundColor: appPrimaryColor,
                   overlayColor: onPrimaryColor,
                   onPressed: () async {
-                    postComment(user.uid, user.displayName, user.photoUrl);
+                    postComment(
+                      user.uid,
+                      user.displayName,
+                      user.photoUrl,
+                      context,
+                    );
                   },
                   child: const Text(
                     'Gửi',
