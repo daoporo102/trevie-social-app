@@ -42,10 +42,3 @@ const infoBackgroundColor = Color.fromRGBO(
   246,
   1,
 ); // blue for informational messages
-
-const secondaryButtonBackgroundColor = Color.fromRGBO(
-  229,
-  231,
-  235,
-  1,
-); // light gray for secondary buttons

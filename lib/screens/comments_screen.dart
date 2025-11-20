@@ -10,7 +10,7 @@ import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/comment_card.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
-import 'package:social_media_app/widgets/custom_text_button.dart';
+import 'package:social_media_app/widgets/custom_button.dart';
 
 class CommentsScreen extends StatefulWidget {
   final String postId;
@@ -53,38 +53,54 @@ class _CommentsScreenState extends State<CommentsScreen> {
   @override
   Widget build(BuildContext context) {
     final User? user = Provider.of<UserProvider>(context).getUserrOrNull;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: mobileBackgroundColor,
-        title: const Text('Bình luận'),
-        centerTitle: false,
-      ),
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance
-            .collection('posts')
-            .doc(widget.postId)
-            .collection('comments')
-            .orderBy('datePublished', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return customCircularProgressIndicator();
-          }
+    final width = MediaQuery.of(context).size.width;
 
-          return ListView.builder(
-            itemBuilder: (context, index) => CommentCard(
-              snap: (snapshot.data! as dynamic).docs[index].data(),
+    return Scaffold(
+      appBar: width > webScreenSize
+          ? null
+          : AppBar(
+              backgroundColor: mobileBackgroundColor,
+              title: const Text('Bình luận'),
+              centerTitle: false,
             ),
-            itemCount: (snapshot.data! as dynamic).docs.length,
-          );
-        },
+      body: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: width > webScreenSize ? width * 0.3 : 0,
+          vertical: 0,
+        ),
+        child: StreamBuilder(
+          stream: FirebaseFirestore.instance
+              .collection('posts')
+              .doc(widget.postId)
+              .collection('comments')
+              .orderBy('datePublished', descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return customCircularProgressIndicator();
+            }
+
+            return ListView.builder(
+              itemBuilder: (context, index) => CommentCard(
+                snap: (snapshot.data! as dynamic).docs[index].data(),
+              ),
+              itemCount: (snapshot.data! as dynamic).docs.length,
+            );
+          },
+        ),
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
           height: kToolbarHeight,
-          margin: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
+          margin:
+              EdgeInsets.symmetric(
+                // horizontal for WEB/MOBILE
+                horizontal: width > webScreenSize ? width * 0.3 : 0,
+                vertical: 0,
+              ).copyWith(
+                // Handle vertical (Bottom) to avoid virtual keyboard covering widget
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
           padding: const EdgeInsets.only(left: 16, right: 8),
           child: Row(
             children: [
@@ -127,9 +143,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                child: CustomTextButton(
-                  backgroundColor: appPrimaryColor,
-                  overlayColor: onPrimaryColor,
+                child: CustomButton(
                   onPressed: () async {
                     postComment(user.uid, user.displayName, user.photoUrl);
                   },

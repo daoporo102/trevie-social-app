@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:social_media_app/utils/colors.dart';
 
-class CustomTextButton extends StatelessWidget {
+class CustomButton extends StatelessWidget {
   final VoidCallback onPressed;
   final Widget child;
   final Color? backgroundColor;
@@ -12,19 +12,23 @@ class CustomTextButton extends StatelessWidget {
   final BorderRadius? borderRadius;
   final Size? minimumSize;
   final double? elevation;
+  final double? borderWidth;
+  final Color? borderColor;
 
-  const CustomTextButton({
+  const CustomButton({
     super.key,
     required this.onPressed,
     required this.child,
-    this.backgroundColor,
+    this.backgroundColor = appPrimaryColor,
     this.hoverColor,
-    this.overlayColor,
+    this.overlayColor = onPrimaryColor,
     this.padding,
     this.borderRadius,
     this.minimumSize,
     this.elevation,
     this.pressColor,
+    this.borderWidth,
+    this.borderColor = secondaryColor,
   });
 
   @override
@@ -54,37 +58,32 @@ class CustomTextButton extends StatelessWidget {
         ) {
           if (states.contains(WidgetState.pressed)) {
             return overlayColor?.withValues(alpha: 0.18) ??
-                (appPrimaryColor).withValues(
-                  alpha: 0.18,
-                );
+                (appPrimaryColor).withValues(alpha: 0.18);
           }
           if (states.contains(WidgetState.hovered)) {
             return overlayColor?.withValues(alpha: 0.08) ??
-                (appPrimaryColor).withValues(
-                  alpha: 0.08,
-                );
+                (appPrimaryColor).withValues(alpha: 0.08);
           }
           if (states.contains(WidgetState.focused)) {
             return overlayColor?.withValues(alpha: 0.15) ??
-                (appPrimaryColor).withValues(
-                  alpha: 0.15,
-                );
+                (appPrimaryColor).withValues(alpha: 0.15);
           }
           return null;
         }),
-        padding: WidgetStateProperty.all(padding??
-            const EdgeInsets.symmetric(
-              vertical: 12,
-              horizontal: 16,
-            )),
+        padding: WidgetStateProperty.all(
+          padding ?? const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        ),
         shape: WidgetStateProperty.all(
           RoundedRectangleBorder(
             borderRadius: borderRadius ?? BorderRadius.circular(8),
           ),
         ),
         minimumSize: WidgetStateProperty.all(minimumSize),
-        elevation: WidgetStateProperty.all(elevation??0),
+        elevation: WidgetStateProperty.all(elevation ?? 0),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        side: WidgetStateProperty.all(
+          BorderSide(color: secondaryColor, width: borderWidth ?? 0),
+        ),
       ),
       child: child,
     );
