@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:social_media_app/utils/colors.dart';
-import 'package:social_media_app/widgets/custom_text_button.dart';
+import 'package:social_media_app/widgets/custom_button.dart';
 
 class NavBarButton extends StatelessWidget {
   final IconData icon;
@@ -17,14 +17,11 @@ class NavBarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomTextButton(
+    return CustomButton(
       onPressed: onPress,
-      backgroundColor: isActive? webBackgroundColor:mobileBackgroundColor,
-      overlayColor: isActive? appPrimaryColor:secondaryColor,
-      padding: const EdgeInsets.symmetric(
-        vertical: 8,
-        horizontal: 12,
-      ),
+      backgroundColor: isActive ? webBackgroundColor : mobileBackgroundColor,
+      overlayColor: isActive ? appPrimaryColor : secondaryColor,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       borderRadius: BorderRadius.circular(8),
       minimumSize: const Size(60, 48),
       child: Column(
