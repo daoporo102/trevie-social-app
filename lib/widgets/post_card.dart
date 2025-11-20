@@ -10,7 +10,7 @@ import 'package:social_media_app/screens/update_post_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
-import 'package:social_media_app/widgets/custom_icon_button.dart';
+
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/like_animation.dart';
 
@@ -37,12 +37,32 @@ class _PostCardState extends State<PostCard> {
         context,
         listen: false,
       ).getUserrOrNull;
+
+      if (user == null) {
+        if (context.mounted) {
+          Navigator.of(context).pop();
+          displaySnackBar(
+            'Không tìm thấy thông tin người dùng',
+            context,
+            SnackBarType.error,
+          );
+        }
+        return;
+      }
+
+      // Get snapData
+      final snapData = _getSnapData();
+
       String res = await FirestoreMethod().deletePost(
-        widget.snap['postId'],
-        user!.uid,
+        snapData['postId'],
+        user.uid,
       );
+
+      if (!context.mounted) return; // Check before any UI operation
+
+      Navigator.of(context).pop(); // Close the dialog first
+
       if (context.mounted && res == 'success') {
-        Navigator.of(context).pop();
         displaySnackBar(
           'Đã xóa bài viết thành công',
           context,
@@ -57,6 +77,11 @@ class _PostCardState extends State<PostCard> {
     } catch (e) {
       if (context.mounted) {
         avoidPrint("Error to delete post: ${e.toString()}");
+
+        if (!context.mounted) return; // Check before UI operation
+
+        Navigator.of(context).pop(); // Close dialog if still open
+
         displaySnackBar(
           "Xóa bài viết thất bại, vui lòng thử lại sau",
           context,
@@ -189,8 +214,8 @@ class _PostCardState extends State<PostCard> {
                                       'Xóa bài viết',
                                       style: TextStyle(color: primaryTextColor),
                                     ),
-                                    onPressed: () {
-                                      _deletePost(context);
+                                    onPressed: () async {
+                                      await _deletePost(context);
                                     },
                                   ),
                                 ] else ...[
@@ -234,7 +259,10 @@ class _PostCardState extends State<PostCard> {
                       Expanded(
                         child: Text(
                           snapData['postText'],
-                          style: TextStyle(color: primaryTextColor),
+                          style: TextStyle(
+                            color: primaryTextColor,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ],
@@ -269,11 +297,15 @@ class _PostCardState extends State<PostCard> {
                 );
               },
               onDoubleTap: () async {
+                if (!mounted) return; // Add this check
+
                 await FirestoreMethod().likePost(
                   snapData['postId'],
                   user!.uid,
                   snapData['likes'],
                 );
+
+                if (!mounted) return; // Check again before setState
                 setState(() {
                   isLikeAnimating = true;
                 });
@@ -353,40 +385,48 @@ class _PostCardState extends State<PostCard> {
                   ),
                   // Comment group (flexible)
                   Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  CommentsScreen(postId: snapData['postId']),
-                            ),
-                          ),
-                          icon: const Icon(Icons.comment_outlined),
-                        ),
-                        //NUMBER OF COMMENTS CAN GO HERE (live)
-                        Flexible(
-                          child:
-                              StreamBuilder<
-                                QuerySnapshot<Map<String, dynamic>>
-                              >(
-                                stream: commentStream,
-                                builder: (context, snapshot) {
-                                  final totalComments = snapshot.hasData
-                                      ? snapshot.data!.size
-                                      : 0;
-                                  return Text(
-                                    '$totalComments bình luận',
+                    child: StreamBuilder(
+                      stream: commentStream,
+                      builder:
+                          (
+                            context,
+                            AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>
+                            snapshot,
+                          ) {
+                            int commentCount = 0;
+                            if (snapshot.hasData) {
+                              commentCount = snapshot.data!.docs.length;
+                            }
+                            return Row(
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
+                                IconButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => CommentsScreen(
+                                          postId: snapData['postId'],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.comment_outlined,
+                                    color: primaryTextColor,
+                                  ),
+                                ),
+                                Flexible(
+                                  child: Text(
+                                    '$commentCount bình luận',
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
-                                  );
-                                },
-                              ),
-                        ),
-                      ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                     ),
                   ),
 
@@ -411,10 +451,10 @@ class _PostCardState extends State<PostCard> {
                     ),
                   ),
 
-                  CustomIconButton(
-                    icon: Icons.bookmark_border,
-                    label: 'lưu',
-                    onPress: () {},
+                  // Bookmark group (flexible)
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.bookmark_border),
                   ),
                 ],
               ),

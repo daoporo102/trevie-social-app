@@ -4,7 +4,7 @@ import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/screens/add_post_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
-import 'package:social_media_app/widgets/custom_text_button.dart';
+import 'package:social_media_app/widgets/custom_button.dart';
 
 class ComposePostCard extends StatelessWidget {
   const ComposePostCard({super.key});
@@ -45,7 +45,7 @@ class ComposePostCard extends StatelessWidget {
                 CircleAvatar(backgroundImage: NetworkImage(user.photoUrl)),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: CustomTextButton(
+                  child: CustomButton(
                     onPressed: () => _goToCreatePost(context),
                     backgroundColor: textFieldBackgroundColor,
                     overlayColor: appPrimaryColor,

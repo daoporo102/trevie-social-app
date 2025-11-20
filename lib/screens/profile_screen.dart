@@ -10,7 +10,7 @@ import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
-import 'package:social_media_app/widgets/custom_text_button.dart';
+import 'package:social_media_app/widgets/custom_button.dart';
 import 'package:social_media_app/widgets/post_card.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -232,9 +232,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Widget btn;
                                 if (FirebaseAuth.instance.currentUser!.uid ==
                                     widget.uid) {
-                                  btn = CustomTextButton(
-                                    backgroundColor:
-                                        secondaryButtonBackgroundColor,
+                                  btn = CustomButton(
+                                    backgroundColor: width > webScreenSize
+                                        ? webBackgroundColor
+                                        : mobileBackgroundColor,
                                     borderRadius: BorderRadius.circular(8),
                                     overlayColor: appPrimaryColor,
                                     onPressed: () async {
@@ -277,7 +278,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   );
                                 } else if (isFollowing) {
-                                  btn = CustomTextButton(
+                                  btn = CustomButton(
+                                    backgroundColor: width > webScreenSize
+                                        ? webBackgroundColor
+                                        : mobileBackgroundColor,
+                                    overlayColor: appPrimaryColor,
                                     onPressed: () async {
                                       //unfollow user
                                       await FirestoreMethod().followUser(
@@ -312,10 +317,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   );
                                 } else {
-                                  btn = CustomTextButton(
-                                    backgroundColor: appPrimaryColor,
+                                  btn = CustomButton(
                                     borderRadius: BorderRadius.circular(8),
-                                    overlayColor: onPrimaryColor,
                                     onPressed: () async {
                                       //follow user
                                       await FirestoreMethod().followUser(

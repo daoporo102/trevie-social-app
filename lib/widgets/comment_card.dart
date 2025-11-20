@@ -21,19 +21,27 @@ class _CommentCardState extends State<CommentCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius:16,
+            radius: 16,
             backgroundColor: secondaryColor,
-            child: (widget.snap['profilePic'] !=null && widget.snap['profilePic'].toString().isNotEmpty)?
-            ClipOval(
-              child: CachedNetworkImage(
-                imageUrl: widget.snap['profilePic'],
-                width: 40,
-                height: 40,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => customCircularProgressIndicator(),
-                errorWidget: (context, url, error) => Icon(Icons.error_outline_outlined, size: 16, color: primaryTextColor),
-              ),
-            ):const Icon(Icons.person,size:16,color:primaryTextColor,)
+            child:
+                (widget.snap['profilePic'] != null &&
+                    widget.snap['profilePic'].toString().isNotEmpty)
+                ? ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: widget.snap['profilePic'],
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          customCircularProgressIndicator(),
+                      errorWidget: (context, url, error) => Icon(
+                        Icons.error_outline_outlined,
+                        size: 16,
+                        color: primaryTextColor,
+                      ),
+                    ),
+                  )
+                : const Icon(Icons.person, size: 16, color: primaryTextColor),
           ),
           Expanded(
             child: Padding(
@@ -69,27 +77,58 @@ class _CommentCardState extends State<CommentCard> {
                     padding: const EdgeInsets.only(top: 4.0),
                     child: Row(
                       children: [
-                        Text(
-                          ' ${widget.snap['text']}',
-                          style: TextStyle(fontWeight: FontWeight.normal),
+                        Expanded(
+                          child: Text(
+                            ' ${widget.snap['text']}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.normal,
+                              fontSize: 16,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 8,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+                    padding: const EdgeInsets.only(left: 4.0, top: 4.0),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.favorite_border,
-                          size: 16,
-                          color: secondaryColor,
+                        IconButton(
+                          onPressed: () {},
+                          icon: Icon(
+                            Icons.favorite_border,
+                            size: 16,
+                            color: secondaryColor,
+                          ),
                         ),
-                        SizedBox(width: 16),
-                        Text(
-                          'Phản hồi',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                        SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            '0 thích',
+                            style: TextStyle(
+                              color: secondaryColor,
+                              fontSize: 12,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () {},
+                          icon: Icon(
+                            Icons.reply,
+                            size: 16,
+                            color: secondaryColor,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () {},
+                          icon: Icon(
+                            Icons.more_horiz,
+                            size: 16,
                             color: secondaryColor,
                           ),
                         ),
