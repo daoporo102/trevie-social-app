@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
+import 'package:social_media_app/widgets/custom_bottom_sheet_button.dart';
+import 'package:social_media_app/widgets/custom_icon_button.dart';
 
 class CommentCard extends StatefulWidget {
   final snap;
@@ -124,12 +126,37 @@ class _CommentCardState extends State<CommentCard> {
                           ),
                         ),
                         SizedBox(width: 8),
-                        IconButton(
-                          onPressed: () {},
-                          icon: Icon(
+                        CustomBottomSheetButton(
+                          childCustomButton: Icon(
                             Icons.more_horiz,
                             size: 16,
                             color: secondaryColor,
+                          ),
+                          childModalBottomSheet: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CustomIconButton(
+                                text: 'Xoá bình luận',
+                                icon: Icons.delete_outlined,
+                                onPress: () {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                              CustomIconButton(
+                                text: 'Báo cáo bình luận',
+                                icon: Icons.report_outlined,
+                                onPress: () {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                              CustomIconButton(
+                                text: 'Huỷ',
+                                icon: Icons.cancel_outlined,
+                                onPress: () {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       ],
