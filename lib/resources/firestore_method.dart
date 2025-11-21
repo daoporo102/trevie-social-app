@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 class FirestoreMethod {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final userUid = FirebaseAuth.instance.currentUser?.uid;
 
   //upload post
   Future<String> uploadPost(
@@ -109,6 +110,46 @@ class FirestoreMethod {
     return res;
   }
 
+  // Deleting comment
+  Future<String> deleteComment(
+      String postId, String commentId, String uid) async {
+    String res = "Một lỗi đã xảy ra";
+    try {
+      // Get the comment document
+      DocumentSnapshot commentDoc = await _firestore
+          .collection('posts')
+          .doc(postId)
+          .collection('comments')
+          .doc(commentId)
+          .get();
+
+      if (userUid == commentDoc['uid']) {
+        // Check if the document exists
+        if (commentDoc.exists) {
+          // Delete comment from Firestore database
+          await _firestore
+              .collection('posts')
+              .doc(postId)
+              .collection('comments')
+              .doc(commentId)
+              .delete();
+
+          res = 'success';
+          return res;
+        }
+      } else {
+        res = 'Bạn không có quyền xoá bình luận này!';
+        avoidPrint(res);
+        return res;
+      }
+    } catch (e) {
+      avoidPrint("Error in deleteComment: ${e.toString()}");
+      rethrow;
+    }
+
+    return res;
+  }
+
   //Deleting post
   Future<String> deletePost(String postId, String uid) async {
     String res = "Một lỗi đã xảy ra";
@@ -119,7 +160,6 @@ class FirestoreMethod {
           .doc(postId)
           .get();
 
-      final userUid = FirebaseAuth.instance.currentUser?.uid;
       if (userUid == postDoc['uid']) {
         // Check if the document exists
         if (postDoc.exists && postDoc.data() != null) {
