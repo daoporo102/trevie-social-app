@@ -112,7 +112,7 @@ class FirestoreMethod {
 
   // Deleting comment
   Future<String> deleteComment(
-      String postId, String commentId, String uid) async {
+      String postId, String commentId) async {
     String res = "Một lỗi đã xảy ra";
     try {
       // Get the comment document
@@ -151,7 +151,7 @@ class FirestoreMethod {
   }
 
   //Deleting post
-  Future<String> deletePost(String postId, String uid) async {
+  Future<String> deletePost(String postId) async {
     String res = "Một lỗi đã xảy ra";
     try {
       // Get the post document to retrieve the postUrl

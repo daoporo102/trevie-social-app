@@ -53,10 +53,7 @@ class _PostCardState extends State<PostCard> {
       // Get snapData
       final snapData = _getSnapData();
 
-      String res = await FirestoreMethod().deletePost(
-        snapData['postId'],
-        user.uid,
-      );
+      String res = await FirestoreMethod().deletePost(snapData['postId']);
 
       if (!context.mounted) return; // Check before any UI operation
 
