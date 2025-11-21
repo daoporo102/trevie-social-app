@@ -111,8 +111,7 @@ class FirestoreMethod {
   }
 
   // Deleting comment
-  Future<String> deleteComment(
-      String postId, String commentId) async {
+  Future<String> deleteComment(String postId, String commentId) async {
     String res = "Một lỗi đã xảy ra";
     try {
       // Get the comment document
@@ -125,7 +124,7 @@ class FirestoreMethod {
 
       if (userUid == commentDoc['uid']) {
         // Check if the document exists
-        if (commentDoc.exists) {
+        if (commentDoc.exists && commentDoc.data() != null) {
           // Delete comment from Firestore database
           await _firestore
               .collection('posts')
@@ -136,6 +135,10 @@ class FirestoreMethod {
 
           res = 'success';
           return res;
+        } else {
+          res = 'Bình luận không tồn tại!';
+          avoidPrint(res);
+          return res;
         }
       } else {
         res = 'Bạn không có quyền xoá bình luận này!';
@@ -144,9 +147,8 @@ class FirestoreMethod {
       }
     } catch (e) {
       avoidPrint("Error in deleteComment: ${e.toString()}");
-      rethrow;
+      res = 'Đã xảy ra lỗi khi xoá bình luận';
     }
-
     return res;
   }
 
