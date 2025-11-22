@@ -9,6 +9,7 @@ import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/custom_bottom_sheet_button.dart';
+import 'package:social_media_app/widgets/custom_button.dart';
 import 'package:social_media_app/widgets/custom_icon_button.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
 
@@ -77,6 +78,92 @@ class _CommentCardState extends State<CommentCard> {
         );
       }
     }
+  }
+
+  Future<void> _showEditCommentInput(BuildContext context) async {
+    TextEditingController commentController = TextEditingController(
+      text: widget.snap['commentText'],
+    );
+
+    showModalBottomSheet(
+      useSafeArea: true,
+      backgroundColor: mobileBackgroundColor,
+      // Dim the background less or change color
+      barrierColor: primaryTextColor.withValues(alpha: 0.5),
+      context: context,
+      // // push sheet up when keyboard opens
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16.0,
+            right: 16.0,
+            top: 16.0,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              TextField(
+                controller: commentController,
+                // Allow multiple lines
+                maxLines: null,
+                // autoFocus the input field when dialog opens
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Chỉnh sửa bình luận',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('Huỷ', style: TextStyle(color: secondaryColor)),
+                  ),
+                  CustomButton(
+                    onPressed: () async {
+                      String newCommentText = commentController.text.trim();
+                      if (newCommentText.isNotEmpty) {
+                        await FirestoreMethod().updateComment(
+                          widget.postId,
+                          widget.snap['commentId'],
+                          newCommentText,
+                        );
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                          displaySnackBar(
+                            'Đã cập nhật bình luận',
+                            context,
+                            SnackBarType.success,
+                          );
+                          commentController.clear();
+                        }
+                      } else {
+                        if (context.mounted) {
+                          displaySnackBar(
+                            'Bình luận không được để trống',
+                            context,
+                            SnackBarType.error,
+                          );
+                        }
+                      }
+                    },
+                    child: Text('Lưu', style: TextStyle(color: onPrimaryColor)),
+                  ),
+                  SizedBox(height: 16),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -212,7 +299,10 @@ class _CommentCardState extends State<CommentCard> {
                                 CustomIconButton(
                                   text: 'Chỉnh sửa bình luận',
                                   icon: Icons.edit_outlined,
-                                  onPress: () {},
+                                  onPress: () async {
+                                    Navigator.of(context).pop();
+                                    await _showEditCommentInput(context);
+                                  },
                                 ),
                               ] else ...[
                                 CustomIconButton(
