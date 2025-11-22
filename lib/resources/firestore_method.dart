@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:social_media_app/models/comment.dart';
 import 'package:social_media_app/models/post.dart';
 import 'package:social_media_app/resources/storage_method.dart';
 import 'package:social_media_app/utils/utils.dart';
@@ -8,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 class FirestoreMethod {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final userUid = FirebaseAuth.instance.currentUser?.uid;
 
   //upload post
   Future<String> uploadPost(
@@ -51,6 +53,51 @@ class FirestoreMethod {
     return res;
   }
 
+  //update post
+  Future<String> updatePost(
+    String postId,
+    String postText,
+    Uint8List? file,
+    String? existingImageUrl,
+  ) async {
+    String res = "Một lỗi đã xảy ra";
+    try {
+      final now = DateTime.now();
+      Map<String, dynamic> updateData = {
+        'postText': postText,
+        'dateUpdated': Timestamp.fromDate(now),
+      };
+      if (file != null) {
+        // Delete the old image from storage if it exists
+        if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
+          await StorageMethod().deleteImageFromStorage(existingImageUrl);
+        }
+
+        // Upload the new image to storage
+        String newPhotoUrl = await StorageMethod().uploadImageToStorage(
+          'posts',
+          file,
+          true,
+        );
+
+        // Add the new photo Url to updateData
+        updateData['postUrl'] = newPhotoUrl;
+
+        // Update the post document with the new image URL, text and date
+        await _firestore.collection('posts').doc(postId).update(updateData);
+
+        res = 'success';
+      } else {
+        // If no new file is provided, just update the text
+        await _firestore.collection('posts').doc(postId).update(updateData);
+      }
+      res = 'success';
+    } catch (e) {
+      avoidPrint(e.toString());
+    }
+    return res;
+  }
+
   //like post
   Future<void> likePost(String postId, String uid, List likes) async {
     try {
@@ -82,22 +129,31 @@ class FirestoreMethod {
     String profilePic,
   ) async {
     String res = "Một lỗi đã xảy ra";
+    // get current time
+    final now = DateTime.now();
     try {
       if (text.isNotEmpty) {
         String commentId = const Uuid().v1();
+        
+        // Create Comment object
+        Comment comment = Comment(
+          uid: uid,
+          commentId: commentId,
+          name: name,
+          commentText: text,
+          profilePic: profilePic,
+          datePublished: now,
+          dateUpdated: now,
+        );
+
+        // Add comment to Firestore database
         await _firestore
             .collection('posts')
             .doc(postId)
             .collection('comments')
             .doc(commentId)
-            .set({
-              'profilePic': profilePic,
-              'name': name,
-              'uid': uid,
-              'text': text,
-              'commentId': commentId,
-              'datePublished': DateTime.now(),
-            });
+            .set(comment.toJson());
+
         res = 'success';
       } else {
         res = "Vui lòng nhập bình luận";
@@ -109,8 +165,50 @@ class FirestoreMethod {
     return res;
   }
 
+  // Deleting comment
+  Future<String> deleteComment(String postId, String commentId) async {
+    String res = "Một lỗi đã xảy ra";
+    try {
+      // Get the comment document
+      DocumentSnapshot commentDoc = await _firestore
+          .collection('posts')
+          .doc(postId)
+          .collection('comments')
+          .doc(commentId)
+          .get();
+
+      if (userUid == commentDoc['uid']) {
+        // Check if the document exists
+        if (commentDoc.exists && commentDoc.data() != null) {
+          // Delete comment from Firestore database
+          await _firestore
+              .collection('posts')
+              .doc(postId)
+              .collection('comments')
+              .doc(commentId)
+              .delete();
+
+          res = 'success';
+          return res;
+        } else {
+          res = 'Bình luận không tồn tại!';
+          avoidPrint(res);
+          return res;
+        }
+      } else {
+        res = 'Bạn không có quyền xoá bình luận này!';
+        avoidPrint(res);
+        return res;
+      }
+    } catch (e) {
+      avoidPrint("Error in deleteComment: ${e.toString()}");
+      res = 'Đã xảy ra lỗi khi xoá bình luận';
+    }
+    return res;
+  }
+
   //Deleting post
-  Future<String> deletePost(String postId, String uid) async {
+  Future<String> deletePost(String postId) async {
     String res = "Một lỗi đã xảy ra";
     try {
       // Get the post document to retrieve the postUrl
@@ -119,7 +217,6 @@ class FirestoreMethod {
           .doc(postId)
           .get();
 
-      final userUid = FirebaseAuth.instance.currentUser?.uid;
       if (userUid == postDoc['uid']) {
         // Check if the document exists
         if (postDoc.exists && postDoc.data() != null) {
@@ -146,6 +243,39 @@ class FirestoreMethod {
       rethrow;
     }
 
+    return res;
+  }
+
+  // Delete comment
+  Future<String> updateComment(
+    String postId,
+    String commentId,
+    String commentText,
+  ) async {
+    String res = "Một lỗi đã xảy ra";
+    try {
+      final now = DateTime.now();
+      Map<String, dynamic> updateData = {
+        'commentText': commentText,
+        'dateUpdated': Timestamp.fromDate(now),
+      };
+
+        if (commentText.isNotEmpty) {
+        // Update the comment document with the new text and date
+        await _firestore
+            .collection('posts')
+            .doc(postId)
+            .collection('comments')
+            .doc(commentId)
+            .update(updateData);   
+        } else {
+          res = "Vui lòng nhập bình luận";
+          return res;
+        }
+      res = 'success';
+    } catch (e) {
+      avoidPrint(e.toString());
+    }
     return res;
   }
 
@@ -184,48 +314,4 @@ class FirestoreMethod {
     }
   }
 
-  //update post
-  Future<String> updatePost(
-    String postId,
-    String postText,
-    Uint8List? file,
-    String? existingImageUrl,
-  ) async {
-    String res = "Một lỗi đã xảy ra";
-    try {
-      final now = DateTime.now();
-      Map<String, dynamic> updateData = {
-        'postText': postText,
-        'dateUpdated': now.toIso8601String(),
-      };
-      if (file != null) {
-        // Delete the old image from storage if it exists
-        if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
-          await StorageMethod().deleteImageFromStorage(existingImageUrl);
-        }
-
-        // Upload the new image to storage
-        String newPhotoUrl = await StorageMethod().uploadImageToStorage(
-          'posts',
-          file,
-          true,
-        );
-
-        // Add the new photo Url to updateData
-        updateData['postUrl'] = newPhotoUrl;
-
-        // Update the post document with the new image URL, text and date
-        await _firestore.collection('posts').doc(postId).update(updateData);
-
-        res = 'success';
-      } else {
-        // If no new file is provided, just update the text
-        await _firestore.collection('posts').doc(postId).update(updateData);
-      }
-      res = 'success';
-    } catch (e) {
-      avoidPrint(e.toString());
-    }
-    return res;
-  }
 }

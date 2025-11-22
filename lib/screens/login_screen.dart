@@ -40,9 +40,16 @@ class _LoginScreenState extends State<LoginScreen> {
       email: _emailController.text,
       password: _passwordController.text,
     );
+
+    // Check if widget is still mounted before using context
+  if (!mounted) return;
+
     if (res == "success") {
       //refresh provider so UI updates immediately
       Provider.of<UserProvider>(context, listen: false).refreshUser();
+
+      if (!mounted) return; // Check again after async operation
+
       displaySnackBar('Đăng nhập thành công', context, SnackBarType.success);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -55,9 +62,12 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       displaySnackBar(res, context, SnackBarType.error);
     }
-    setState(() {
+    
+    if(mounted){
+      setState(() {
       _isLoading = false;
     });
+    }
   }
 
   void navigateToSignUpScreen(BuildContext context) {

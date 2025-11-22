@@ -23,7 +23,12 @@ class CommentsScreen extends StatefulWidget {
 class _CommentsScreenState extends State<CommentsScreen> {
   final TextEditingController _commentController = TextEditingController();
 
-  void postComment(String uid, String name, String profilePic) async {
+  void postComment(
+    String uid,
+    String name,
+    String profilePic,
+    BuildContext context,
+  ) async {
     try {
       String res = await FirestoreMethod().postComment(
         widget.postId,
@@ -42,11 +47,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
       });
     } catch (e) {
       avoidPrint(e.toString());
-      displaySnackBar(
-        "Có lỗi xảy ra, vui lòng thử lại sau.",
-        context,
-        SnackBarType.error,
-      );
+      if (context.mounted) {
+        displaySnackBar(
+          "Có lỗi xảy ra, vui lòng thử lại sau.",
+          context,
+          SnackBarType.error,
+        );
+      }
     }
   }
 
@@ -73,7 +80,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
               .collection('posts')
               .doc(widget.postId)
               .collection('comments')
-              .orderBy('datePublished', descending: true)
+              .orderBy('dateUpdated', descending: true)
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -83,6 +90,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             return ListView.builder(
               itemBuilder: (context, index) => CommentCard(
                 snap: (snapshot.data! as dynamic).docs[index].data(),
+                postId: widget.postId,
               ),
               itemCount: (snapshot.data! as dynamic).docs.length,
             );
@@ -145,7 +153,12 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                 child: CustomButton(
                   onPressed: () async {
-                    postComment(user.uid, user.displayName, user.photoUrl);
+                    postComment(
+                      user.uid,
+                      user.displayName,
+                      user.photoUrl,
+                      context,
+                    );
                   },
                   child: const Text(
                     'Gửi',
