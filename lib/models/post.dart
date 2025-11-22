@@ -29,10 +29,10 @@ class Post {
     "postText": postText,
     "postUrl": postUrl,
     "profImage": profImage,
-    "datePublished": datePublished.toIso8601String(),
+    "datePublished": 	Timestamp.fromDate(datePublished),
     "likes": likes,
     "displayName": displayName,
-    "dateUpdated": dateUpdated?.toIso8601String(),
+    "dateUpdated": Timestamp.fromDate(dateUpdated!) ,
   };
 
   static Post fromSnap(DocumentSnapshot snapshot) {
@@ -51,27 +51,15 @@ class Post {
     }
 
     return Post(
-      postId: snapshotData.containsKey("postId") ? snapshotData['postId'] : '',
-      uid: snapshotData.containsKey("uid") ? snapshotData['uid'] : '',
-      postText: snapshotData.containsKey("postText")
-          ? snapshotData['postText']
-          : '',
-      postUrl: snapshotData.containsKey("postUrl")
-          ? snapshotData['postUrl']
-          : '',
-      profImage: snapshotData.containsKey("profImage")
-          ? snapshotData['profImage']
-          : '',
-      datePublished: snapshotData.containsKey("datePublished")
-          ? parseDateField(snapshotData['datePublished']) ?? DateTime.now()
-          : DateTime.now(),
-      likes: snapshotData.containsKey("likes") ? snapshotData['likes'] : 0,
-      displayName: snapshotData.containsKey("displayName")
-          ? snapshotData['displayName']
-          : '',
-      dateUpdated: snapshotData.containsKey("dateUpdated")
-          ? parseDateField(snapshotData['dateUpdated'])
-          : null,
+      postId: snapshotData['postId'] ?? '',
+      uid: snapshotData['uid'] ?? '',
+      postText: snapshotData['postText'] ?? '',
+      postUrl: snapshotData['postUrl'] ?? '',
+      profImage: snapshotData['profImage'] ?? '',
+      datePublished: parseDateField(snapshotData['datePublished']) ?? DateTime.now(),
+      likes: snapshotData['likes'] ?? [],
+      displayName: snapshotData['displayName'] ?? '',
+      dateUpdated: parseDateField(snapshotData['dateUpdated']),
     );
   }
 }
