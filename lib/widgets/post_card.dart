@@ -157,17 +157,7 @@ class _PostCardState extends State<PostCard> {
                               ),
                               Text(
                                 DateFormat.yMMMd().format(
-                                  snapData.containsKey('dateUpdated')
-                                      ? (snapData['dateUpdated'] is Timestamp
-                                            ? snapData['dateUpdated'].toDate()
-                                            : DateTime.parse(
-                                                snapData['dateUpdated'],
-                                              ))
-                                      : (snapData['datePublished'] is Timestamp
-                                            ? snapData['datePublished'].toDate()
-                                            : DateTime.parse(
-                                                snapData['datePublished'],
-                                              )),
+                                  snapData['dateUpdated'].toDate(),
                                 ),
                                 style: TextStyle(
                                   color: secondaryColor,

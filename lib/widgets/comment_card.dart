@@ -134,7 +134,7 @@ class _CommentCardState extends State<CommentCard> {
                         ),
                         TextSpan(
                           text: DateFormat.yMMMd().format(
-                            widget.snap['datePublished'].toDate(),
+                            widget.snap['dateUpdated'].toDate(),
                           ),
                           style: TextStyle(color: secondaryColor, fontSize: 12),
                         ),
@@ -147,7 +147,7 @@ class _CommentCardState extends State<CommentCard> {
                       children: [
                         Expanded(
                           child: Text(
-                            ' ${widget.snap['text']}',
+                            ' ${widget.snap['commentText']}',
                             style: TextStyle(
                               fontWeight: FontWeight.normal,
                               fontSize: 16,

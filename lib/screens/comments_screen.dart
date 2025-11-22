@@ -80,7 +80,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
               .collection('posts')
               .doc(widget.postId)
               .collection('comments')
-              .orderBy('datePublished', descending: true)
+              .orderBy('dateUpdated', descending: true)
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
