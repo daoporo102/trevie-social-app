@@ -12,7 +12,7 @@ class CustomButton extends StatelessWidget {
   final BorderRadius? borderRadius;
   final Size? minimumSize;
   final double? elevation;
-  final double? borderWidth;
+  final bool hasBorder;
   final Color? borderColor;
 
   const CustomButton({
@@ -27,7 +27,7 @@ class CustomButton extends StatelessWidget {
     this.minimumSize,
     this.elevation,
     this.pressColor,
-    this.borderWidth,
+    this.hasBorder = false,
     this.borderColor = secondaryColor,
   });
 
@@ -82,7 +82,9 @@ class CustomButton extends StatelessWidget {
         elevation: WidgetStateProperty.all(elevation ?? 0),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         side: WidgetStateProperty.all(
-          BorderSide(color: secondaryColor, width: borderWidth ?? 0),
+          hasBorder
+              ? BorderSide(color: secondaryColor, width: 1)
+              : BorderSide.none,
         ),
       ),
       child: child,

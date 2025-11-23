@@ -238,6 +238,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         : mobileBackgroundColor,
                                     borderRadius: BorderRadius.circular(8),
                                     overlayColor: appPrimaryColor,
+                                    hasBorder: true,
                                     onPressed: () async {
                                       // Wait for edit screen to close before refreshing
                                       await Navigator.of(context).push(
@@ -283,6 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ? webBackgroundColor
                                         : mobileBackgroundColor,
                                     overlayColor: appPrimaryColor,
+                                    hasBorder: true,
                                     onPressed: () async {
                                       //unfollow user
                                       await FirestoreMethod().followUser(
@@ -319,6 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 } else {
                                   btn = CustomButton(
                                     borderRadius: BorderRadius.circular(8),
+                                    hasBorder: true,
                                     onPressed: () async {
                                       //follow user
                                       await FirestoreMethod().followUser(
