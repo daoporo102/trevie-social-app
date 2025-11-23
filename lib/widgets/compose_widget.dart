@@ -50,6 +50,7 @@ class ComposePostCard extends StatelessWidget {
                     backgroundColor: textFieldBackgroundColor,
                     overlayColor: appPrimaryColor,
                     borderRadius: BorderRadius.circular(16),
+                    hasBorder: true,
                     padding: const EdgeInsets.symmetric(
                       vertical: 12,
                       horizontal: 16,

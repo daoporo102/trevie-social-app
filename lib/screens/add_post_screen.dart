@@ -363,6 +363,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               : mobileBackgroundColor,
                           borderRadius: BorderRadius.circular(8),
                           overlayColor: appPrimaryColor,
+                          hasBorder: true,
                           onPressed: () {
                             _selectImage(context);
                           },
@@ -386,6 +387,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               : mobileBackgroundColor,
                           borderRadius: BorderRadius.circular(8),
                           overlayColor: appPrimaryColor,
+                          hasBorder: true,
                           onPressed: () {},
                           child: Row(
                             children: const [
@@ -407,6 +409,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               : mobileBackgroundColor,
                           borderRadius: BorderRadius.circular(8),
                           overlayColor: appPrimaryColor,
+                          hasBorder: true,
                           onPressed: () {},
                           child: Row(
                             children: const [
