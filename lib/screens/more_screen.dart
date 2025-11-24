@@ -20,13 +20,26 @@ class MoreScreen extends StatefulWidget {
 class _MoreScreenState extends State<MoreScreen> {
   // Sign out function
   void signOutUser() async {
+    // Get provider and navigator references BEFORE async operations
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final navigator = Navigator.of(context);
+
     await AuthMethods().signOut();
+
+    // Check after async
+    if(!mounted) return;
     // Ensure user provider is refreshed
-    Provider.of<UserProvider>(context, listen: false).refreshUser();
+    userProvider.refreshUser();
+
+    // Check after async
+    if(!mounted) return;
     // Navigate to login screen
-    Navigator.of(context).pushReplacement(
+    navigator.pushReplacement(
       MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
+
+    // Check before using context with Snackbar
+    if (!mounted) return;
     //Display snackbar
     displaySnackBar('Đăng xuất thành công!', context, SnackBarType.success);
   }
