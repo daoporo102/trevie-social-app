@@ -8,6 +8,7 @@ class Comment {
   final String profilePic;
   final DateTime datePublished;
   final DateTime? dateUpdated;
+  final DateTime lastDateModified;
 
   const Comment({
     required this.uid,
@@ -17,6 +18,7 @@ class Comment {
     required this.profilePic,
     required this.datePublished,
     this.dateUpdated,
+    required this.lastDateModified,
   });
 
   Map<String, dynamic> toJson() => {
@@ -26,7 +28,8 @@ class Comment {
     "name": name,
     "profilePic": profilePic,
     "datePublished": Timestamp.fromDate(datePublished),
-    "dateUpdated":Timestamp.fromDate(dateUpdated!),
+    "dateUpdated": dateUpdated != null ? Timestamp.fromDate(dateUpdated!) : null,
+    "lastDateModified": Timestamp.fromDate(lastDateModified),
   };
 
   static Comment fromSnap(DocumentSnapshot snapshot) {
@@ -50,8 +53,11 @@ class Comment {
       name: snapshotData['name'] ?? '',
       commentText: snapshotData['commentText'] ?? '',
       profilePic: snapshotData['profilePic'] ?? '',
-      datePublished: parseDateField(snapshotData['datePublished']) ?? DateTime.now(),
+      datePublished:
+          parseDateField(snapshotData['datePublished']) ?? DateTime.now(),
       dateUpdated: parseDateField(snapshotData['dateUpdated']),
+      lastDateModified:
+          parseDateField(snapshotData['lastDateModified']) ?? DateTime.now(),
     );
   }
 }
