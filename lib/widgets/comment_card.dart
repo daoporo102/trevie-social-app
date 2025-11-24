@@ -221,7 +221,7 @@ class _CommentCardState extends State<CommentCard> {
                         ),
                         TextSpan(
                           text: DateFormat.yMMMd().format(
-                            widget.snap['dateUpdated'].toDate(),
+                            widget.snap['lastDateModified'].toDate(),
                           ),
                           style: TextStyle(color: secondaryColor, fontSize: 12),
                         ),

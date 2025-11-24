@@ -37,7 +37,15 @@ class _CommentsScreenState extends State<CommentsScreen> {
         name,
         profilePic,
       );
-      if (res != 'success') {
+      if (res == 'success') {
+        if (context.mounted) {
+          displaySnackBar(
+            "Bình luận thành công",
+            context,
+            SnackBarType.success,
+          );
+        }
+      } else if (res != 'success') {
         if (context.mounted) {
           displaySnackBar(res, context, SnackBarType.error);
         }
@@ -80,7 +88,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
               .collection('posts')
               .doc(widget.postId)
               .collection('comments')
-              .orderBy('dateUpdated', descending: true)
+              .orderBy('lastDateModified', descending: true)
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
