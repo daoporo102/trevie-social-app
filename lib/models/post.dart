@@ -34,7 +34,7 @@ class Post {
     "datePublished": Timestamp.fromDate(datePublished),
     "likes": likes,
     "displayName": displayName,
-    "dateUpdated": Timestamp.fromDate(dateUpdated!),
+    "dateUpdated": dateUpdated != null ? Timestamp.fromDate(dateUpdated!) : null,
     "lastDateModified": Timestamp.fromDate(lastDateModified),
   };
 
