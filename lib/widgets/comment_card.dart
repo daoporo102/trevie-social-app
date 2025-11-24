@@ -220,9 +220,10 @@ class _CommentCardState extends State<CommentCard> {
                           alignment: PlaceholderAlignment.middle,
                         ),
                         TextSpan(
-                          text: DateFormat.yMMMd().add_jm().format(
-                            widget.snap['lastDateModified'].toDate(),
-                          ),
+                          text: DateFormat(
+                            'HH:mm dd MMM, y',
+                            'vi',
+                          ).format((widget.snap['lastDateModified']).toDate()),
                           style: TextStyle(color: secondaryColor, fontSize: 12),
                         ),
                       ],
