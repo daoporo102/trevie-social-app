@@ -104,7 +104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final postStream = FirebaseFirestore.instance
         .collection('posts')
         .where('uid', isEqualTo: widget.uid)
-        .orderBy('dateUpdated', descending: true)
+        .orderBy('lastDateModified', descending: true)
         .snapshots();
 
     final width = MediaQuery.of(context).size.width;

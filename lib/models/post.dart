@@ -10,6 +10,7 @@ class Post {
   final DateTime datePublished;
   final List<String> likes;
   final DateTime? dateUpdated;
+  final DateTime lastDateModified;
 
   const Post({
     required this.postId,
@@ -21,6 +22,7 @@ class Post {
     required this.likes,
     required this.displayName,
     this.dateUpdated,
+    required this.lastDateModified,
   });
 
   Map<String, dynamic> toJson() => {
@@ -29,10 +31,11 @@ class Post {
     "postText": postText,
     "postUrl": postUrl,
     "profImage": profImage,
-    "datePublished": 	Timestamp.fromDate(datePublished),
+    "datePublished": Timestamp.fromDate(datePublished),
     "likes": likes,
     "displayName": displayName,
-    "dateUpdated": Timestamp.fromDate(dateUpdated!) ,
+    "dateUpdated": Timestamp.fromDate(dateUpdated!),
+    "lastDateModified": Timestamp.fromDate(lastDateModified),
   };
 
   static Post fromSnap(DocumentSnapshot snapshot) {
@@ -56,10 +59,13 @@ class Post {
       postText: snapshotData['postText'] ?? '',
       postUrl: snapshotData['postUrl'] ?? '',
       profImage: snapshotData['profImage'] ?? '',
-      datePublished: parseDateField(snapshotData['datePublished']) ?? DateTime.now(),
+      datePublished:
+          parseDateField(snapshotData['datePublished']) ?? DateTime.now(),
       likes: snapshotData['likes'] ?? [],
       displayName: snapshotData['displayName'] ?? '',
       dateUpdated: parseDateField(snapshotData['dateUpdated']),
+      lastDateModified:
+          parseDateField(snapshotData['lastDateModified']) ?? DateTime.now(),
     );
   }
 }

@@ -11,9 +11,11 @@ class FeedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final postStream = FirebaseFirestore.instance
-        .collection('posts')
-        .orderBy('dateUpdated', descending: true)
+    // check date updated field in post and use it if available
+    final post = FirebaseFirestore.instance.collection('posts');
+    // get the stream of posts from Firestore
+    final postStream = post
+        .orderBy('lastDateModified', descending: true)
         .snapshots();
 
     final width = MediaQuery.of(context).size.width;
