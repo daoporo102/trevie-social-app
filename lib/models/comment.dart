@@ -28,7 +28,7 @@ class Comment {
     "name": name,
     "profilePic": profilePic,
     "datePublished": Timestamp.fromDate(datePublished),
-    "dateUpdated": Timestamp.fromDate(dateUpdated!),
+    "dateUpdated": dateUpdated != null ? Timestamp.fromDate(dateUpdated!) : null,
     "lastDateModified": Timestamp.fromDate(lastDateModified),
   };
 
