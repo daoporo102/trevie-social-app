@@ -41,7 +41,8 @@ class FirestoreMethod {
         likes: [],
         displayName: displayName,
         profImage: profImage,
-        dateUpdated: now,
+        dateUpdated: null,
+        lastDateModified: now,
       );
 
       _firestore.collection('posts').doc(postId).set(post.toJson());
@@ -66,6 +67,7 @@ class FirestoreMethod {
       Map<String, dynamic> updateData = {
         'postText': postText,
         'dateUpdated': Timestamp.fromDate(now),
+        'lastDateModified': Timestamp.fromDate(now),
       };
       if (file != null) {
         // Delete the old image from storage if it exists
@@ -134,7 +136,7 @@ class FirestoreMethod {
     try {
       if (text.isNotEmpty) {
         String commentId = const Uuid().v1();
-        
+
         // Create Comment object
         Comment comment = Comment(
           uid: uid,
@@ -143,7 +145,7 @@ class FirestoreMethod {
           commentText: text,
           profilePic: profilePic,
           datePublished: now,
-          dateUpdated: now,
+          dateUpdated: null,
         );
 
         // Add comment to Firestore database
@@ -258,20 +260,21 @@ class FirestoreMethod {
       Map<String, dynamic> updateData = {
         'commentText': commentText,
         'dateUpdated': Timestamp.fromDate(now),
+        'lastDateModified': Timestamp.fromDate(now),
       };
 
-        if (commentText.isNotEmpty) {
+      if (commentText.isNotEmpty) {
         // Update the comment document with the new text and date
         await _firestore
             .collection('posts')
             .doc(postId)
             .collection('comments')
             .doc(commentId)
-            .update(updateData);   
-        } else {
-          res = "Vui lòng nhập bình luận";
-          return res;
-        }
+            .update(updateData);
+      } else {
+        res = "Vui lòng nhập bình luận";
+        return res;
+      }
       res = 'success';
     } catch (e) {
       avoidPrint(e.toString());
@@ -313,5 +316,4 @@ class FirestoreMethod {
       avoidPrint(e.toString());
     }
   }
-
 }
