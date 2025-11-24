@@ -240,21 +240,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     overlayColor: appPrimaryColor,
                                     hasBorder: true,
                                     onPressed: () async {
-                                      // Wait for edit screen to close before refreshing
+                                      // 1. Get context-dependent values FIRST (before any await)
+                                      final userProvider =
+                                          Provider.of<UserProvider>(
+                                            context,
+                                            listen: false,
+                                          );
+                                          
+                                      // 2. do async operations
                                       await Navigator.of(context).push(
                                         MaterialPageRoute(
                                           builder: (context) =>
                                               EditProfileScreen(),
                                         ),
                                       );
-                                      // Now these run AFTER returning from edit screen
-                                      if (mounted) {
-                                        await getData();
-                                        await Provider.of<UserProvider>(
-                                          context,
-                                          listen: false,
-                                        ).refreshUser();
-                                      }
+
+                                      //3. Check mounted after earch asysnc gap
+                                      if (!mounted) return;
+
+                                      await getData();
+
+                                      if (!mounted) return;
+
+                                      //4. Use stored references (no context access)
+                                      await userProvider.refreshUser();
                                     },
                                     child: Padding(
                                       padding: EdgeInsets.all(8.0),
