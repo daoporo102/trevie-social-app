@@ -25,10 +25,13 @@ class _AddPostScreenState extends State<AddPostScreen> {
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _selectImage(BuildContext context) async {
+  Future<void> _selectImage() async {
+    // Capture the State's context BEFORE async
+    final scaffoldContext = context;
+
     return showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return SimpleDialog(
           backgroundColor: mobileBackgroundColor,
           title: const Text('Chọn ảnh cho bài đăng'),
@@ -37,16 +40,18 @@ class _AddPostScreenState extends State<AddPostScreen> {
               padding: const EdgeInsets.all(20),
               child: const Text('Chụp ảnh'),
               onPressed: () async {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 try {
                   Uint8List? file = await pickImage(ImageSource.camera);
                   if (!mounted) return;
                   if (file == null) {
-                    displaySnackBar(
-                      'Không thể chụp ảnh',
-                      context,
-                      SnackBarType.error,
-                    );
+                    if (scaffoldContext.mounted) {
+                      displaySnackBar(
+                        'Không thể chụp ảnh',
+                        scaffoldContext,
+                        SnackBarType.error,
+                      );
+                    }
                     return;
                   }
                   setState(() {
@@ -54,11 +59,13 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   });
                 } catch (e) {
                   if (!mounted) return;
-                  displaySnackBar(
-                    'Có lỗi xảy ra khi chụp ảnh',
-                    context,
-                    SnackBarType.error,
-                  );
+                  if (scaffoldContext.mounted) {
+                    displaySnackBar(
+                      'Có lỗi xảy ra khi chụp ảnh',
+                      scaffoldContext,
+                      SnackBarType.error,
+                    );
+                  }
                   avoidPrint(e.toString());
                 }
               },
@@ -68,15 +75,17 @@ class _AddPostScreenState extends State<AddPostScreen> {
               child: const Text('Chọn ảnh từ thư viện'),
               onPressed: () async {
                 try {
-                  Navigator.of(context).pop();
+                  Navigator.of(dialogContext).pop();
                   Uint8List? file = await pickImage(ImageSource.gallery);
                   if (!mounted) return;
                   if (file == null) {
-                    displaySnackBar(
-                      'Không thể chọn ảnh từ thư viện',
-                      context,
-                      SnackBarType.error,
-                    );
+                    if (scaffoldContext.mounted) {
+                      displaySnackBar(
+                        'Không thể chọn ảnh từ thư viện',
+                        context,
+                        SnackBarType.error,
+                      );
+                    }
                     return;
                   }
                   setState(() {
@@ -84,11 +93,13 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   });
                 } catch (e) {
                   if (!mounted) return;
-                  displaySnackBar(
-                    'Có lỗi xảy ra khi chọn ảnh',
-                    context,
-                    SnackBarType.error,
-                  );
+                  if (scaffoldContext.mounted) {
+                    displaySnackBar(
+                      'Có lỗi xảy ra khi chọn ảnh từ thư viện',
+                      scaffoldContext,
+                      SnackBarType.error,
+                    );
+                  }
                   avoidPrint(e.toString());
                 }
               },
@@ -96,8 +107,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
             SimpleDialogOption(
               padding: const EdgeInsets.all(20),
               child: const Text('Hủy'),
-              onPressed: () async {
-                Navigator.of(context).pop();
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
               },
             ),
           ],
@@ -114,11 +125,11 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
   void postImage(String uid, String displayName, String profImage) async {
     // Add debug logging
-  avoidPrint("DEBUG - uid: $uid");
-  avoidPrint("DEBUG - displayName: $displayName");
-  avoidPrint("DEBUG - profImage: $profImage");
-  avoidPrint("DEBUG - postText: ${_textController.text}");
-  avoidPrint("DEBUG - image size: ${_image?.length}");
+    avoidPrint("DEBUG - uid: $uid");
+    avoidPrint("DEBUG - displayName: $displayName");
+    avoidPrint("DEBUG - profImage: $profImage");
+    avoidPrint("DEBUG - postText: ${_textController.text}");
+    avoidPrint("DEBUG - image size: ${_image?.length}");
     // Validate inputs
     if (_textController.text.isEmpty) {
       displaySnackBar(
@@ -161,7 +172,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
         profImage,
       );
 
-       avoidPrint("DEBUG - Upload result: $res"); // See what fails
+      avoidPrint("DEBUG - Upload result: $res"); // See what fails
 
       if (!mounted) return; // guard context after async
 
@@ -226,7 +237,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     }
 
     // Check if user has a profile photo
-  final hasProfilePhoto = user.photoUrl.isNotEmpty;
+    final hasProfilePhoto = user.photoUrl.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -258,9 +269,14 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   Text('Tạo bài đăng'),
                   const Spacer(),
                   CustomButton(
-                      onPressed:  hasProfilePhoto // Disable if no photo
-                      ? () => postImage(user.uid, user.displayName, user.photoUrl)
-                      : () {}, // Empty function instead of null
+                    onPressed:
+                        hasProfilePhoto // Disable if no photo
+                        ? () => postImage(
+                            user.uid,
+                            user.displayName,
+                            user.photoUrl,
+                          )
+                        : () {}, // Empty function instead of null
                     child: const Text(
                       'Đăng bài',
                       style: TextStyle(
@@ -281,9 +297,14 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 Padding(
                   padding: const EdgeInsets.only(left: 16.0, right: 16.0),
                   child: CustomButton(
-                    onPressed: hasProfilePhoto // Disable if no photo
-                      ? () => postImage(user.uid, user.displayName, user.photoUrl)
-                      : () {}, // Empty function instead of null
+                    onPressed:
+                        hasProfilePhoto // Disable if no photo
+                        ? () => postImage(
+                            user.uid,
+                            user.displayName,
+                            user.photoUrl,
+                          )
+                        : () {}, // Empty function instead of null
                     child: const Text(
                       'Đăng bài',
                       style: TextStyle(
@@ -387,7 +408,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                           overlayColor: appPrimaryColor,
                           hasBorder: true,
                           onPressed: () {
-                            _selectImage(context);
+                            _selectImage();
                           },
                           child: Row(
                             children: const [
