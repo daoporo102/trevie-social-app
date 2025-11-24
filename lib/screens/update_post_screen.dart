@@ -35,10 +35,13 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
     _image = postData['postUrl'];
   }
 
-  Future<void> _selectImage(BuildContext context) async {
+  Future<void> _selectImage() async {
+    // Capture the State's context BEFORE async
+    final scaffoldContext = context;
+
     return showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return SimpleDialog(
           backgroundColor: mobileBackgroundColor,
           title: const Text('Chọn ảnh cho bài đăng'),
@@ -47,16 +50,19 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
               padding: const EdgeInsets.all(20),
               child: const Text('Chụp ảnh'),
               onPressed: () async {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 try {
                   Uint8List? file = await pickImage(ImageSource.camera);
                   if (!mounted) return;
                   if (file == null) {
-                    displaySnackBar(
-                      'Không thể chụp ảnh',
-                      context,
-                      SnackBarType.error,
-                    );
+                    // Use captured context with mounted check
+                    if (scaffoldContext.mounted) {
+                      displaySnackBar(
+                        'Không thể chụp ảnh',
+                        scaffoldContext,
+                        SnackBarType.error,
+                      );
+                    }
                     return;
                   }
                   setState(() {
@@ -64,11 +70,13 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
                   });
                 } catch (e) {
                   if (!mounted) return;
-                  displaySnackBar(
-                    'Có lỗi xảy ra khi chụp ảnh',
-                    context,
-                    SnackBarType.error,
-                  );
+                  if (scaffoldContext.mounted) {
+                    displaySnackBar(
+                      'Có lỗi xảy ra khi chụp ảnh',
+                      scaffoldContext,
+                      SnackBarType.error,
+                    );
+                  }
                   avoidPrint(e.toString());
                 }
               },
@@ -78,15 +86,17 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
               child: const Text('Chọn ảnh từ thư viện'),
               onPressed: () async {
                 try {
-                  Navigator.of(context).pop();
+                  Navigator.of(dialogContext).pop();
                   Uint8List? file = await pickImage(ImageSource.gallery);
                   if (!mounted) return;
                   if (file == null) {
-                    displaySnackBar(
-                      'Không thể chọn ảnh từ thư viện',
-                      context,
-                      SnackBarType.error,
-                    );
+                    if (scaffoldContext.mounted) {
+                      displaySnackBar(
+                        'Không thể chọn ảnh từ thư viện',
+                        scaffoldContext,
+                        SnackBarType.error,
+                      );
+                    }
                     return;
                   }
                   setState(() {
@@ -94,11 +104,13 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
                   });
                 } catch (e) {
                   if (!mounted) return;
-                  displaySnackBar(
-                    'Có lỗi xảy ra khi chọn ảnh',
-                    context,
-                    SnackBarType.error,
-                  );
+                  if (scaffoldContext.mounted) {
+                    displaySnackBar(
+                      'Có lỗi xảy ra khi chọn ảnh',
+                      scaffoldContext,
+                      SnackBarType.error,
+                    );
+                  }
                   avoidPrint(e.toString());
                 }
               },
@@ -106,8 +118,8 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
             SimpleDialogOption(
               padding: const EdgeInsets.all(20),
               child: const Text('Hủy'),
-              onPressed: () async {
-                Navigator.of(context).pop();
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
               },
             ),
           ],
@@ -410,7 +422,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
                       IconButton(
                         icon: const Icon(Icons.edit, color: secondaryColor),
                         onPressed: () {
-                          _selectImage(context);
+                          _selectImage();
                         },
                       ),
                   ],
