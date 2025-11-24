@@ -157,7 +157,7 @@ class _PostCardState extends State<PostCard> {
                               ),
                               Text(
                                 DateFormat.yMMMd().format(
-                                  snapData['dateUpdated'].toDate(),
+                                  (snapData['lastDateModified']).toDate()
                                 ),
                                 style: TextStyle(
                                   color: secondaryColor,
