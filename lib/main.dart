@@ -11,6 +11,7 @@ import 'firebase_options.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,9 @@ Future<void> main() async {
         AndroidDebugProvider(), // switch to PlayIntegrity for release
     // appleProvider: AppleProvider.debug, // switch to DeviceCheck for release
   );
+
+  // Initialize Vietnamese date formatting
+  await initializeDateFormatting('vi', null);
 
   runApp(const MyApp());
 }
