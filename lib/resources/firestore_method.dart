@@ -22,11 +22,22 @@ class FirestoreMethod {
     // asking uid here because we dont want to make extra calls to firebase auth when we can just get from our state management
     String res = "Một lỗi đã xảy ra";
     try {
+
+      // Validate proImage before proceeding
+      if (profImage.isEmpty) {
+      return "Ảnh đại diện không hợp lệ";
+    }
+
       String photoUrl = await StorageMethod().uploadImageToStorage(
         'posts',
         file,
         true,
       );
+
+      // Check if upload succeeded
+    if (photoUrl.isEmpty) {
+      return "Lỗi tải ảnh lên, vui lòng thử lại";
+    }
       // creates unique id based on time
       String postId = const Uuid().v1();
       // get current time
@@ -49,7 +60,8 @@ class FirestoreMethod {
 
       res = "success";
     } catch (e) {
-      res = e.toString();
+      avoidPrint("Error in uploadPost: ${e.toString()}");
+      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
     }
     return res;
   }

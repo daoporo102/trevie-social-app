@@ -113,6 +113,12 @@ class _AddPostScreenState extends State<AddPostScreen> {
   }
 
   void postImage(String uid, String displayName, String profImage) async {
+    // Add debug logging
+  avoidPrint("DEBUG - uid: $uid");
+  avoidPrint("DEBUG - displayName: $displayName");
+  avoidPrint("DEBUG - profImage: $profImage");
+  avoidPrint("DEBUG - postText: ${_textController.text}");
+  avoidPrint("DEBUG - image size: ${_image?.length}");
     // Validate inputs
     if (_textController.text.isEmpty) {
       displaySnackBar(
@@ -132,6 +138,16 @@ class _AddPostScreenState extends State<AddPostScreen> {
       return;
     }
 
+    // Add this check for profImage
+    if (profImage.isEmpty) {
+      displaySnackBar(
+        'Vui lòng cập nhật ảnh đại diện trước khi đăng bài',
+        context,
+        SnackBarType.error,
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -144,6 +160,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
         displayName,
         profImage,
       );
+
+       avoidPrint("DEBUG - Upload result: $res"); // See what fails
 
       if (!mounted) return; // guard context after async
 
@@ -207,6 +225,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
       return customCircularProgressIndicator();
     }
 
+    // Check if user has a profile photo
+  final hasProfilePhoto = user.photoUrl.isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: mobileBackgroundColor,
@@ -237,8 +258,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   Text('Tạo bài đăng'),
                   const Spacer(),
                   CustomButton(
-                    onPressed: () =>
-                        postImage(user.uid, user.displayName, user.photoUrl),
+                      onPressed:  hasProfilePhoto // Disable if no photo
+                      ? () => postImage(user.uid, user.displayName, user.photoUrl)
+                      : () {}, // Empty function instead of null
                     child: const Text(
                       'Đăng bài',
                       style: TextStyle(
@@ -259,8 +281,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 Padding(
                   padding: const EdgeInsets.only(left: 16.0, right: 16.0),
                   child: CustomButton(
-                    onPressed: () =>
-                        postImage(user.uid, user.displayName, user.photoUrl),
+                    onPressed: hasProfilePhoto // Disable if no photo
+                      ? () => postImage(user.uid, user.displayName, user.photoUrl)
+                      : () {}, // Empty function instead of null
                     child: const Text(
                       'Đăng bài',
                       style: TextStyle(
@@ -295,12 +318,11 @@ class _AddPostScreenState extends State<AddPostScreen> {
           ),
           child: Column(
             children: [
-              _isLoading
-                  ? customLinearProgressIndicator()
-                  : Padding(padding: EdgeInsets.only(top: 0)),
-              ?width > webScreenSize
-                  ? null
-                  : const Divider(color: secondaryColor),
+              // Check Loading
+              if (_isLoading) customLinearProgressIndicator(),
+
+              // 2. Responsive layout
+              if (width <= webScreenSize) const Divider(color: secondaryColor),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
