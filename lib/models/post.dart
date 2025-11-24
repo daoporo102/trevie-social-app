@@ -63,7 +63,7 @@ class Post {
           parseDateField(snapshotData['datePublished']) ?? DateTime.now(),
       likes: snapshotData['likes'] ?? [],
       displayName: snapshotData['displayName'] ?? '',
-      dateUpdated: parseDateField(snapshotData['dateUpdated']) ?? null,
+      dateUpdated: parseDateField(snapshotData['dateUpdated']),
       lastDateModified:
           parseDateField(snapshotData['lastDateModified']) ?? DateTime.now(),
     );
