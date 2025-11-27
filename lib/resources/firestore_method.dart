@@ -46,13 +46,19 @@ class FirestoreMethod {
         postId: postId,
         uid: uid,
         postText: postText,
+        displayName: displayName,
         postUrl: photoUrl,
+        profImage: profImage,
         datePublished: now,
         likes: [],
-        displayName: displayName,
-        profImage: profImage,
         dateUpdated: null,
         lastDateModified: now,
+        reshareCount: 0,
+        originalPostId: null,
+        originalUid: null,
+        originalPostText: null,
+        originalDisplayName: null,
+        originalProfImage: null,
       );
 
       _firestore.collection('posts').doc(postId).set(post.toJson());
