@@ -237,47 +237,61 @@ class FirestoreMethod {
           .doc(postId)
           .get();
 
-      if(postDoc.data() == null) {
+      if (postDoc.data() == null || !postDoc.exists) {
         res = 'Bài viết không tồn tại hoặc đã bị xoá!';
         avoidPrint(res);
         return res;
       }
 
-      if (userUid == postDoc['uid']) {
-        // Check if the document exists
-        if (postDoc.exists && postDoc.data() != null) {
-          String postUrl = (postDoc.data() as Map<String, dynamic>)['postUrl'];
+      final postData = postDoc.data() as Map<String, dynamic>;
 
-          // Delete post collection in Firestore database
-          await _firestore.collection('posts').doc(postId).delete();
-
-          // Delete post's image in storage if it exists
-          if (postUrl.isNotEmpty) {
-            await StorageMethod().deleteImageFromStorage(postUrl);
-          }
-          
-          // Check if the post is a reshared post
-          if (postDoc['originalPostId'] != null) {
-            String originalPostId = postDoc['originalPostId'];
-            // Decrement reshareCount on the original post
-            await _firestore.collection('posts').doc(originalPostId).update({
-              'reshareCount': FieldValue.increment(-1),
-            });
-          }
-
-          res = 'success';
-          return res;
-        }
-      } else {
-        // res = 'Bạn không có quyền xoá bài viết này!';
+      // Check ownership
+      if (userUid != postDoc['uid']) {
+        res = 'Bạn không có quyền xoá bài viết này!';
         avoidPrint(res);
         return res;
       }
+
+      String postUrl = postData['postUrl'];
+
+      // Check if this is a reshared post
+      bool isReshare = postData['originalPostId'] != null;
+
+      // Delete post collection in Firestore database
+      await _firestore.collection('posts').doc(postId).delete();
+
+      // Only delete image if it's not a reshared post (reshares reuse the original image)
+      if (!isReshare && postUrl.isNotEmpty) {
+        try {
+          await StorageMethod().deleteImageFromStorage(postUrl);
+        } catch (storageError) {
+          avoidPrint(
+            "Storage deletion warning (post already deleted): $storageError",
+          );
+        }
+      }
+
+      // If this is a post is a reshared post
+      if (isReshare && postData['originalPostId'] != null) {
+        String originalPostId = postData['originalPostId'];
+        // Decrement reshareCount on the original post
+        try {
+          await _firestore.collection('posts').doc(originalPostId).update({
+            'reshareCount': FieldValue.increment(-1),
+          });
+        } catch (e) {
+          avoidPrint(
+            "Could not decrement reshareCount (original post may be deleted): $e",
+          );
+        }
+      }
+
+      res = 'success';
     } catch (e) {
+      res = "Có lỗi xảy ra, vui lòng thử lại sau";
       avoidPrint("Error in deletePost: ${e.toString()}");
       rethrow;
     }
-
     return res;
   }
 
@@ -350,7 +364,7 @@ class FirestoreMethod {
     }
   }
 
-   // Reshare post
+  // Reshare post
   Future<String> resharePost(
     String postText,
     Post originalPost,
@@ -386,8 +400,9 @@ class FirestoreMethod {
       );
 
       // Reference to the original post
-      DocumentReference originalPostRef =
-          _firestore.collection('posts').doc(originalPost.postId);
+      DocumentReference originalPostRef = _firestore
+          .collection('posts')
+          .doc(originalPost.postId);
 
       // Original post exists, proceed with resharing
       if (await originalPostRef.snapshots().isEmpty) {
@@ -395,7 +410,7 @@ class FirestoreMethod {
         res = 'Bài viết gốc không tồn tại hoặc đã bị xoá!';
         return res;
       }
-    
+
       // Add the new post to Firestore
       await _firestore.collection('posts').doc(postId).set(newPost.toJson());
 
