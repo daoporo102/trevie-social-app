@@ -237,6 +237,12 @@ class FirestoreMethod {
           .doc(postId)
           .get();
 
+      if(postDoc.data() == null) {
+        res = 'Bài viết không tồn tại hoặc đã bị xoá!';
+        avoidPrint(res);
+        return res;
+      }
+
       if (userUid == postDoc['uid']) {
         // Check if the document exists
         if (postDoc.exists && postDoc.data() != null) {
@@ -249,12 +255,21 @@ class FirestoreMethod {
           if (postUrl.isNotEmpty) {
             await StorageMethod().deleteImageFromStorage(postUrl);
           }
+          
+          // Check if the post is a reshared post
+          if (postDoc['originalPostId'] != null) {
+            String originalPostId = postDoc['originalPostId'];
+            // Decrement reshareCount on the original post
+            await _firestore.collection('posts').doc(originalPostId).update({
+              'reshareCount': FieldValue.increment(-1),
+            });
+          }
 
           res = 'success';
           return res;
         }
       } else {
-        res = 'Bạn không có quyền xoá bài viết này!';
+        // res = 'Bạn không có quyền xoá bài viết này!';
         avoidPrint(res);
         return res;
       }
