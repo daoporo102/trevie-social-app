@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Post {
+  // the fields of the current post
   final String postId;
   final String uid;
   final String postText;
@@ -11,6 +12,13 @@ class Post {
   final List<String> likes;
   final DateTime? dateUpdated;
   final DateTime lastDateModified;
+  final int reshareCount;
+  // the fields of the original post being reshared
+  final String? originalPostId;
+  final String? originalUid;
+  final String? originalPostText;
+  final String? originalDisplayName;
+  final String? originalProfImage;
 
   const Post({
     required this.postId,
@@ -23,6 +31,12 @@ class Post {
     required this.displayName,
     this.dateUpdated,
     required this.lastDateModified,
+    required this.reshareCount,
+    this.originalPostId,
+    this.originalUid,
+    this.originalPostText,
+    this.originalDisplayName,
+    this.originalProfImage,
   });
 
   Map<String, dynamic> toJson() => {
@@ -34,8 +48,16 @@ class Post {
     "datePublished": Timestamp.fromDate(datePublished),
     "likes": likes,
     "displayName": displayName,
-    "dateUpdated": dateUpdated != null ? Timestamp.fromDate(dateUpdated!) : null,
+    "dateUpdated": dateUpdated != null
+        ? Timestamp.fromDate(dateUpdated!)
+        : null,
     "lastDateModified": Timestamp.fromDate(lastDateModified),
+    "reshareCount": reshareCount,
+    "originalPostId": originalPostId,
+    "originalUid": originalUid,
+    "originalPostText": originalPostText,
+    "originalDisplayName": originalDisplayName,
+    "originalProfImage": originalProfImage,
   };
 
   static Post fromSnap(DocumentSnapshot snapshot) {
@@ -53,6 +75,15 @@ class Post {
       return null;
     }
 
+    // Helper function to safely cast List<dynamic> to List<String>
+    List<String> parseStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((e) => e.toString()).toList();
+      }
+      return [];
+    }
+
     return Post(
       postId: snapshotData['postId'] ?? '',
       uid: snapshotData['uid'] ?? '',
@@ -61,11 +92,17 @@ class Post {
       profImage: snapshotData['profImage'] ?? '',
       datePublished:
           parseDateField(snapshotData['datePublished']) ?? DateTime.now(),
-      likes: snapshotData['likes'] ?? [],
+      likes: parseStringList(snapshotData['likes']),
       displayName: snapshotData['displayName'] ?? '',
       dateUpdated: parseDateField(snapshotData['dateUpdated']),
       lastDateModified:
           parseDateField(snapshotData['lastDateModified']) ?? DateTime.now(),
+      reshareCount: snapshotData['reshareCount'] ?? 0,
+      originalPostId: snapshotData['originalPostId'],
+      originalUid: snapshotData['originalUid'],
+      originalPostText: snapshotData['originalPostText'],
+      originalDisplayName: snapshotData['originalDisplayName'],
+      originalProfImage: snapshotData['originalProfImage'],
     );
   }
 }
