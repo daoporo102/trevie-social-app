@@ -426,4 +426,29 @@ class FirestoreMethod {
     }
     return res;
   }
+
+  // Update reshare post (text only)
+  Future<String> updateResharePost(
+    String postId,
+    String postText,
+  ) async {
+    String res = "Một lỗi đã xảy ra";
+    try {
+      final now = DateTime.now();
+      Map<String, dynamic> updateData = {
+        'postText': postText,
+        'dateUpdated': Timestamp.fromDate(now),
+        'lastDateModified': Timestamp.fromDate(now),
+      };
+      
+        // just update the text
+        await _firestore.collection('posts').doc(postId).update(updateData);
+  
+      res = 'success';
+    } catch (e) {
+      avoidPrint(e.toString());
+      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
+    }
+    return res;
+  }
 }
