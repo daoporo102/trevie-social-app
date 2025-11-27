@@ -334,4 +334,66 @@ class FirestoreMethod {
       avoidPrint(e.toString());
     }
   }
+
+   // Reshare post
+  Future<String> resharePost(
+    String postText,
+    Post originalPost,
+    String uid,
+    String displayName,
+    String profImage,
+  ) async {
+    String res = "Một lỗi đã xảy ra";
+    try {
+      // creates unique id based on time
+      String postId = const Uuid().v1();
+      // get current time
+      final now = DateTime.now();
+
+      // Create the new post data
+      Post newPost = Post(
+        postId: postId,
+        uid: uid,
+        postText: postText,
+        displayName: displayName,
+        postUrl: originalPost.postUrl,
+        profImage: profImage,
+        datePublished: now,
+        likes: [],
+        dateUpdated: null,
+        lastDateModified: now,
+        reshareCount: 0,
+        originalPostId: originalPost.postId,
+        originalUid: originalPost.uid,
+        originalPostText: originalPost.postText,
+        originalDisplayName: originalPost.displayName,
+        originalProfImage: originalPost.profImage,
+      );
+
+      // Reference to the original post
+      DocumentReference originalPostRef =
+          _firestore.collection('posts').doc(originalPost.postId);
+
+      // Original post exists, proceed with resharing
+      if (await originalPostRef.snapshots().isEmpty) {
+        avoidPrint('Original post does not exist.');
+        res = 'Bài viết gốc không tồn tại hoặc đã bị xoá!';
+        return res;
+      }
+    
+      // Add the new post to Firestore
+      await _firestore.collection('posts').doc(postId).set(newPost.toJson());
+
+      // Increment reshareCount on the original post
+      await _firestore.collection('posts').doc(originalPost.postId).update({
+        'reshareCount': FieldValue.increment(1),
+      });
+
+      res = 'success';
+    } catch (e) {
+      avoidPrint("Error in resharePost: ${e.toString()}");
+      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
+    }
+    return res;
+  }
 }
