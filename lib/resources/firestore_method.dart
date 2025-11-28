@@ -86,10 +86,18 @@ class FirestoreMethod {
         'dateUpdated': Timestamp.fromDate(now),
         'lastDateModified': Timestamp.fromDate(now),
       };
+
+      // Only update image if user selected a new one
       if (file != null) {
         // Delete the old image from storage if it exists
         if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
-          await StorageMethod().deleteImageFromStorage(existingImageUrl);
+          try {
+            await StorageMethod().deleteImageFromStorage(existingImageUrl);
+          } catch (storageError) {
+            avoidPrint(
+              "Storage deletion warning (old image may be missing): $storageError",
+            );
+          }
         }
 
         // Upload the new image to storage
@@ -98,6 +106,11 @@ class FirestoreMethod {
           file,
           true,
         );
+
+        //  Check if upload succeeded
+        if (newPhotoUrl.isEmpty) {
+          return "Lỗi tải ảnh lên, vui lòng thử lại";
+        }
 
         // Add the new photo Url to updateData
         updateData['postUrl'] = newPhotoUrl;
@@ -112,7 +125,8 @@ class FirestoreMethod {
       }
       res = 'success';
     } catch (e) {
-      avoidPrint(e.toString());
+      avoidPrint("Error in updatePost: ${e.toString()}");
+      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
     }
     return res;
   }
@@ -428,10 +442,7 @@ class FirestoreMethod {
   }
 
   // Update reshare post (text only)
-  Future<String> updateResharePost(
-    String postId,
-    String postText,
-  ) async {
+  Future<String> updateResharePost(String postId, String postText) async {
     String res = "Một lỗi đã xảy ra";
     try {
       final now = DateTime.now();
@@ -440,10 +451,10 @@ class FirestoreMethod {
         'dateUpdated': Timestamp.fromDate(now),
         'lastDateModified': Timestamp.fromDate(now),
       };
-      
-        // just update the text
-        await _firestore.collection('posts').doc(postId).update(updateData);
-  
+
+      // just update the text
+      await _firestore.collection('posts').doc(postId).update(updateData);
+
       res = 'success';
     } catch (e) {
       avoidPrint(e.toString());
