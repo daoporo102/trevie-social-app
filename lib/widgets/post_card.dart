@@ -355,7 +355,28 @@ class _PostCardState extends State<PostCard> {
                       ),
                       // MORE BUTTON
                       IconButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          // For reshares, check if original post exists first
+                          bool canEdit = true;
+                          if (isResharePost && user.uid == snapData['uid']) {
+                            try {
+                              final originalPostDoc = await FirebaseFirestore
+                                  .instance
+                                  .collection('posts')
+                                  .doc(snapData['originalPostId'])
+                                  .get();
+
+                              canEdit =
+                                  originalPostDoc.exists &&
+                                  originalPostDoc.data() != null;
+                            } catch (e) {
+                              canEdit = false;
+                              avoidPrint("Error checking original post: $e");
+                            }
+                          }
+
+                          if (!context.mounted) return;
+
                           showDialog(
                             context: context,
                             builder: (context) => SimpleDialog(
@@ -365,22 +386,59 @@ class _PostCardState extends State<PostCard> {
                               title: const Text('Tùy chọn'),
                               children: [
                                 if (user.uid == snapData['uid']) ...[
-                                  SimpleDialogOption(
-                                    padding: const EdgeInsets.all(16),
-                                    child: const Text(
-                                      'Chỉnh sửa bài viết',
-                                      style: TextStyle(color: primaryTextColor),
-                                    ),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              UpdatePostScreen(snap: snapData),
+                                  // Only show edit if original post exists (or not a reshare)
+                                  if (!isResharePost || canEdit)
+                                    SimpleDialogOption(
+                                      padding: const EdgeInsets.all(16),
+                                      child: const Text(
+                                        'Chỉnh sửa bài viết',
+                                        style: TextStyle(
+                                          color: primaryTextColor,
                                         ),
-                                      );
-                                    },
-                                  ),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                UpdatePostScreen(
+                                                  snap: snapData,
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  if (isResharePost && !canEdit)
+                                    SimpleDialogOption(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Row(
+                                        children: const [
+                                          Icon(
+                                            Icons.info_outline,
+                                            color: secondaryColor,
+                                            size: 20,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              'Chỉnh sửa bài viết',
+                                              style: TextStyle(
+                                                color: secondaryColor,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                        displaySnackBar(
+                                          'Bài viết gốc đã bị xóa, không thể chỉnh sửa',
+                                          context,
+                                          SnackBarType.info,
+                                        );
+                                      },
+                                    ),
                                   SimpleDialogOption(
                                     padding: const EdgeInsets.all(16),
                                     child: const Text(
@@ -451,67 +509,102 @@ class _PostCardState extends State<PostCard> {
             // ORIGINAL POST SECTION (if this is a reshare)
             if (isResharePost) ...[
               const SizedBox(height: 4),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: mobileBackgroundColor.withValues(alpha: 0.5),
-                  border: Border.all(color: secondaryColor),
-                ),
-                // padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Original post header
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 12,
-                            backgroundImage: NetworkImage(
-                              snapData['originalProfImage'] ?? '',
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            snapData['originalDisplayName'] ?? 'Tên người dùng',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
+              StreamBuilder<DocumentSnapshot>(
+                stream: snapData['originalPostId'] != null
+                    ? FirebaseFirestore.instance
+                          .collection('posts')
+                          .doc(snapData['originalPostId'])
+                          .snapshots()
+                    : null,
+                builder: (context, originalPostSnapshot) {
+                  // Check loading state
+                  if (originalPostSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return customCircularProgressIndicator();
+                  }
+
+                  // check if original post was deleted
+                  if (!originalPostSnapshot.hasData ||
+                      !originalPostSnapshot.data!.exists ||
+                      originalPostSnapshot.data!.data() == null) {
+                    return _buildErrorContainer('Bài viết gốc đã bị xóa.');
+                  }
+
+                  // Original post exists - display it with live data
+                  final originalPostData =
+                      originalPostSnapshot.data!.data() as Map<String, dynamic>;
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: mobileBackgroundColor.withValues(alpha: 0.5),
+                      border: Border.all(color: secondaryColor),
                     ),
-                    // Original post text
-                    if (snapData['originalPostText'] != null &&
-                        snapData['originalPostText']!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: Text(
-                          snapData['originalPostText'] ?? '',
-                          style: const TextStyle(fontSize: 14),
+                    // padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Original post header
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundImage: NetworkImage(
+                                  originalPostData['profImage'] ?? '',
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                originalPostData['displayName'] ??
+                                    'Tên người dùng',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    const SizedBox(height: 4),
-                    // Original post image
-                    if (snapData['postUrl'] != null)
-                      ClipRRect(
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(12),
-                          bottomRight: Radius.circular(12),
-                        ),
-                        child: Image.network(
-                          snapData['postUrl'],
-                          height: MediaQuery.of(context).size.height * 0.25,
-                          width: double.infinity,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    const SizedBox(height: 4),
-                  ],
-                ),
+                        // Original post text
+                        if (originalPostData['postText'] != null &&
+                            originalPostData['postText']!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                            ),
+                            child: Text(
+                              originalPostData['postText'] ?? '',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ),
+                        const SizedBox(height: 4),
+                        // Original post image
+                        if (originalPostData['postUrl'] != null &&
+                            originalPostData['postUrl'].isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(12),
+                              bottomRight: Radius.circular(12),
+                            ),
+                            child: Image.network(
+                              originalPostData['postUrl'],
+                              height: MediaQuery.of(context).size.height * 0.25,
+                              width: double.infinity,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildErrorContainer(
+                                  'Không thể tải hình ảnh.',
+                                );
+                              },
+                            ),
+                          ),
+                        const SizedBox(height: 4),
+                      ],
+                    ),
+                  );
+                },
               ),
             ] else ...[
               // REGULAR IMAGE SECTION OF THE POST (if not a reshare)
@@ -746,6 +839,27 @@ class _PostCardState extends State<PostCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorContainer(String message) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: mobileBackgroundColor.withValues(alpha: 0.5),
+        border: Border.all(color: secondaryColor),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: secondaryColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(message, style: TextStyle(color: primaryTextColor)),
+          ),
+        ],
       ),
     );
   }
