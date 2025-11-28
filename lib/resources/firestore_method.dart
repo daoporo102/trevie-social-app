@@ -87,6 +87,8 @@ class FirestoreMethod {
         'lastDateModified': Timestamp.fromDate(now),
       };
 
+      String? newPhotoUrl;
+
       // Only update image if user selected a new one
       if (file != null) {
         // Delete the old image from storage if it exists
@@ -101,7 +103,7 @@ class FirestoreMethod {
         }
 
         // Upload the new image to storage
-        String newPhotoUrl = await StorageMethod().uploadImageToStorage(
+        newPhotoUrl = await StorageMethod().uploadImageToStorage(
           'posts',
           file,
           true,
@@ -118,10 +120,24 @@ class FirestoreMethod {
         // Update the post document with the new image URL, text and date
         await _firestore.collection('posts').doc(postId).update(updateData);
 
+        // Update all reshared posts that reference this original post
+        await _updateResharesOfPost(
+          postId,
+          postText,
+          newPhotoUrl, // Will be null if no new image was uploaded
+        );
+
         res = 'success';
       } else {
         // If no new file is provided, just update the text
         await _firestore.collection('posts').doc(postId).update(updateData);
+
+        // Update all reshared posts that reference this original post
+        await _updateResharesOfPost(
+          postId,
+          postText,
+          newPhotoUrl, // Will be null if no new image was uploaded
+        );
       }
       res = 'success';
     } catch (e) {
@@ -461,5 +477,62 @@ class FirestoreMethod {
       res = "Đã xảy ra lỗi, vui lòng thử lại sau";
     }
     return res;
+  }
+
+  // New helper method to update all reshares
+  Future<void> _updateResharesOfPost(
+    String originalPostId,
+    String newPostText,
+    String? newPhotoUrl,
+  ) async {
+    try {
+      // Query all posts that are reshares of the original post
+      QuerySnapshot reshareSnapshot = await _firestore
+          .collection('posts')
+          .where('originalPostId', isEqualTo: originalPostId)
+          .get();
+
+      if (reshareSnapshot.docs.isEmpty) {
+        avoidPrint("No reshares found for postId: $originalPostId");
+        return; // No reshares to update
+      }
+
+      // Use batch to update all reshares efficiently
+      WriteBatch batch = _firestore.batch();
+      int updateCount = 0;
+
+      for (var doc in reshareSnapshot.docs) {
+        Map<String, dynamic> reshareUpdateData = {
+          'originalPostText': newPostText,
+          'lastDateModified': Timestamp.now(),
+        };
+
+        // Only update photoUrl if a new one is provided
+        if (newPhotoUrl != null) {
+          reshareUpdateData['postUrl'] = newPhotoUrl;
+        }
+
+        batch.update(doc.reference, reshareUpdateData);
+        updateCount++;
+
+        // Firestore batch limit is 500 operations
+        if (updateCount >= 500) {
+          await batch.commit();
+          batch = _firestore.batch();
+          updateCount = 0;
+        }
+      }
+
+      // Commit remaining updates
+      if (updateCount > 0) {
+        await batch.commit();
+      }
+
+      avoidPrint(
+        "Updated ${reshareSnapshot.docs.length} reshares for postId: $originalPostId",
+      );
+    } catch (e) {
+      avoidPrint("Error updating reshares: ${e.toString()}");
+    }
   }
 }
