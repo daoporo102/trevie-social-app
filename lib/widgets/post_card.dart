@@ -185,26 +185,58 @@ class _PostCardState extends State<PostCard> {
                     child: CustomButton(
                       onPressed: () async {
                         final String res;
-                        res = await FirestoreMethod().resharePost(
-                          textPostController.text.trim(),
-                          originalPost,
-                          uid,
-                          displayName,
-                          profImage,
-                        );
-                        if (res != 'success') {
-                          if (!context.mounted) return;
-                          displaySnackBar(res, context, SnackBarType.error);
-                          return;
-                        }
+                        // check if is a reshare post or not
+                        if (snapData['originalPostId'] != null) {
+                          // if is a reshare post, we need to get the original post
+                          Post originalResharePost = Post.fromSnap(
+                            await FirebaseFirestore.instance
+                                .collection('posts')
+                                .doc(snapData['originalPostId'])
+                                .get(),
+                          );
+                          res = await FirestoreMethod().resharePost(
+                            textPostController.text.trim(),
+                            originalResharePost,
+                            uid,
+                            displayName,
+                            profImage,
+                          );
+                          if (res != 'success') {
+                            if (!context.mounted) return;
+                            displaySnackBar(res, context, SnackBarType.error);
+                            return;
+                          }
 
-                        if (!context.mounted) return;
-                        Navigator.pop(context); // Close the bottom sheet
-                        displaySnackBar(
-                          'Chia sẻ bài viết thành công',
-                          context,
-                          SnackBarType.success,
-                        );
+                          if (!context.mounted) return;
+                          Navigator.pop(context); // Close the bottom sheet
+                          displaySnackBar(
+                            'Chia sẻ bài viết thành công',
+                            context,
+                            SnackBarType.success,
+                          );
+                        } else {
+                          // This is an original post
+                          res = await FirestoreMethod().resharePost(
+                            textPostController.text.trim(),
+                            originalPost,
+                            uid,
+                            displayName,
+                            profImage,
+                          );
+                          if (res != 'success') {
+                            if (!context.mounted) return;
+                            displaySnackBar(res, context, SnackBarType.error);
+                            return;
+                          }
+
+                          if (!context.mounted) return;
+                          Navigator.pop(context); // Close the bottom sheet
+                          displaySnackBar(
+                            'Chia sẻ bài viết thành công',
+                            context,
+                            SnackBarType.success,
+                          );
+                        }
                       },
                       child: const Text(
                         'Chia sẻ',
