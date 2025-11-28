@@ -523,7 +523,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
               CircleAvatar(
                 radius: 12,
                 backgroundImage: NetworkImage(
-                  postData['originalPostImage'] ?? '',
+                  postData['originalProfImage'] ?? '',
                 ),
               ),
               const SizedBox(width: 8),
