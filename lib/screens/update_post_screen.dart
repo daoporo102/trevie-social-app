@@ -512,8 +512,9 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
       padding: const EdgeInsets.all(16.0),
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       decoration: BoxDecoration(
-        color: secondaryColor.withValues(alpha: 0.5),
+        color: mobileBackgroundColor.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(color: secondaryColor, width: 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
