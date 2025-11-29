@@ -46,13 +46,19 @@ class FirestoreMethod {
         postId: postId,
         uid: uid,
         postText: postText,
+        displayName: displayName,
         postUrl: photoUrl,
+        profImage: profImage,
         datePublished: now,
         likes: [],
-        displayName: displayName,
-        profImage: profImage,
         dateUpdated: null,
         lastDateModified: now,
+        reshareCount: 0,
+        originalPostId: null,
+        originalUid: null,
+        originalPostText: null,
+        originalDisplayName: null,
+        originalProfImage: null,
       );
 
       _firestore.collection('posts').doc(postId).set(post.toJson());
@@ -80,18 +86,33 @@ class FirestoreMethod {
         'dateUpdated': Timestamp.fromDate(now),
         'lastDateModified': Timestamp.fromDate(now),
       };
+
+      String? newPhotoUrl;
+
+      // Only update image if user selected a new one
       if (file != null) {
         // Delete the old image from storage if it exists
         if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
-          await StorageMethod().deleteImageFromStorage(existingImageUrl);
+          try {
+            await StorageMethod().deleteImageFromStorage(existingImageUrl);
+          } catch (storageError) {
+            avoidPrint(
+              "Storage deletion warning (old image may be missing): $storageError",
+            );
+          }
         }
 
         // Upload the new image to storage
-        String newPhotoUrl = await StorageMethod().uploadImageToStorage(
+        newPhotoUrl = await StorageMethod().uploadImageToStorage(
           'posts',
           file,
           true,
         );
+
+        //  Check if upload succeeded
+        if (newPhotoUrl.isEmpty) {
+          return "Lỗi tải ảnh lên, vui lòng thử lại";
+        }
 
         // Add the new photo Url to updateData
         updateData['postUrl'] = newPhotoUrl;
@@ -99,14 +120,29 @@ class FirestoreMethod {
         // Update the post document with the new image URL, text and date
         await _firestore.collection('posts').doc(postId).update(updateData);
 
+        // Update all reshared posts that reference this original post
+        await _updateResharesOfPost(
+          postId,
+          postText,
+          newPhotoUrl, // Will be null if no new image was uploaded
+        );
+
         res = 'success';
       } else {
         // If no new file is provided, just update the text
         await _firestore.collection('posts').doc(postId).update(updateData);
+
+        // Update all reshared posts that reference this original post
+        await _updateResharesOfPost(
+          postId,
+          postText,
+          newPhotoUrl, // Will be null if no new image was uploaded
+        );
       }
       res = 'success';
     } catch (e) {
-      avoidPrint(e.toString());
+      avoidPrint("Error in updatePost: ${e.toString()}");
+      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
     }
     return res;
   }
@@ -231,32 +267,75 @@ class FirestoreMethod {
           .doc(postId)
           .get();
 
-      if (userUid == postDoc['uid']) {
-        // Check if the document exists
-        if (postDoc.exists && postDoc.data() != null) {
-          String postUrl = (postDoc.data() as Map<String, dynamic>)['postUrl'];
+      if (postDoc.data() == null || !postDoc.exists) {
+        res = 'Bài viết không tồn tại hoặc đã bị xoá!';
+        avoidPrint(res);
+        return res;
+      }
 
-          // Delete post collection in Firestore database
-          await _firestore.collection('posts').doc(postId).delete();
+      final postData = postDoc.data() as Map<String, dynamic>;
 
-          // Delete post's image in storage if it exists
-          if (postUrl.isNotEmpty) {
-            await StorageMethod().deleteImageFromStorage(postUrl);
-          }
-
-          res = 'success';
-          return res;
-        }
-      } else {
+      // Check ownership
+      if (userUid != postDoc['uid']) {
         res = 'Bạn không có quyền xoá bài viết này!';
         avoidPrint(res);
         return res;
       }
-    } catch (e) {
-      avoidPrint("Error in deletePost: ${e.toString()}");
-      rethrow;
-    }
 
+      String postUrl = postData['postUrl'];
+
+      // Check if this is a reshared post
+      bool isReshare = postData['originalPostId'] != null;
+
+      // Delete post collection in Firestore database
+      await _firestore.collection('posts').doc(postId).delete();
+
+      // Only delete image if it's not a reshared post (reshares reuse the original image)
+      if (!isReshare && postUrl.isNotEmpty) {
+        try {
+          await StorageMethod().deleteImageFromStorage(postUrl);
+        } catch (storageError) {
+          avoidPrint(
+            "Storage deletion warning (post already deleted): $storageError",
+          );
+        }
+      }
+
+      // If this is a post is a reshared post
+      if (isReshare && postData['originalPostId'] != null) {
+        String originalPostId = postData['originalPostId'];
+
+        try {
+          // get original post document
+          DocumentSnapshot originalPostDoc = await _firestore
+              .collection('posts')
+              .doc(originalPostId)
+              .get();
+
+          // Only decrement if the original post exists
+          if (originalPostDoc.exists && originalPostDoc.data() != null) {
+            // Decrement reshareCount on the original post
+            await _firestore.collection('posts').doc(originalPostId).update({
+              'reshareCount': FieldValue.increment(-1),
+            });
+            avoidPrint("Decremented reshareCount for post $originalPostId");
+          } else {
+            avoidPrint(
+              "Original post $originalPostId doesn't exist, skipping reshareCount decrement",
+            );
+          }
+        } catch (e) {
+          avoidPrint(
+            "Could not decrement reshareCount (original post may be deleted): ${e.toString()}",
+          );
+        }
+      }
+
+      res = 'success';
+    } catch (e) {
+      res = "Có lỗi xảy ra, vui lòng thử lại sau";
+      avoidPrint("Error in deletePost: ${e.toString()}");
+    }
     return res;
   }
 
@@ -326,6 +405,148 @@ class FirestoreMethod {
       }
     } catch (e) {
       avoidPrint(e.toString());
+    }
+  }
+
+  // Reshare post
+  Future<String> resharePost(
+    String postText,
+    Post originalPost,
+    String uid,
+    String displayName,
+    String profImage,
+  ) async {
+    String res = "Một lỗi đã xảy ra";
+    try {
+      // creates unique id based on time
+      String postId = const Uuid().v1();
+      // get current time
+      final now = DateTime.now();
+
+      // Create the new post data
+      Post newPost = Post(
+        postId: postId,
+        uid: uid,
+        postText: postText,
+        displayName: displayName,
+        postUrl: originalPost.postUrl,
+        profImage: profImage,
+        datePublished: now,
+        likes: [],
+        dateUpdated: null,
+        lastDateModified: now,
+        reshareCount: 0,
+        originalPostId: originalPost.postId,
+        originalUid: originalPost.uid,
+        originalPostText: originalPost.postText,
+        originalDisplayName: originalPost.displayName,
+        originalProfImage: originalPost.profImage,
+      );
+
+      // Reference to the original post
+      DocumentReference originalPostRef = _firestore
+          .collection('posts')
+          .doc(originalPost.postId);
+
+      // Original post exists, proceed with resharing
+      if (await originalPostRef.snapshots().isEmpty) {
+        avoidPrint('Original post does not exist.');
+        res = 'Bài viết gốc không tồn tại hoặc đã bị xoá!';
+        return res;
+      }
+
+      // Add the new post to Firestore
+      await _firestore.collection('posts').doc(postId).set(newPost.toJson());
+
+      // Increment reshareCount on the original post
+      await _firestore.collection('posts').doc(originalPost.postId).update({
+        'reshareCount': FieldValue.increment(1),
+      });
+
+      res = 'success';
+    } catch (e) {
+      avoidPrint("Error in resharePost: ${e.toString()}");
+      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
+    }
+    return res;
+  }
+
+  // Update reshare post (text only)
+  Future<String> updateResharePost(String postId, String postText) async {
+    String res = "Một lỗi đã xảy ra";
+    try {
+      final now = DateTime.now();
+      Map<String, dynamic> updateData = {
+        'postText': postText,
+        'dateUpdated': Timestamp.fromDate(now),
+        'lastDateModified': Timestamp.fromDate(now),
+      };
+
+      // just update the text
+      await _firestore.collection('posts').doc(postId).update(updateData);
+
+      res = 'success';
+    } catch (e) {
+      avoidPrint(e.toString());
+      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
+    }
+    return res;
+  }
+
+  // New helper method to update all reshares
+  Future<void> _updateResharesOfPost(
+    String originalPostId,
+    String newPostText,
+    String? newPhotoUrl,
+  ) async {
+    try {
+      // Query all posts that are reshares of the original post
+      QuerySnapshot reshareSnapshot = await _firestore
+          .collection('posts')
+          .where('originalPostId', isEqualTo: originalPostId)
+          .get();
+
+      if (reshareSnapshot.docs.isEmpty) {
+        avoidPrint("No reshares found for postId: $originalPostId");
+        return; // No reshares to update
+      }
+
+      // Use batch to update all reshares efficiently
+      WriteBatch batch = _firestore.batch();
+      int updateCount = 0;
+
+      for (var doc in reshareSnapshot.docs) {
+        Map<String, dynamic> reshareUpdateData = {
+          'originalPostText': newPostText,
+          'lastDateModified': Timestamp.now(),
+        };
+
+        // Only update photoUrl if a new one is provided
+        if (newPhotoUrl != null) {
+          reshareUpdateData['postUrl'] = newPhotoUrl;
+        }
+
+        batch.update(doc.reference, reshareUpdateData);
+        updateCount++;
+
+        // Firestore batch limit is 500 operations
+        if (updateCount >= 500) {
+          await batch.commit();
+          batch = _firestore.batch();
+          updateCount = 0;
+        }
+      }
+
+      // Commit remaining updates
+      if (updateCount > 0) {
+        await batch.commit();
+      }
+
+      avoidPrint(
+        "Updated ${reshareSnapshot.docs.length} reshares for postId: $originalPostId",
+      );
+    } catch (e) {
+      avoidPrint("Error updating reshares: ${e.toString()}");
     }
   }
 }

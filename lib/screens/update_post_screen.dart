@@ -24,6 +24,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
   var _image;
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
+  bool _isReshare = false;
 
   @override
   void initState() {
@@ -33,6 +34,9 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
     _textController.text = postData['postText'];
     // Initialize _image with existing post URL
     _image = postData['postUrl'];
+
+    // Check if the post is a reshare
+    _isReshare = postData['originalPostId'] != null;
   }
 
   Future<void> _selectImage() async {
@@ -143,62 +147,118 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
       _isLoading = true;
     });
     try {
-      // Determine if we have a new image (Uint8List) or existing URL (String)
-      Uint8List? fileToUpload;
-      String? existingUrl;
-
-      if (_image is Uint8List) {
-        // User selected a new image
-        fileToUpload = _image;
-        existingUrl = widget.snap['postUrl']; // Pass the old URL to delete it
-      } else if (_image is String) {
-        // User kept the existing image
-        fileToUpload = null;
-        existingUrl = null;
-      }
-
-      // Update post's text and image
-      String res = await FirestoreMethod().updatePost(
-        postId,
-        _textController.text.trim(),
-        fileToUpload,
-        existingUrl,
-      );
-
-      if (!mounted) return; // guard context after async
-
-      if (res == 'success') {
-        setState(() {
-          _isLoading = false;
-        });
-        displaySnackBar(
-          'Cập nhật bài đăng thành công!',
-          context,
-          SnackBarType.success,
+      // For reshared posts, only update the text (not the image)
+      if (_isReshare) {
+        String res = await FirestoreMethod().updateResharePost(
+          postId,
+          _textController.text.trim(),
         );
-        clearImage();
-        _textController.clear();
-        //Navigate back to feed screen
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const ResponsiveLayout(
-              mobileScreenLayout: MobileScreenLayout(),
-              webScreenLayout: WebScreenLayout(),
+        if (!mounted) return; // guard context after async
+
+        if (res == 'success') {
+          setState(() {
+            _isLoading = false;
+          });
+          displaySnackBar(
+            'Cập nhật bài đăng thành công!',
+            context,
+            SnackBarType.success,
+          );
+          clearImage();
+          _textController.clear();
+          //Navigate back to feed screen
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const ResponsiveLayout(
+                mobileScreenLayout: MobileScreenLayout(),
+                webScreenLayout: WebScreenLayout(),
+              ),
             ),
-          ),
-          // remove all previous routes
-          (route) => false,
-        );
+            // remove all previous routes
+            (route) => false,
+          );
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+          displaySnackBar(
+            'Có lỗi xảy ra, vui lòng thử lại sau.',
+            context,
+            SnackBarType.error,
+          );
+        }
       } else {
-        setState(() {
-          _isLoading = false;
-        });
-        displaySnackBar(
-          'Có lỗi xảy ra, vui lòng thử lại sau.',
-          context,
-          SnackBarType.error,
+        // For regular posts, update both text and image
+
+        // Determine if we have a new image (Uint8List) or existing URL (String)
+        Uint8List? fileToUpload;
+        String? existingUrl;
+
+        if (_image is Uint8List) {
+          // User selected a new image
+          fileToUpload = _image;
+          existingUrl = widget.snap['postUrl']; // Pass the old URL to delete it
+        } else if (_image is String) {
+          // User kept the existing image
+          fileToUpload = null;
+          existingUrl = null;
+        } else {
+          // No image at all
+          fileToUpload = null;
+          existingUrl = widget.snap['postUrl']; // Delete existing image
+        }
+
+        // ✅ Add debug logging
+        avoidPrint("DEBUG - Updating post:");
+        avoidPrint(
+          "  fileToUpload: ${fileToUpload != null ? 'New image' : 'null'}",
         );
-        avoidPrint("Update post failed: $res");
+        avoidPrint("  existingUrl: $existingUrl");
+        avoidPrint("  _image type: ${_image.runtimeType}");
+
+        // Update post's text and image
+        String res = await FirestoreMethod().updatePost(
+          postId,
+          _textController.text.trim(),
+          fileToUpload,
+          existingUrl,
+        );
+
+        if (!mounted) return; // guard context after async
+
+        if (res == 'success') {
+          setState(() {
+            _isLoading = false;
+          });
+          displaySnackBar(
+            'Cập nhật bài đăng thành công!',
+            context,
+            SnackBarType.success,
+          );
+          clearImage();
+          _textController.clear();
+          //Navigate back to feed screen
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const ResponsiveLayout(
+                mobileScreenLayout: MobileScreenLayout(),
+                webScreenLayout: WebScreenLayout(),
+              ),
+            ),
+            // remove all previous routes
+            (route) => false,
+          );
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+          displaySnackBar(
+            'Có lỗi xảy ra, vui lòng thử lại sau.',
+            context,
+            SnackBarType.error,
+          );
+          avoidPrint("Update post failed: $res");
+        }
       }
     } catch (e) {
       if (!mounted) return; // guard context after async
@@ -334,6 +394,8 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
               ?width > webScreenSize
                   ? null
                   : const Divider(color: secondaryColor),
+
+              // User info section
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -369,6 +431,8 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
                   ],
                 ),
               ),
+
+              // Text input
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: SizedBox(
@@ -384,53 +448,129 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
                 ),
               ),
               const Divider(color: secondaryColor),
-              // show the post's image
-              Center(
-                child: Stack(
-                  alignment: Alignment.topRight,
-                  children: [
-                    if (_isLoading)
-                      customCircularProgressIndicator()
-                    else if (_image == null)
-                      Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: const Text(
-                          'Không có ảnh cho bài đăng',
-                          style: TextStyle(color: primaryTextColor),
-                        ),
-                      )
-                    else if (_image is Uint8List)
-                      Image.memory(
-                        _image as Uint8List,
-                        width: double.infinity,
-                        fit: BoxFit.contain,
-                      )
-                    else if (_image is String)
-                      Image.network(
-                        _image as String,
-                        width: double.infinity,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => Padding(
+
+              // Show different UI for reshare vs regular post
+              if (_isReshare) ...[
+                // Show original post preview (read-only)
+                _buildOriginalPostPreview(postData),
+              ] else ...[
+                // Show editable image section
+                Center(
+                  child: Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      if (_isLoading)
+                        customCircularProgressIndicator()
+                      else if (_image == null)
+                        Padding(
                           padding: const EdgeInsets.all(32.0),
                           child: const Text(
-                            'Không thể tải ảnh',
+                            'Không có ảnh cho bài đăng',
                             style: TextStyle(color: primaryTextColor),
                           ),
+                        )
+                      else if (_image is Uint8List)
+                        Image.memory(
+                          _image as Uint8List,
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                        )
+                      else if (_image is String)
+                        Image.network(
+                          _image as String,
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: const Text(
+                              'Không thể tải ảnh',
+                              style: TextStyle(color: primaryTextColor),
+                            ),
+                          ),
                         ),
-                      ),
-                    if (_image != null && !_isLoading)
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: secondaryColor),
-                        onPressed: () {
-                          _selectImage();
-                        },
-                      ),
-                  ],
+                      if (_image != null && !_isLoading)
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: secondaryColor),
+                          onPressed: () {
+                            _selectImage();
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper widget to show original post preview
+  Widget _buildOriginalPostPreview(Map<String, dynamic> postData) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: mobileBackgroundColor.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(color: secondaryColor, width: 1.0),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 12,
+                backgroundImage: NetworkImage(
+                  postData['originalProfImage'] ?? '',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                postData['originalDisplayName'] ?? 'Người dùng không xác định',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: primaryTextColor,
+                  fontSize: 14,
                 ),
               ),
             ],
           ),
-        ),
+          if (postData['originalPostText'] != null &&
+              postData['originalPostText'].isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              postData['originalPostText'],
+              style: const TextStyle(color: primaryTextColor, fontSize: 14),
+            ),
+          ],
+          if (postData['postUrl'] != null &&
+              postData['postUrl'].isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8.0),
+              child: Image.network(
+                postData['postUrl'],
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Text(
+                  'Không thể tải ảnh gốc',
+                  style: TextStyle(color: primaryTextColor),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          const Text(
+            'Bạn không thể chỉnh sửa nội dung gốc',
+            style: TextStyle(
+              fontStyle: FontStyle.italic,
+              color: primaryTextColor,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }
