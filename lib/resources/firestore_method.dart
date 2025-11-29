@@ -304,14 +304,29 @@ class FirestoreMethod {
       // If this is a post is a reshared post
       if (isReshare && postData['originalPostId'] != null) {
         String originalPostId = postData['originalPostId'];
-        // Decrement reshareCount on the original post
+
         try {
-          await _firestore.collection('posts').doc(originalPostId).update({
-            'reshareCount': FieldValue.increment(-1),
-          });
+          // get original post document
+          DocumentSnapshot originalPostDoc = await _firestore
+              .collection('posts')
+              .doc(originalPostId)
+              .get();
+
+          // Only decrement if the original post exists
+          if (originalPostDoc.exists && originalPostDoc.data() != null) {
+            // Decrement reshareCount on the original post
+            await _firestore.collection('posts').doc(originalPostId).update({
+              'reshareCount': FieldValue.increment(-1),
+            });
+            avoidPrint("Decremented reshareCount for post $originalPostId");
+          } else {
+            avoidPrint(
+              "Original post $originalPostId doesn't exist, skipping reshareCount decrement",
+            );
+          }
         } catch (e) {
           avoidPrint(
-            "Could not decrement reshareCount (original post may be deleted): $e",
+            "Could not decrement reshareCount (original post may be deleted): ${e.toString()}",
           );
         }
       }
@@ -320,7 +335,6 @@ class FirestoreMethod {
     } catch (e) {
       res = "Có lỗi xảy ra, vui lòng thử lại sau";
       avoidPrint("Error in deletePost: ${e.toString()}");
-      rethrow;
     }
     return res;
   }
