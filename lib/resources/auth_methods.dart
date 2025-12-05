@@ -23,6 +23,9 @@ class AuthMethods {
         bio: '',
         dateOfBirth: DateTime.now(),
         createdAt: DateTime.now(),
+        isSuspended: false,
+        suspendedAt: null,
+        isDeleted: false,
       );
     }
 
@@ -41,6 +44,9 @@ class AuthMethods {
         bio: '',
         dateOfBirth: DateTime.now(),
         createdAt: DateTime.now(),
+        isSuspended: false,
+        suspendedAt: null,
+        isDeleted: false,
       );
     }
     return model.User.fromSnap(snap);
@@ -82,6 +88,9 @@ class AuthMethods {
           bio: '',
           dateOfBirth: DateTime.now(),
           createdAt: DateTime.now(),
+          isSuspended: false,
+        suspendedAt: null,
+        isDeleted: false,
         );
 
         //adding user in our database
