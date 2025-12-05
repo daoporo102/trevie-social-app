@@ -7,6 +7,7 @@ class User {
   final String photoUrl;
   final String? bio;
   final DateTime? dateOfBirth;
+  final DateTime createdAt;
   final List followers;
   final List following;
 
@@ -17,6 +18,7 @@ class User {
     required this.photoUrl,
     this.bio,
     this.dateOfBirth,
+    required this.createdAt,
     required this.followers,
     required this.following,
   });
@@ -27,6 +29,7 @@ class User {
     "email": email,
     "bio": bio,
     "dateOfBirth": dateOfBirth?.toIso8601String(),
+    "createdAt": Timestamp.fromDate(createdAt),
     "photoUrl": photoUrl,
     "followers": followers,
     "following": following,
@@ -36,7 +39,7 @@ class User {
     var snapshotData = spapshot.data() as Map<String, dynamic>;
 
     // Helper function to safely convert Timestamp to DateTime
-    DateTime? parseDateOfBirth(dynamic value){
+    DateTime? parseDateField(dynamic value){
       if(value == null) return null;
       if(value is Timestamp) return value.toDate();
       if(value is String) return DateTime.tryParse(value);
@@ -59,7 +62,8 @@ class User {
           ? snapshotData["following"]
           : [],
       bio: snapshotData.containsKey("bio") ? snapshotData["bio"] : '',
-      dateOfBirth: parseDateOfBirth(snapshotData["dateOfBirth"]),
+      dateOfBirth: parseDateField(snapshotData["dateOfBirth"]),
+      createdAt: parseDateField(snapshotData['createdAt']) ?? DateTime.now(),
     );
   }
 }
