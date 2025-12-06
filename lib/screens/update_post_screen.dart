@@ -208,7 +208,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
           existingUrl = widget.snap['postUrl']; // Delete existing image
         }
 
-        // ✅ Add debug logging
+        // Add debug logging
         avoidPrint("DEBUG - Updating post:");
         avoidPrint(
           "  fileToUpload: ${fileToUpload != null ? 'New image' : 'null'}",

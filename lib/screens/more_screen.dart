@@ -20,28 +20,42 @@ class MoreScreen extends StatefulWidget {
 class _MoreScreenState extends State<MoreScreen> {
   // Sign out function
   void signOutUser() async {
-    // Get provider and navigator references BEFORE async operations
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final navigator = Navigator.of(context);
+    try {
+      avoidPrint("Starting sign out process...");
 
-    await AuthMethods().signOut();
+      // Get references BEFORE async operations
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final navigator = Navigator.of(context);
 
-    // Check after async
-    if(!mounted) return;
-    // Ensure user provider is refreshed
-    userProvider.refreshUser();
+      // Sign out from Firebase
+      await AuthMethods().signOut();
 
-    // Check after async
-    if(!mounted) return;
-    // Navigate to login screen
-    navigator.pushReplacement(
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-    );
+      // Wait a bit for auth state to propagate
+      await Future.delayed(const Duration(milliseconds: 500));
 
-    // Check before using context with Snackbar
-    if (!mounted) return;
-    //Display snackbar
-    displaySnackBar('Đăng xuất thành công!', context, SnackBarType.success);
+      if (!mounted) return;
+
+      // Clear user provider
+      await userProvider.refreshUser();
+
+      if (!mounted) return;
+
+      // Navigate to login
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false, // Remove all routes
+      );
+
+      if (!mounted) return;
+
+      displaySnackBar('Đăng xuất thành công!', context, SnackBarType.success);
+
+      avoidPrint("Sign out complete");
+    } catch (e) {
+      avoidPrint("Error during sign out: $e");
+      if (!mounted) return;
+      displaySnackBar('Lỗi đăng xuất: $e', context, SnackBarType.error);
+    }
   }
 
   @override

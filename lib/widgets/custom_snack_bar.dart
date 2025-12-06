@@ -7,7 +7,7 @@ class CustomSnackBar {
   static SnackBar buildSnackBar({
     required String text,
     required SnackBarType type,
-    Duration duration = const Duration(seconds: 5),
+    Duration duration = const Duration(seconds: 4),
   }) {
     Color backgroundColor;
     IconData icon;

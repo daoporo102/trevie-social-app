@@ -7,8 +7,12 @@ class User {
   final String photoUrl;
   final String? bio;
   final DateTime? dateOfBirth;
+  final DateTime createdAt;
   final List followers;
   final List following;
+  final bool isSuspended;
+  final DateTime? suspendedAt;
+  final bool isDeleted;
 
   const User({
     required this.uid,
@@ -17,8 +21,12 @@ class User {
     required this.photoUrl,
     this.bio,
     this.dateOfBirth,
+    required this.createdAt,
     required this.followers,
     required this.following,
+    this.isSuspended = false,
+    this.suspendedAt,
+    this.isDeleted = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -26,20 +34,28 @@ class User {
     "displayName": displayName,
     "email": email,
     "bio": bio,
-    "dateOfBirth": dateOfBirth?.toIso8601String(),
+    "dateOfBirth": dateOfBirth != null
+        ? Timestamp.fromDate(dateOfBirth!)
+        : null,
+    "createdAt": Timestamp.fromDate(createdAt),
     "photoUrl": photoUrl,
     "followers": followers,
     "following": following,
+    "isSuspended": isSuspended,
+    "suspendedAt": suspendedAt != null
+        ? Timestamp.fromDate(suspendedAt!)
+        : null,
+    "isDeleted": isDeleted,
   };
 
   static User fromSnap(DocumentSnapshot spapshot) {
     var snapshotData = spapshot.data() as Map<String, dynamic>;
 
     // Helper function to safely convert Timestamp to DateTime
-    DateTime? parseDateOfBirth(dynamic value){
-      if(value == null) return null;
-      if(value is Timestamp) return value.toDate();
-      if(value is String) return DateTime.tryParse(value);
+    DateTime? parseDateField(dynamic value) {
+      if (value == null) return null;
+      if (value is Timestamp) return value.toDate();
+      if (value is String) return DateTime.tryParse(value);
       return null;
     }
 
@@ -59,7 +75,12 @@ class User {
           ? snapshotData["following"]
           : [],
       bio: snapshotData.containsKey("bio") ? snapshotData["bio"] : '',
-      dateOfBirth: parseDateOfBirth(snapshotData["dateOfBirth"]),
+      dateOfBirth: parseDateField(snapshotData["dateOfBirth"]),
+      createdAt: parseDateField(snapshotData['createdAt']) ?? DateTime.now(),
+      isSuspended:
+          snapshotData['isSuspended'] == true, // Defaults to false if null
+      suspendedAt: parseDateField(snapshotData['suspendedAt']),
+      isDeleted: snapshotData['isDeleted'] == true, // Defaults to false if null
     );
   }
 }

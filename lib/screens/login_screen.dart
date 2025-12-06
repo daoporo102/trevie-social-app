@@ -6,6 +6,7 @@ import 'package:social_media_app/resources/auth_methods.dart';
 import 'package:social_media_app/responsive/mobile_screen_layout.dart';
 import 'package:social_media_app/responsive/responsive_layout_screen.dart';
 import 'package:social_media_app/responsive/web_screen_layout.dart';
+import 'package:social_media_app/screens/account_blocked_screen.dart';
 import 'package:social_media_app/screens/signup_screen.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
@@ -33,40 +34,88 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void loginUser() async {
+    if (_isLoading) return;
+
     setState(() {
       _isLoading = true;
     });
+
+    avoidPrint("Starting login process...");
+    avoidPrint("Email: ${_emailController.text}");
+
+    // Flag is now managed inside AuthMethods.loginUser()
     String res = await AuthMethods().loginUser(
-      email: _emailController.text,
+      email: _emailController.text.trim(),
       password: _passwordController.text,
     );
 
-    // Check if widget is still mounted before using context
-  if (!mounted) return;
+    avoidPrint("Login result: $res");
 
-    if (res == "success") {
-      //refresh provider so UI updates immediately
-      Provider.of<UserProvider>(context, listen: false).refreshUser();
+    if (!mounted) return;
 
-      if (!mounted) return; // Check again after async operation
+    // Handle suspended account
+    if (res.startsWith("SUSPENDED:")) {
+      final timestampStr = res.split(':')[1];
+      final timestamp = int.tryParse(timestampStr);
+      final suspendedAt = timestamp != null
+          ? DateTime.fromMillisecondsSinceEpoch(timestamp)
+          : null;
 
-      displaySnackBar('Đăng nhập thành công', context, SnackBarType.success);
-      Navigator.of(context).pushReplacement(
+      setState(() {
+        _isLoading = false;
+      });
+
+      avoidPrint("Account is suspended, navigating to blocked screen");
+
+      // Navigate to AccountBlockedScreen
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (context) => const ResponsiveLayout(
-            webScreenLayout: WebScreenLayout(),
-            mobileScreenLayout: MobileScreenLayout(),
+          builder: (context) => AccountBlockedScreen(
+            reason:
+                'Tài khoản đã bị tạm khóa${suspendedAt != null ? ' vào ${suspendedAt.day}/${suspendedAt.month}/${suspendedAt.year}' : ''}.',
+            suspendedAt: suspendedAt,
           ),
         ),
+        (route) => false,
       );
+      return;
+    }
+
+    if (res == "success") {
+      avoidPrint("Login successful");
+
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.refreshUser();
+
+      if (!mounted) return;
+
+      displaySnackBar('Đăng nhập thành công', context, SnackBarType.success);
+
+      _emailController.clear();
+      _passwordController.clear();
+
+      // Pop back to root to let StreamBuilder handle navigation
+      // This ensures the StreamBuilder in main.dart detects the auth change
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const ResponsiveLayout(
+              webScreenLayout: WebScreenLayout(),
+              mobileScreenLayout: MobileScreenLayout(),
+            ),
+          ),
+          (route) => false,
+        );
+      }
     } else {
+      avoidPrint("Login failed: $res");
       displaySnackBar(res, context, SnackBarType.error);
     }
-    
-    if(mounted){
+
+    if (mounted) {
       setState(() {
-      _isLoading = false;
-    });
+        _isLoading = false;
+      });
     }
   }
 
