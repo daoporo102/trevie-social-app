@@ -75,10 +75,12 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         );
       } else {
+        avoidPrint("Error during signup: $res");
         displaySnackBar(res, context, SnackBarType.error);
       }
     } catch (e) {
       if (!mounted) return;
+      avoidPrint("Error during signup: $e");
       displaySnackBar(e.toString(), context, SnackBarType.error);
     } finally {
       if (mounted) {
