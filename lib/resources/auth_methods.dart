@@ -173,9 +173,20 @@ class AuthMethods {
 
         // Check if account is deleted
         if (userData['isDeleted'] == true) {
-          await _auth.signOut();
+          final deletedAt = userData['deletedAt'] as Timestamp?;
+          final deletionDate = deletedAt?.toDate();
+          final deletionReason = userData['deletionReason'] as String?;
+
+          // Don't reset flag yet - let UI handle navigation first
+          avoidPrint("Account deleted, flag still true");
+          avoidPrint("Deletion reason: $deletionReason");
+
+          // Reset flag AFTER determining deletion (UI will handle navigation)
           _isCheckingLogin = false;
-          return "Tài khoản đã bị xóa";
+          avoidPrint("Set _isCheckingLogin = false (deleted - UI will handle)");
+
+          // Return special code with timestamp and reason
+          return "DELETED:${deletionDate?.millisecondsSinceEpoch ?? 0}:${deletionReason ?? ''}";
         }
 
         // Check if account is suspended
@@ -344,7 +355,12 @@ class AuthMethods {
       if (userData['isDeleted'] == true) {
         // await signOut();
         avoidPrint("Account is deleted!");
-        return {'isValid': false, 'reason': 'Tài khoản đã bị xóa'};
+        final deletionReason = userData['deletionReason'] as String?;
+        return {
+          'isValid': false,
+          'reason': 'Tài khoản đã bị xóa',
+          'deletionReason': deletionReason,
+        };
       }
 
       // Check if suspended
