@@ -10,6 +10,8 @@ class AccountBlockedScreen extends StatelessWidget {
   final DateTime? suspendedAt;
   final bool isDeleted;
   final String? deletionReason;
+  final String? suspensionReason;
+
 
   const AccountBlockedScreen({
     super.key,
@@ -17,6 +19,7 @@ class AccountBlockedScreen extends StatelessWidget {
     this.suspendedAt,
     this.isDeleted = false,
     this.deletionReason,
+    this.suspensionReason,
   });
 
   @override
@@ -86,6 +89,45 @@ class AccountBlockedScreen extends StatelessWidget {
                           const SizedBox(height: 8),
                           Text(
                             deletionReason!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: secondaryColor,
+                            ),
+                            textAlign: TextAlign.left,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Suspension Reason (if provided)
+                  if (!isDeleted &&
+                      suspensionReason != null &&
+                      suspensionReason!.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Lý do tạm khóa:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: primaryTextColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            suspensionReason!,
                             style: TextStyle(
                               fontSize: 14,
                               color: secondaryColor,

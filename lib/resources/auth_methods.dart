@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:intl/intl.dart';
 import 'package:social_media_app/models/user.dart' as model;
 import 'package:social_media_app/resources/storage_method.dart';
 import 'package:social_media_app/utils/utils.dart';
@@ -365,19 +364,13 @@ class AuthMethods {
 
       // Check if suspended
       if (userData['isSuspended'] == true) {
-        final suspendedAt = userData['suspendedAt'] as Timestamp?;
-        final DateTime dateToFormat = suspendedAt?.toDate() ?? DateTime.now();
-        final String formattedString = DateFormat(
-          'hh:mm a dd/MM/yyyy',
-          'vi',
-        ).format(dateToFormat);
-
         avoidPrint("Account is suspended!");
-        avoidPrint("Suspended At: $formattedString");
+
+        final suspensionReason = userData['suspensionReason'] as String?;
         return {
           'isValid': false,
-          'reason': 'Tài khoản đã bị tạm khóa${' vào $formattedString'}',
-          'suspendedAt': dateToFormat,
+          'reason': 'Tài khoản đã bị đình chỉ hoạt động',
+          'suspensionReason': suspensionReason,
         };
       }
 

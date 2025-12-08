@@ -89,10 +89,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Handle suspended account
     if (res.startsWith("SUSPENDED:")) {
-      final timestampStr = res.split(':')[1];
-      final timestamp = int.tryParse(timestampStr);
-      final suspendedAt = timestamp != null
-          ? DateTime.fromMillisecondsSinceEpoch(timestamp)
+      final suspendedParts = res.split(':');
+      final suspendedTimestampStr = suspendedParts.length > 1 ? suspendedParts[1] : '0';
+      final suspendedReason = suspendedParts.length > 2 ? suspendedParts[2] : '';
+
+      final suspendedTimestamp = int.tryParse(suspendedTimestampStr);
+      final suspendedAt = suspendedTimestamp != null
+          ? DateTime.fromMillisecondsSinceEpoch(suspendedTimestamp)
           : null;
 
       setState(() {
@@ -100,6 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       avoidPrint("Account is suspended, navigating to blocked screen");
+      avoidPrint("Suspension reason: $suspendedReason");
 
       // Navigate to AccountBlockedScreen
       Navigator.of(context).pushAndRemoveUntil(
@@ -108,6 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
             reason:
                 'Tài khoản đã bị tạm khóa${suspendedAt != null ? ' vào ${suspendedAt.day}/${suspendedAt.month}/${suspendedAt.year}' : ''}.',
             suspendedAt: suspendedAt,
+            suspensionReason: suspendedReason.isNotEmpty ? suspendedReason : null,
           ),
         ),
         (route) => false,

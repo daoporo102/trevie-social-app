@@ -156,6 +156,7 @@ class MyApp extends StatelessWidget {
                         suspendedAt: status['suspendedAt'],
                         isDeleted: status['reason']?.contains('deleted') ?? false,// Check if deleted
                         deletionReason: status['deletionReason'],
+                        suspensionReason: status['suspensionReason'],
                       );
                     }
                   },
