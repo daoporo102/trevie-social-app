@@ -10,6 +10,7 @@ class Post {
   final String profImage;
   final DateTime datePublished;
   final List<String> likes;
+  final int likesCount;
   final DateTime? dateUpdated;
   final DateTime lastDateModified;
   final int reshareCount;
@@ -28,6 +29,7 @@ class Post {
     required this.profImage,
     required this.datePublished,
     required this.likes,
+    required this.likesCount,
     required this.displayName,
     this.dateUpdated,
     required this.lastDateModified,
@@ -47,6 +49,7 @@ class Post {
     "profImage": profImage,
     "datePublished": Timestamp.fromDate(datePublished),
     "likes": likes,
+    "likesCount": likes.length,
     "displayName": displayName,
     "dateUpdated": dateUpdated != null
         ? Timestamp.fromDate(dateUpdated!)
@@ -103,6 +106,7 @@ class Post {
       originalPostText: snapshotData['originalPostText'],
       originalDisplayName: snapshotData['originalDisplayName'],
       originalProfImage: snapshotData['originalProfImage'],
+      likesCount: snapshotData['likesCount'] ?? snapshotData['likes']?.length ?? 0,
     );
   }
 }
