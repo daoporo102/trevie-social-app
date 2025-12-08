@@ -8,11 +8,13 @@ import 'package:social_media_app/widgets/custom_button.dart';
 class AccountBlockedScreen extends StatelessWidget {
   final String reason;
   final DateTime? suspendedAt;
+  final bool isDeleted;
 
   const AccountBlockedScreen({
     super.key,
     required this.reason,
     this.suspendedAt,
+    this.isDeleted = false,
   });
 
   @override
@@ -26,13 +28,17 @@ class AccountBlockedScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Error Icon
-                Icon(Icons.block, size: 100, color: Colors.red),
+                // Error Icon  - different for deleted vs suspended
+                Icon(
+                  isDeleted ? Icons.delete : Icons.block,
+                  size: 100,
+                  color: Colors.red,
+                ),
                 const SizedBox(height: 32),
 
                 // Title
                 Text(
-                  'Tài khoản bị khóa',
+                  isDeleted ? 'Tài khoản đã bị xóa' : 'Tài khoản bị khóa',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -52,7 +58,9 @@ class AccountBlockedScreen extends StatelessWidget {
 
                 // Contact Support
                 Text(
-                  'Nếu bạn cho rằng đây là lỗi, vui lòng liên hệ quản trị viên qua email: truongquangdao102@gmail.com',
+                  isDeleted
+                      ? 'Tài khoản của bạn đã bị xóa vĩnh viễn. Nếu bạn cho rằng đây là lỗi, vui lòng liên hệ quản trị viên qua email: truongquangdao102@gmail.com'
+                      : 'Nếu bạn cho rằng đây là lỗi, vui lòng liên hệ quản trị viên qua email: truongquangdao102@gmail.com',
                   style: TextStyle(fontSize: 14, color: secondaryColor),
                   textAlign: TextAlign.center,
                 ),
