@@ -173,9 +173,21 @@ class AuthMethods {
 
         // Check if account is deleted
         if (userData['isDeleted'] == true) {
-          await _auth.signOut();
+          final deletedAt = userData['deletedAt'] as Timestamp?;
+          final deletionDate = deletedAt?.toDate();
+
+          // Don't reset flag yet - let UI handle navigation first
+          avoidPrint("Account deleted, flag still true");
+
+          // Reset flag AFTER determining deletion (UI will handle navigation)
+          // But keep user signed in for AccountBlockedScreen to display
           _isCheckingLogin = false;
-          return "Tài khoản đã bị xóa";
+          avoidPrint(
+            "Set _isCheckingLogin = false (deleted - UI will handle)",
+          );
+
+          // Return special code
+          return "DELETED:${deletionDate?.millisecondsSinceEpoch ?? 0}";
         }
 
         // Check if account is suspended
