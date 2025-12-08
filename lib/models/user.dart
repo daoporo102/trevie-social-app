@@ -13,6 +13,8 @@ class User {
   final bool isSuspended;
   final DateTime? suspendedAt;
   final bool isDeleted;
+  final DateTime? deletedAt;
+  final String? deletionReason;
 
   const User({
     required this.uid,
@@ -26,7 +28,7 @@ class User {
     required this.following,
     this.isSuspended = false,
     this.suspendedAt,
-    this.isDeleted = false,
+    this.isDeleted = false, this.deletedAt, this.deletionReason,
   });
 
   Map<String, dynamic> toJson() => {
@@ -46,6 +48,10 @@ class User {
         ? Timestamp.fromDate(suspendedAt!)
         : null,
     "isDeleted": isDeleted,
+    "deletedAt": deletedAt != null
+        ? Timestamp.fromDate(deletedAt!)
+        : null,
+    "deletionReason": deletionReason,
   };
 
   static User fromSnap(DocumentSnapshot spapshot) {
@@ -81,6 +87,8 @@ class User {
           snapshotData['isSuspended'] == true, // Defaults to false if null
       suspendedAt: parseDateField(snapshotData['suspendedAt']),
       isDeleted: snapshotData['isDeleted'] == true, // Defaults to false if null
+      deletedAt: parseDateField(snapshotData['deletedAt']),
+      deletionReason: snapshotData["deletionReason"],
     );
   }
 }

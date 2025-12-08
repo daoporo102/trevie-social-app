@@ -155,6 +155,7 @@ class MyApp extends StatelessWidget {
                         reason: status['reason'] ?? 'Tài khoản bị khóa',
                         suspendedAt: status['suspendedAt'],
                         isDeleted: status['reason']?.contains('deleted') ?? false,// Check if deleted
+                        deletionReason: status['deletionReason'],
                       );
                     }
                   },

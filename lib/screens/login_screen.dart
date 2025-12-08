@@ -55,7 +55,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Handle deleted account
     if (res.startsWith("DELETED:")) {
-      final timestampStr = res.split(':')[1];
+      final parts = res.split(':');
+      final timestampStr = parts.length > 1 ? parts[1] : '0';
+      final deletionReason = parts.length > 2 ? parts[2] : '';
+      
       final timestamp = int.tryParse(timestampStr);
       final deletedAt = timestamp != null
           ? DateTime.fromMillisecondsSinceEpoch(timestamp)
@@ -66,6 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       avoidPrint("Account is deleted, navigating to blocked screen");
+      avoidPrint("Deletion reason: $deletionReason");
 
       // Navigate to AccountBlockedScreen
       Navigator.of(context).pushAndRemoveUntil(
@@ -75,6 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 'Tài khoản đã bị xóa${deletedAt != null ? ' vào ${deletedAt.day}/${deletedAt.month}/${deletedAt.year}' : ''}.',
             suspendedAt: deletedAt, // Reuse this field for deletedAt
             isDeleted: true, // Add new parameter to differentiate
+            deletionReason: deletionReason.isNotEmpty ? deletionReason : null,
           ),
         ),
         (route) => false,
