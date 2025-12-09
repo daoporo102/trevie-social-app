@@ -688,6 +688,8 @@ class _PostCardState extends State<PostCard> {
                         isAnimating: isLikeAnimating,
                         duration: const Duration(milliseconds: 400),
                         onEnd: () {
+                          // Add mounted check before setState
+                          if (!mounted) return;
                           setState(() {
                             isLikeAnimating = false;
                           });
