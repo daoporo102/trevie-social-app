@@ -338,6 +338,26 @@ class _PostCardState extends State<PostCard> {
                                       ),
                                     ),
                                   ],
+                                  // Display admin badge
+                                  if (snapData['role'] == "admin") ...[
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.admin_panel_settings,
+                                      size: 16,
+                                      color: appPrimaryColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        'Quản trị viên',
+                                        style: TextStyle(
+                                          color: appPrimaryColor,
+                                          fontSize: 12,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                               Text(
