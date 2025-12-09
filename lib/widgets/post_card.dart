@@ -318,26 +318,6 @@ class _PostCardState extends State<PostCard> {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  // Display reshare indicator
-                                  if (isResharePost) ...[
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.repeat,
-                                      size: 16,
-                                      color: secondaryColor,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        'đã chia sẻ',
-                                        style: TextStyle(
-                                          color: secondaryColor,
-                                          fontSize: 12,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
                                   // Display admin badge
                                   if (snapData['role'] == "admin") ...[
                                     const SizedBox(width: 4),
@@ -352,6 +332,26 @@ class _PostCardState extends State<PostCard> {
                                         'Quản trị viên',
                                         style: TextStyle(
                                           color: appPrimaryColor,
+                                          fontSize: 12,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                  // Display reshare indicator
+                                  if (isResharePost) ...[
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.repeat,
+                                      size: 16,
+                                      color: secondaryColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        'đã chia sẻ',
+                                        style: TextStyle(
+                                          color: secondaryColor,
                                           fontSize: 12,
                                         ),
                                         overflow: TextOverflow.ellipsis,
