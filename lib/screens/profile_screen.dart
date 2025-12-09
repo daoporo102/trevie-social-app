@@ -98,6 +98,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final displayName = (userData['displayName'] as String?) ?? 'Đang tải...';
+    final role = userData['role'] as String?;
     final photoUrl = (userData['photoUrl'] as String?) ?? '';
     final bio = (userData['bio'] as String?) == '' || (userData['bio'] == null)
         ? 'Chưa có tiểu sử'
@@ -193,7 +194,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  if (role == "admin") ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.admin_panel_settings,
+                          color: appPrimaryColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Quản trị viên',
+                          style: TextStyle(
+                            color: appPrimaryColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   Container(alignment: Alignment.center, child: Text('$bio')),
                   const SizedBox(height: 8),
                   Container(
