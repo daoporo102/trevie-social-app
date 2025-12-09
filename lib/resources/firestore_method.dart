@@ -42,6 +42,12 @@ class FirestoreMethod {
       // get current time
       final now = DateTime.now();
 
+      // Fetch author doc to get role (fallback to 'user')
+      final authorDoc = await _firestore.collection('users').doc(uid).get();
+      final authorRole = (authorDoc.exists && authorDoc.data()!=null)
+          ? (authorDoc.data() as Map<String,dynamic>)['role'] as String? ?? 'user'
+          : 'user';
+
       Post post = Post(
         postId: postId,
         uid: uid,
@@ -60,9 +66,14 @@ class FirestoreMethod {
         originalDisplayName: null,
         originalProfImage: null,
         likesCount: 0,
+        role: authorRole,
       );
 
-      _firestore.collection('posts').doc(postId).set(post.toJson());
+      // Create a map from the Post object
+      final postMap = post.toJson();
+
+      // upload to firestore
+      await _firestore.collection('posts').doc(postId).set(postMap);
 
       res = "success";
     } catch (e) {
@@ -426,6 +437,12 @@ class FirestoreMethod {
       // get current time
       final now = DateTime.now();
 
+      // Fetch author doc to get role (fallback to 'user')
+      final authorDoc = await _firestore.collection('users').doc(uid).get();
+      final authorRole = (authorDoc.exists && authorDoc.data()!=null)
+          ? (authorDoc.data() as Map<String,dynamic>)['role'] as String? ?? 'user'
+          : 'user';
+
       // Create the new post data
       Post newPost = Post(
         postId: postId,
@@ -445,6 +462,7 @@ class FirestoreMethod {
         originalDisplayName: originalPost.displayName,
         originalProfImage: originalPost.profImage,
         likesCount: 0,
+        role: authorRole,
       );
 
       // Reference to the original post
