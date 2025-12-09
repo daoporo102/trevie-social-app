@@ -108,6 +108,7 @@ class AuthMethods {
           isSuspended: false,
           suspendedAt: null,
           isDeleted: false,
+          role: 'user',
         );
 
         //adding user in our database
