@@ -28,28 +28,45 @@ class _SearchScreenState extends State<SearchScreen> {
     String query,
     String? currentUid,
   ) async {
+    if (query.isEmpty) {
+      return {'users': [], 'posts': []};
+    }
+
+    // Convert query to lowercase for case-insensitive search
+    final lowerQuery = query.toLowerCase();
+
     // Search users
     final usersSnapshot = await FirebaseFirestore.instance
         .collection('users')
-        .orderBy('displayName')
-        .startAt([query])
-        .endAt(['$query\uf8ff'])
         .get();
 
-    // Filter out the current user from the results
-    final users = usersSnapshot.docs
-        .where((d) => d.data()['uid'] != currentUid)
-        .toList();
+    // Filter users by displayName (case-insensitive) and exclude current user
+    final users = usersSnapshot.docs.where((doc) {
+      final data = doc.data();
+      final displayName = (data['displayName'] as String? ?? '').toLowerCase();
+      final username = (data['username'] as String? ?? '').toLowerCase();
+      final uid = data['uid'] as String?;
 
-    // Search posts by postText
+      // Exclude current user and check if displayName or username contains query
+      return uid != currentUid &&
+          (displayName.contains(lowerQuery) || username.contains(lowerQuery));
+    }).toList();
+
+    // Get all posts and filter in memory (for case-insensitive search)
     final postsSnapshot = await FirebaseFirestore.instance
         .collection('posts')
-        .orderBy('postText')
-        .startAt([query])
-        .endAt(['$query\uf8ff'])
         .get();
 
-    return {'users': users, 'posts': postsSnapshot.docs};
+    // Filter posts by postText (case-insensitive)
+    final posts = postsSnapshot.docs.where((doc) {
+      final data = doc.data();
+      final postText = (data['postText'] as String? ?? '').toLowerCase();
+
+      // Check if postText contains query
+      return postText.contains(lowerQuery);
+    }).toList();
+
+    return {'users': users, 'posts': posts};
   }
 
   @override
