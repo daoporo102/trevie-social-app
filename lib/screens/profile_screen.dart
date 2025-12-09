@@ -99,7 +99,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final displayName = (userData['displayName'] as String?) ?? 'Đang tải...';
     final photoUrl = (userData['photoUrl'] as String?) ?? '';
-    final bio = (userData['bio'] as String?) ?? 'Chưa có tiểu sử';
+    final bio = (userData['bio'] as String?) == '' || (userData['bio'] == null)
+        ? 'Chưa có tiểu sử'
+        : userData['bio'];
     final dateOfBirth = (userData['dateOfBirth'] as Timestamp?)?.toDate();
     final postStream = FirebaseFirestore.instance
         .collection('posts')
@@ -192,10 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Container(
-                    alignment: Alignment.center,
-                    child: Text('Tiểu sử: $bio'),
-                  ),
+                  Container(alignment: Alignment.center, child: Text('$bio')),
                   const SizedBox(height: 8),
                   Container(
                     alignment: Alignment.center,
@@ -246,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             context,
                                             listen: false,
                                           );
-                                          
+
                                       // 2. do async operations
                                       await Navigator.of(context).push(
                                         MaterialPageRoute(
