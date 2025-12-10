@@ -65,6 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       var postSnap = await FirebaseFirestore.instance
           .collection('posts')
           .where('uid', isEqualTo: widget.uid)
+          .where('status', isEqualTo: 'active')
           .get();
 
       final currentUid = FirebaseAuth.instance.currentUser?.uid;
@@ -107,6 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final postStream = FirebaseFirestore.instance
         .collection('posts')
         .where('uid', isEqualTo: widget.uid)
+        .where('status', isEqualTo: 'active')
         .orderBy('lastDateModified', descending: true)
         .snapshots();
 
