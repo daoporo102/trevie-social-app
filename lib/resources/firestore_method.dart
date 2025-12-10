@@ -67,6 +67,9 @@ class FirestoreMethod {
         originalProfImage: null,
         likesCount: 0,
         role: authorRole,
+        status: 'processing',
+        aiReason: null,
+        adminReason: null,
       );
 
       // Create a map from the Post object
@@ -463,6 +466,9 @@ class FirestoreMethod {
         originalProfImage: originalPost.profImage,
         likesCount: 0,
         role: authorRole,
+        status: 'processing',
+        aiReason: null,
+        adminReason: null,
       );
 
       // Reference to the original post

@@ -15,6 +15,7 @@ class FeedScreen extends StatelessWidget {
     final post = FirebaseFirestore.instance.collection('posts');
     // get the stream of posts from Firestore
     final postStream = post
+        .where('status', isEqualTo: 'active')
         .orderBy('lastDateModified', descending: true)
         .snapshots();
 
