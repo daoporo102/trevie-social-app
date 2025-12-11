@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:typed_data';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +14,7 @@ import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/custom_button.dart';
+import 'package:social_media_app/widgets/reject_dialog.dart';
 
 class AddPostScreen extends StatefulWidget {
   const AddPostScreen({super.key});
@@ -163,8 +166,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
       _isLoading = true;
     });
     try {
-      // upload to storage and db
-      String res = await FirestoreMethod().uploadPost(
+      // Call the uploadPost method((At this point, the function returns either the postId or an error message.))
+      String result = await FirestoreMethod().uploadPost(
         _textController.text.trim(),
         _image!,
         uid,
@@ -172,38 +175,31 @@ class _AddPostScreenState extends State<AddPostScreen> {
         profImage,
       );
 
-      avoidPrint("DEBUG - Upload result: $res"); // See what fails
+      avoidPrint("DEBUG - Upload result: $result"); // See what fails
 
       if (!mounted) return; // guard context after async
 
-      if (res == "success") {
-        setState(() {
-          _isLoading = false;
-        });
-        displaySnackBar('Đăng bài thành công!', context, SnackBarType.success);
-        clearImage();
-        _textController.clear();
-        // Navigate to the feed screen
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const ResponsiveLayout(
-              mobileScreenLayout: MobileScreenLayout(),
-              webScreenLayout: WebScreenLayout(),
-            ),
-          ),
-          // remove all previous routes
-          (route) => false,
-        );
-      } else {
+      // Check if the result is an error message (UUID length is 36 characters)
+      // If it contains spaces or is too short, it's an error
+      if (result.length != 36 || result.contains(' ')) {
         setState(() {
           _isLoading = false;
         });
         displaySnackBar(
-          "Có lỗi xảy ra, vui lòng thử lại sau.",
+          "Đã xảy ra lỗi khi đăng bài, vui lòng thử lại sau",
           context,
           SnackBarType.error,
         );
-        avoidPrint(res);
+        avoidPrint("DEBUG - Post upload failed with message: $result");
+      } else {
+        // Upload successful, result is postId
+        String postId = result;
+        avoidPrint("DEBUG - Post uploaded with ID: $postId");
+        setState(() {
+          _isLoading = false;
+        });
+
+        _listenToPostStatus(postId);
       }
     } catch (e) {
       if (!mounted) return;
@@ -217,6 +213,111 @@ class _AddPostScreenState extends State<AddPostScreen> {
         SnackBarType.error,
       );
     }
+  }
+
+  // Listen to the post document for AI moderation status
+  void _listenToPostStatus(String postId) {
+    StreamSubscription<DocumentSnapshot>? postSubscription;
+
+    // Listen the changes in the post document
+    postSubscription = FirebaseFirestore.instance
+        .collection('posts')
+        .doc(postId)
+        .snapshots()
+        .listen((snapshot) async {
+          // Check if snapshot is not exists
+          if (!snapshot.exists) return;
+
+          final data = snapshot.data() as Map<String, dynamic>;
+          final status = data['status'] as String?;
+          final aiReason = data['aiReason'] as String?;
+
+          avoidPrint(
+            "DEBUG - Post $postId status updated: $status, Reason: $aiReason",
+          );
+
+          // if status changed to 'processed', stop listening
+          if (status != 'processing') {
+            // Cancel the subscription to avoid memory leaks
+            await postSubscription?.cancel();
+
+            if (!mounted) return;
+
+            setState(() {
+              _isLoading = false; // Stop loading indicator
+            });
+
+            if (status == 'active') {
+              // AI approved (or AI error -> approved by system_failover) => show success
+              displaySnackBar(
+                "Bài đăng thành công!.",
+                context,
+                SnackBarType.success,
+              );
+              clearImage();
+              _textController.clear();
+
+              // Navigate to Feed Screen
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const ResponsiveLayout(
+                    mobileScreenLayout: MobileScreenLayout(),
+                    webScreenLayout: WebScreenLayout(),
+                  ),
+                ),
+                // remove all previous routes
+                (route) => false,
+              );
+            } else if (status == 'rejected') {
+              // displaySnackBar(
+              //   "Bài đăng của bạn đã bị từ chối. Lý do: $aiReason",
+              //   context,
+              //   SnackBarType.error,
+              // );
+
+              // Show detailed rejection dialog
+              RejectionDialog.show(
+                context,
+                title: 'Bài viết bị từ chối',
+                description:
+                    'Hệ thống AI đã phát hiện nội dung không phù hợp:',
+                reason: aiReason ?? 'Vui lòng kiểm tra lại nội dung.',
+              );
+              avoidPrint("DEBUG - Post $postId was rejected: $aiReason");
+            } else {
+              displaySnackBar(
+                "Bài đăng của bạn có trạng thái không xác định, vui lòng thử lại sau.",
+                context,
+                SnackBarType.error,
+              );
+              avoidPrint("DEBUG - Post $postId has unknown status: $status");
+            }
+          }
+        });
+
+    // Safe timeout: If the AI ​​doesn't respond after 10 seconds (network lag, server down)
+    // Then stop listening and return to the Feed (to prevent the user's computer from freezing indefinitely)
+    Future.delayed(const Duration(seconds: 10), () async {
+      // Only process if the subscription has not been canceled (it is still loading).
+      if (_isLoading && mounted) {
+        setState(() {
+          _isLoading = false; // Stop loading indicator
+        });
+
+        // Navigate back to feed screen after moderation (timeout)
+        // Cloud Function will activate automatically after 5 seconds.
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const ResponsiveLayout(
+              mobileScreenLayout: MobileScreenLayout(),
+              webScreenLayout: WebScreenLayout(),
+            ),
+          ),
+          // remove all previous routes
+          (route) => false,
+        );
+      }
+    });
   }
 
   @override
