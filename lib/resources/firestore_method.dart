@@ -78,7 +78,8 @@ class FirestoreMethod {
       // upload to firestore
       await _firestore.collection('posts').doc(postId).set(postMap);
 
-      res = "success";
+      // return the postId on success
+      res = postId;
     } catch (e) {
       avoidPrint("Error in uploadPost: ${e.toString()}");
       res = "Đã xảy ra lỗi, vui lòng thử lại sau";

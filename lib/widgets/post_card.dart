@@ -263,6 +263,30 @@ class _PostCardState extends State<PostCard> {
 
     final snapData = _getSnapData();
 
+    // Extract status and adminReason if needed
+    final status = snapData['status'] as String?;
+    final adminReason = snapData['adminReason'] as String?;
+    final aiReason = snapData['aiReason'] as String?;
+
+    bool isRejected = status == 'rejected';
+    String rejectionTitle = "";
+    String rejectionReason = "";
+    // Set content opacity based on rejection status
+    final double contentOpacity = isRejected ? 0.5 : 1.0;
+
+    if (isRejected) {
+      if (adminReason != null && adminReason.isNotEmpty) {
+        rejectionTitle = "Bài viết đã bị Admin gỡ";
+        rejectionReason = "Lý do: $adminReason";
+      } else if (aiReason != null && aiReason.isNotEmpty) {
+        rejectionTitle = "Bài viết đã bị AI gỡ";
+        rejectionReason = "Lý do: $aiReason";
+      } else {
+        rejectionTitle = "Bài viết đã bị từ chối";
+        rejectionReason = "Vi phạm tiêu chuẩn cộng đồng";
+      }
+    }
+
     // Check if this is a reshared post
     final bool isResharePost = snapData['originalPostId'] != null;
 
@@ -289,240 +313,293 @@ class _PostCardState extends State<PostCard> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
           children: [
-            //HEADER SECTION OF THE POST
-            Container(
-              padding: const EdgeInsets.symmetric(
-                vertical: 4,
-                horizontal: 16,
-              ).copyWith(right: 0),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundImage: NetworkImage(snapData['profImage']),
+            // REJECTION NOTICE SECTION
+            if (isRejected)
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: errorBackgroundColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: errorBackgroundColor.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.admin_panel_settings,
+                      color: errorBackgroundColor,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            rejectionTitle,
+                            style: const TextStyle(
+                              color: errorBackgroundColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            rejectionReason,
+                            style: const TextStyle(
+                              color: errorBackgroundColor,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    snapData['displayName'],
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
+                    ),
+                  ],
+                ),
+              ),
+            //HEADER SECTION OF THE POST
+            Opacity(
+              opacity: contentOpacity,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 4,
+                  horizontal: 16,
+                ).copyWith(right: 0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundImage: NetworkImage(snapData['profImage']),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      snapData['displayName'],
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
+                                    // Display admin badge
+                                    if (snapData['role'] == "admin") ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.admin_panel_settings,
+                                        size: 16,
+                                        color: appPrimaryColor,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          'Quản trị viên',
+                                          style: TextStyle(
+                                            color: appPrimaryColor,
+                                            fontSize: 12,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                    // Display reshare indicator
+                                    if (isResharePost) ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.repeat,
+                                        size: 16,
+                                        color: secondaryColor,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          'đã chia sẻ',
+                                          style: TextStyle(
+                                            color: secondaryColor,
+                                            fontSize: 12,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                Text(
+                                  DateFormat('HH:mm dd MMM, y', 'vi').format(
+                                    (snapData['lastDateModified']).toDate(),
                                   ),
-                                  // Display admin badge
-                                  if (snapData['role'] == "admin") ...[
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.admin_panel_settings,
-                                      size: 16,
-                                      color: appPrimaryColor,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        'Quản trị viên',
-                                        style: TextStyle(
-                                          color: appPrimaryColor,
-                                          fontSize: 12,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                  // Display reshare indicator
-                                  if (isResharePost) ...[
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.repeat,
-                                      size: 16,
-                                      color: secondaryColor,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        'đã chia sẻ',
-                                        style: TextStyle(
-                                          color: secondaryColor,
-                                          fontSize: 12,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              Text(
-                                DateFormat('HH:mm dd MMM, y', 'vi').format(
-                                  (snapData['lastDateModified']).toDate(),
+                                  style: TextStyle(
+                                    color: secondaryColor,
+                                    fontSize: 12,
+                                  ),
                                 ),
-                                style: TextStyle(
-                                  color: secondaryColor,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      // MORE BUTTON
-                      IconButton(
-                        onPressed: () async {
-                          // For reshares, check if original post exists first
-                          bool canEdit = true;
-                          if (isResharePost && user.uid == snapData['uid']) {
-                            try {
-                              final originalPostDoc = await FirebaseFirestore
-                                  .instance
-                                  .collection('posts')
-                                  .doc(snapData['originalPostId'])
-                                  .get();
+                        // MORE BUTTON
+                        IconButton(
+                          onPressed: () async {
+                            // For reshares, check if original post exists first
+                            bool canEdit = true;
+                            if (isResharePost && user.uid == snapData['uid']) {
+                              try {
+                                final originalPostDoc = await FirebaseFirestore
+                                    .instance
+                                    .collection('posts')
+                                    .doc(snapData['originalPostId'])
+                                    .get();
 
-                              canEdit =
-                                  originalPostDoc.exists &&
-                                  originalPostDoc.data() != null;
-                            } catch (e) {
-                              canEdit = false;
-                              avoidPrint("Error checking original post: $e");
+                                canEdit =
+                                    originalPostDoc.exists &&
+                                    originalPostDoc.data() != null;
+                              } catch (e) {
+                                canEdit = false;
+                                avoidPrint("Error checking original post: $e");
+                              }
                             }
-                          }
 
-                          if (!context.mounted) return;
+                            if (!context.mounted) return;
 
-                          showDialog(
-                            context: context,
-                            builder: (context) => SimpleDialog(
-                              backgroundColor: width > webScreenSize
-                                  ? webBackgroundColor
-                                  : mobileBackgroundColor,
-                              title: const Text('Tùy chọn'),
-                              children: [
-                                if (user.uid == snapData['uid']) ...[
-                                  // Only show edit if original post exists (or not a reshare)
-                                  if (!isResharePost || canEdit)
+                            showDialog(
+                              context: context,
+                              builder: (context) => SimpleDialog(
+                                backgroundColor: width > webScreenSize
+                                    ? webBackgroundColor
+                                    : mobileBackgroundColor,
+                                title: const Text('Tùy chọn'),
+                                children: [
+                                  if (user.uid == snapData['uid']) ...[
+                                    // Only show edit if original post exists (or not a reshare)
+                                    if (!isResharePost || canEdit)
+                                      SimpleDialogOption(
+                                        padding: const EdgeInsets.all(16),
+                                        child: const Text(
+                                          'Chỉnh sửa bài viết',
+                                          style: TextStyle(
+                                            color: primaryTextColor,
+                                          ),
+                                        ),
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  UpdatePostScreen(
+                                                    snap: snapData,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    if (isResharePost && !canEdit)
+                                      SimpleDialogOption(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Row(
+                                          children: const [
+                                            Icon(
+                                              Icons.info_outline,
+                                              color: secondaryColor,
+                                              size: 20,
+                                            ),
+                                            SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Chỉnh sửa bài viết',
+                                                style: TextStyle(
+                                                  color: secondaryColor,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          displaySnackBar(
+                                            'Bài viết gốc đã bị xóa, không thể chỉnh sửa',
+                                            context,
+                                            SnackBarType.info,
+                                          );
+                                        },
+                                      ),
                                     SimpleDialogOption(
                                       padding: const EdgeInsets.all(16),
                                       child: const Text(
-                                        'Chỉnh sửa bài viết',
+                                        'Xóa bài viết',
+                                        style: TextStyle(
+                                          color: primaryTextColor,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        await _deletePost(context);
+                                      },
+                                    ),
+                                  ] else ...[
+                                    SimpleDialogOption(
+                                      padding: const EdgeInsets.all(16),
+                                      child: const Text(
+                                        'Báo cáo bài viết',
                                         style: TextStyle(
                                           color: primaryTextColor,
                                         ),
                                       ),
                                       onPressed: () {
                                         Navigator.of(context).pop();
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                UpdatePostScreen(
-                                                  snap: snapData,
-                                                ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  if (isResharePost && !canEdit)
-                                    SimpleDialogOption(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Row(
-                                        children: const [
-                                          Icon(
-                                            Icons.info_outline,
-                                            color: secondaryColor,
-                                            size: 20,
-                                          ),
-                                          SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              'Chỉnh sửa bài viết',
-                                              style: TextStyle(
-                                                color: secondaryColor,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
                                         displaySnackBar(
-                                          'Bài viết gốc đã bị xóa, không thể chỉnh sửa',
+                                          'Tính năng sẽ được phát triển trong thời gian tới',
                                           context,
                                           SnackBarType.info,
                                         );
                                       },
                                     ),
+                                  ],
                                   SimpleDialogOption(
                                     padding: const EdgeInsets.all(16),
                                     child: const Text(
-                                      'Xóa bài viết',
-                                      style: TextStyle(color: primaryTextColor),
-                                    ),
-                                    onPressed: () async {
-                                      await _deletePost(context);
-                                    },
-                                  ),
-                                ] else ...[
-                                  SimpleDialogOption(
-                                    padding: const EdgeInsets.all(16),
-                                    child: const Text(
-                                      'Báo cáo bài viết',
+                                      'Hủy',
                                       style: TextStyle(color: primaryTextColor),
                                     ),
                                     onPressed: () {
                                       Navigator.of(context).pop();
-                                      displaySnackBar(
-                                        'Tính năng sẽ được phát triển trong thời gian tới',
-                                        context,
-                                        SnackBarType.info,
-                                      );
                                     },
                                   ),
                                 ],
-                                SimpleDialogOption(
-                                  padding: const EdgeInsets.all(16),
-                                  child: const Text(
-                                    'Hủy',
-                                    style: TextStyle(color: primaryTextColor),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.more_vert),
-                      ),
-                    ],
-                  ),
-
-                  // Show reshare's text (if they added any)
-                  if (snapData['postText'].isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            snapData['postText'],
-                            style: TextStyle(
-                              color: primaryTextColor,
-                              fontSize: 16,
-                            ),
-                          ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.more_vert),
                         ),
                       ],
                     ),
+
+                    // Show reshare's text (if they added any)
+                    if (snapData['postText'].isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              snapData['postText'],
+                              style: TextStyle(
+                                color: primaryTextColor,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
 
@@ -629,236 +706,248 @@ class _PostCardState extends State<PostCard> {
             ] else ...[
               // REGULAR IMAGE SECTION OF THE POST (if not a reshare)
               const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () async {
-                  // View image in full screen
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => Scaffold(
-                        appBar: AppBar(
-                          backgroundColor: mobileBackgroundColor,
-                          title: Text('Hình ảnh'),
-                        ),
-                        body: Center(
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: Image.network(
-                              snapData['postUrl'] ?? '',
-                              fit: BoxFit.contain,
+              Opacity(
+                opacity: contentOpacity,
+                child: GestureDetector(
+                  onTap: () async {
+                    // View image in full screen
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                          appBar: AppBar(
+                            backgroundColor: mobileBackgroundColor,
+                            title: Text('Hình ảnh'),
+                          ),
+                          body: Center(
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Image.network(
+                                snapData['postUrl'] ?? '',
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
-                onDoubleTap: () async {
-                  if (!mounted) return; // Add this check
+                    );
+                  },
+                  onDoubleTap: () async {
+                    if (!mounted) return; // Add this check
 
-                  await FirestoreMethod().likePost(
-                    snapData['postId'],
-                    user.uid,
-                    snapData['likes'],
-                  );
+                    await FirestoreMethod().likePost(
+                      snapData['postId'],
+                      user.uid,
+                      snapData['likes'],
+                    );
 
-                  if (!mounted) return; // Check again before setState
-                  setState(() {
-                    isLikeAnimating = true;
-                  });
-                },
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.35,
-                      width: double.infinity,
-                      child: Image.network(
-                        //check if disconnect network
-                        snapData['postUrl'] ?? '',
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-
-                    AnimatedOpacity(
-                      opacity: isLikeAnimating ? 1 : 0,
-                      duration: const Duration(milliseconds: 200),
-                      child: LikeAnimation(
-                        isAnimating: isLikeAnimating,
-                        duration: const Duration(milliseconds: 400),
-                        onEnd: () {
-                          // Add mounted check before setState
-                          if (!mounted) return;
-                          setState(() {
-                            isLikeAnimating = false;
-                          });
-                        },
-                        child: Icon(
-                          Icons.favorite,
-                          color: Colors.red,
-                          size: 120,
+                    if (!mounted) return; // Check again before setState
+                    setState(() {
+                      isLikeAnimating = true;
+                    });
+                  },
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.35,
+                        width: double.infinity,
+                        child: Image.network(
+                          //check if disconnect network
+                          snapData['postUrl'] ?? '',
+                          fit: BoxFit.contain,
                         ),
                       ),
+
+                      AnimatedOpacity(
+                        opacity: isLikeAnimating ? 1 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: LikeAnimation(
+                          isAnimating: isLikeAnimating,
+                          duration: const Duration(milliseconds: 400),
+                          onEnd: () {
+                            // Add mounted check before setState
+                            if (!mounted) return;
+                            setState(() {
+                              isLikeAnimating = false;
+                            });
+                          },
+                          child: Icon(
+                            Icons.favorite,
+                            color: Colors.red,
+                            size: 120,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            //LIKE, COMMENT, SHARE SECTION OF THE POST
+            if (!isRejected) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  children: [
+                    // Like group (flexible)
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          LikeAnimation(
+                            isAnimating: (snapData['likes'] as List).contains(
+                              user.uid,
+                            ),
+                            smallLike: true,
+                            child: IconButton(
+                              onPressed: () async {
+                                await FirestoreMethod().likePost(
+                                  snapData['postId'],
+                                  user.uid,
+                                  snapData['likes'],
+                                );
+                              },
+                              icon: snapData['likes'].contains(user.uid)
+                                  ? const Icon(
+                                      Icons.favorite,
+                                      color: Colors.red,
+                                    )
+                                  : const Icon(
+                                      Icons.favorite_border,
+                                      color: primaryTextColor,
+                                    ),
+                            ),
+                          ),
+                          //NUMBER OF LIKES CAN GO HERE
+                          Flexible(
+                            child:
+                                snapData['likes'] != null &&
+                                    snapData['likes'].length >= 1
+                                ? Text(
+                                    '${(snapData['likes'] as List).length} lượt thích',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Thích',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Comment group (flexible)
+                    Expanded(
+                      child: StreamBuilder(
+                        stream: commentStream,
+                        builder:
+                            (
+                              context,
+                              AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>
+                              snapshot,
+                            ) {
+                              int commentCount = 0;
+                              if (snapshot.hasData) {
+                                commentCount = snapshot.data!.docs.length;
+                              }
+                              return Row(
+                                mainAxisSize: MainAxisSize.max,
+                                children: [
+                                  IconButton(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => CommentsScreen(
+                                            postId: snapData['postId'],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.comment_outlined,
+                                      color: primaryTextColor,
+                                    ),
+                                  ),
+                                  Flexible(
+                                    child: commentCount >= 1
+                                        ? Text(
+                                            '$commentCount bình luận',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          )
+                                        : const Text(
+                                            'bình luận',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                  ),
+                                ],
+                              );
+                            },
+                      ),
+                    ),
+
+                    //Share group (flexible)
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          //NUMBER OF SHARES CAN GO HERE
+                          IconButton(
+                            onPressed: () {
+                              _openShareBottomSheet(
+                                context,
+                                snapData,
+                                user.displayName,
+                                user.photoUrl,
+                                user.uid,
+                              );
+                            },
+                            icon: const Icon(Icons.share),
+                          ),
+                          Flexible(
+                            child:
+                                snapData['reshareCount'] != null &&
+                                    snapData['reshareCount'] >= 1
+                                ? Text(
+                                    '${snapData['reshareCount']} chia sẻ',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : const Text(
+                                    'chia sẻ',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Bookmark group (flexible)
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.bookmark_border),
                     ),
                   ],
                 ),
               ),
             ],
-            //LIKE, COMMENT, SHARE SECTION OF THE POST
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  // Like group (flexible)
-                  Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        LikeAnimation(
-                          isAnimating: (snapData['likes'] as List).contains(
-                            user.uid,
-                          ),
-                          smallLike: true,
-                          child: IconButton(
-                            onPressed: () async {
-                              await FirestoreMethod().likePost(
-                                snapData['postId'],
-                                user.uid,
-                                snapData['likes'],
-                              );
-                            },
-                            icon: snapData['likes'].contains(user.uid)
-                                ? const Icon(Icons.favorite, color: Colors.red)
-                                : const Icon(
-                                    Icons.favorite_border,
-                                    color: primaryTextColor,
-                                  ),
-                          ),
-                        ),
-                        //NUMBER OF LIKES CAN GO HERE
-                        Flexible(
-                          child:
-                              snapData['likes'] != null &&
-                                  snapData['likes'].length >= 1
-                              ? Text(
-                                  '${(snapData['likes'] as List).length} lượt thích',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                )
-                              : const Text(
-                                  'Thích',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Comment group (flexible)
-                  Expanded(
-                    child: StreamBuilder(
-                      stream: commentStream,
-                      builder:
-                          (
-                            context,
-                            AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>
-                            snapshot,
-                          ) {
-                            int commentCount = 0;
-                            if (snapshot.hasData) {
-                              commentCount = snapshot.data!.docs.length;
-                            }
-                            return Row(
-                              mainAxisSize: MainAxisSize.max,
-                              children: [
-                                IconButton(
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => CommentsScreen(
-                                          postId: snapData['postId'],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(
-                                    Icons.comment_outlined,
-                                    color: primaryTextColor,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: commentCount >= 1
-                                      ? Text(
-                                          '$commentCount bình luận',
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        )
-                                      : const Text(
-                                          'bình luận',
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                ),
-                              ],
-                            );
-                          },
-                    ),
-                  ),
-
-                  //Share group (flexible)
-                  Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        //NUMBER OF SHARES CAN GO HERE
-                        IconButton(
-                          onPressed: () {
-                            _openShareBottomSheet(
-                              context,
-                              snapData,
-                              user.displayName,
-                              user.photoUrl,
-                              user.uid,
-                            );
-                          },
-                          icon: const Icon(Icons.share),
-                        ),
-                        Flexible(
-                          child:
-                              snapData['reshareCount'] != null &&
-                                  snapData['reshareCount'] >= 1
-                              ? Text(
-                                  '${snapData['reshareCount']} chia sẻ',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                )
-                              : const Text(
-                                  'chia sẻ',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Bookmark group (flexible)
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.bookmark_border),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),

@@ -105,10 +105,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ? 'Chưa có tiểu sử'
         : userData['bio'];
     final dateOfBirth = (userData['dateOfBirth'] as Timestamp?)?.toDate();
-    final postStream = FirebaseFirestore.instance
+
+    // Determine if the profile belongs to the current user
+    final currentUserUid = FirebaseAuth.instance.currentUser?.uid;
+    // Check if the current user is viewing their own profile
+    final isMe = currentUserUid == widget.uid;
+
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance
         .collection('posts')
-        .where('uid', isEqualTo: widget.uid)
-        .where('status', isEqualTo: 'active')
+        .where('uid', isEqualTo: widget.uid);
+
+    // If it's the current user
+    if (isMe) {
+      query = query.where(
+        'status',
+        whereIn: ['active', 'processing', 'rejected'],
+      );
+    }
+    // If it's another user
+    else {
+      query = query.where('status', isEqualTo: 'active');
+    }
+
+    final postStream = query
         .orderBy('lastDateModified', descending: true)
         .snapshots();
 
@@ -447,12 +466,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final doc = docs[index];
+
+
                   return Container(
                     margin: EdgeInsets.symmetric(
                       horizontal: width > webScreenSize ? width * 0.3 : 0,
                       vertical: width > webScreenSize ? 15 : 0,
                     ),
-                    child: PostCard(snap: doc),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        PostCard(snap: doc),
+
+                        if (width <= webScreenSize)
+                          const Divider(color: secondaryColor, height: 1),
+                      ],
+                    ),
                   );
                 }, childCount: docs.length),
               );
