@@ -99,6 +99,16 @@ class RejectionDialog extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
+            // Additional info
+            Text(
+              'Bạn có thể xem lại nội dung của mình ở màn cài đặt -> lịch sử vi phạm.',
+              style: TextStyle(
+                fontSize: 14,
+                color: secondaryColor,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+
             // Action button
             SizedBox(
               width: double.infinity,
