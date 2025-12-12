@@ -62,7 +62,7 @@ class _WebScreenLayoutState extends State<WebScreenLayout> {
           NavBarButton(icon: Icons.messenger_outline_outlined, label: 'Trò chuyện', isActive: _page == 3, onPress: () => navigationTapped(3)),
           NavBarButton(icon: Icons.notification_add_outlined, label: 'Thông báo', isActive: _page == 4, onPress: () => navigationTapped(4)),
           NavBarButton(icon: Icons.person_outlined, label: 'Hồ sơ', isActive: _page == 5, onPress: () => navigationTapped(5)),
-          NavBarButton(icon: Icons.more_vert_outlined, label: 'Cài đặt', isActive: _page == 6, onPress: () => navigationTapped(6)),
+          NavBarButton(icon: Icons.settings_outlined, label: 'Cài đặt', isActive: _page == 6, onPress: () => navigationTapped(6)),
         ],
       ),
       body: PageView(

@@ -119,7 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (isMe) {
       query = query.where(
         'status',
-        whereIn: ['active', 'processing', 'rejected'],
+        whereIn: ['active', 'processing'],
       );
     }
     // If it's another user

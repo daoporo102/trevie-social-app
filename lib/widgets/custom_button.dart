@@ -83,7 +83,7 @@ class CustomButton extends StatelessWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         side: WidgetStateProperty.all(
           hasBorder
-              ? BorderSide(color: secondaryColor, width: 1)
+              ? BorderSide(color: borderColor ?? secondaryColor, width: 1)
               : BorderSide.none,
         ),
       ),

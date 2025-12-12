@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:typed_data';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +13,7 @@ import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
+import 'package:social_media_app/widgets/reject_dialog.dart';
 
 class UpdatePostScreen extends StatefulWidget {
   final snap;
@@ -213,8 +216,8 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
         avoidPrint(
           "  fileToUpload: ${fileToUpload != null ? 'New image' : 'null'}",
         );
-        avoidPrint("  existingUrl: $existingUrl");
-        avoidPrint("  _image type: ${_image.runtimeType}");
+        avoidPrint("existingUrl: $existingUrl");
+        avoidPrint("_image type: ${_image.runtimeType}");
 
         // Update post's text and image
         String res = await FirestoreMethod().updatePost(
@@ -227,27 +230,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
         if (!mounted) return; // guard context after async
 
         if (res == 'success') {
-          setState(() {
-            _isLoading = false;
-          });
-          displaySnackBar(
-            'Cập nhật bài đăng thành công!',
-            context,
-            SnackBarType.success,
-          );
-          clearImage();
-          _textController.clear();
-          //Navigate back to feed screen
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const ResponsiveLayout(
-                mobileScreenLayout: MobileScreenLayout(),
-                webScreenLayout: WebScreenLayout(),
-              ),
-            ),
-            // remove all previous routes
-            (route) => false,
-          );
+          _listenToPostStatus(postId);
         } else {
           setState(() {
             _isLoading = false;
@@ -272,6 +255,114 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
         SnackBarType.error,
       );
     }
+  }
+
+  // Listen to the post document for AI moderation status
+  void _listenToPostStatus(String postId) {
+    StreamSubscription<DocumentSnapshot>? postSubscription;
+
+    // Listen to the changes in the post document
+    postSubscription = FirebaseFirestore.instance
+        .collection('posts')
+        .doc(postId)
+        .snapshots()
+        .listen((snapshot) async {
+          // Check if snapshot is not exists
+          if (!snapshot.exists) return;
+
+          final data = snapshot.data() as Map<String, dynamic>;
+          final status = data['status'] as String?;
+          final updateStatus =
+              data['updateStatus']
+                  as String?; // Field mới do Cloud Function set
+          final updateError =
+              data['updateError'] as String?; // Field mới chứa lý do lỗi
+
+          // Nếu vẫn đang xử lý thì đợi tiếp
+          if (status == 'processing') return;
+          avoidPrint("DEBUG - Post $postId status updated: $status");
+
+          // Cancel the subscription to avoid memory leaks
+          await postSubscription?.cancel();
+
+          if (!mounted) return;
+
+          setState(() {
+            _isLoading = false; // Stop loading indicator
+          });
+
+          // Update failed due to AI moderation (Rollback)
+          if (updateStatus == 'failed') {
+            // Show detailed rejection dialog
+            RejectionDialog.show(
+              context,
+              title: 'Cập nhật thất bại',
+              description: 'Nội dung chỉnh sửa chứa thông tin không phù hợp:',
+              reason: updateError ?? 'Vi phạm tiêu chuẩn cộng đồng.',
+            );
+            avoidPrint(
+              "DEBUG - Post $postId was rejected during update: $updateError",
+            );
+          }
+          // Update approved (active)
+          else if (status == 'active') {
+            // AI approved (or AI error -> approved by system_failover) => show success
+            displaySnackBar(
+              "Cập nhật bài viết thành công!",
+              context,
+              SnackBarType.success,
+            );
+            clearImage();
+            _textController.clear();
+
+            // Navigate to Feed Screen
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const ResponsiveLayout(
+                  mobileScreenLayout: MobileScreenLayout(),
+                  webScreenLayout: WebScreenLayout(),
+                ),
+              ),
+              // remove all previous routes
+              (route) => false,
+            );
+
+            avoidPrint("DEBUG - Post $postId update approved and active.");
+          }
+          // Unknown status
+          else {
+            displaySnackBar(
+              "Bài đăng của bạn có trạng thái không xác định, vui lòng thử lại sau.",
+              context,
+              SnackBarType.error,
+            );
+            avoidPrint("DEBUG - Post $postId has unknown status: $status");
+          }
+        });
+
+    // Safe timeout: If the AI ​​doesn't respond after 15 seconds (network lag, server down)
+    // Then stop listening and return to the Feed (to prevent the user's computer from freezing indefinitely)
+    Future.delayed(const Duration(seconds: 15), () async {
+      // Only process if the subscription has not been canceled (it is still loading).
+      if (_isLoading && mounted) {
+        setState(() {
+          _isLoading = false; // Stop loading indicator
+        });
+
+        // Navigate back to feed screen after moderation (timeout)
+        // Cloud Function will activate automatically after 10 seconds.
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const ResponsiveLayout(
+              mobileScreenLayout: MobileScreenLayout(),
+              webScreenLayout: WebScreenLayout(),
+            ),
+          ),
+          // remove all previous routes
+          (route) => false,
+        );
+      }
+    });
   }
 
   void clearImage() {
