@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:social_media_app/utils/colors.dart';
+import 'package:social_media_app/widgets/custom_button.dart';
 
 class RejectionDialog extends StatelessWidget {
   final String reason;
@@ -112,22 +113,21 @@ class RejectionDialog extends StatelessWidget {
             // Action button
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
+              child: CustomButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   onDismiss?.call();
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: appPrimaryColor,
-                  foregroundColor: onPrimaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                backgroundColor: appPrimaryColor,
+                borderRadius: BorderRadius.circular(8),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: const Text(
                   'Đã hiểu',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: onPrimaryColor,
+                  ),
                 ),
               ),
             ),
@@ -153,7 +153,7 @@ class RejectionDialog extends StatelessWidget {
           reason: reason,
           title: title ?? 'Bài viết bị từ chối',
           description:
-              description ?? 'Hệ thống AI đã phát hiện nội dung không phù hợp:',
+              description ?? 'Hệ thống đã phát hiện nội dung không phù hợp:',
           onDismiss: onDismiss,
         );
       },
