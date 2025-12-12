@@ -110,6 +110,8 @@ class RejectionDialog extends StatelessWidget {
               ),
             ),
 
+            const SizedBox(height: 24),
+
             // Action button
             SizedBox(
               width: double.infinity,
