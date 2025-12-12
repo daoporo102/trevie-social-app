@@ -92,7 +92,7 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
             ),
             BottomNavigationBarItem(
               icon: Icon(
-                Icons.person,
+                Icons.person_outlined,
                 color: _page == 4 ? appPrimaryColor : secondaryColor,
               ),
               label: 'Hồ sơ',
@@ -100,10 +100,10 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
             ),
             BottomNavigationBarItem(
               icon: Icon(
-                Icons.person,
+                Icons.settings_outlined,
                 color: _page == 5 ? appPrimaryColor : secondaryColor,
               ),
-              label: 'Thêm',
+              label: 'Cài đặt',
               backgroundColor: mobileBackgroundColor,
             ),
           ],
