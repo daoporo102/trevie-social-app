@@ -44,8 +44,9 @@ class FirestoreMethod {
 
       // Fetch author doc to get role (fallback to 'user')
       final authorDoc = await _firestore.collection('users').doc(uid).get();
-      final authorRole = (authorDoc.exists && authorDoc.data()!=null)
-          ? (authorDoc.data() as Map<String,dynamic>)['role'] as String? ?? 'user'
+      final authorRole = (authorDoc.exists && authorDoc.data() != null)
+          ? (authorDoc.data() as Map<String, dynamic>)['role'] as String? ??
+                'user'
           : 'user';
 
       Post post = Post(
@@ -97,11 +98,35 @@ class FirestoreMethod {
     String res = "Một lỗi đã xảy ra";
     try {
       final now = DateTime.now();
+
+      // Get the current post data to check if text changed
+      DocumentSnapshot postDoc = await _firestore
+          .collection('posts')
+          .doc(postId)
+          .get();
+
+      if (!postDoc.exists) {
+        return "Bài viết không tồn tại";
+      }
+
+      final currentData = postDoc.data() as Map<String, dynamic>;
+      final oldText = currentData['postText'] as String? ?? '';
+
+      // Only set processing if text actually changed
+      final textChanged = postText != oldText;
+
       Map<String, dynamic> updateData = {
         'postText': postText,
         'dateUpdated': Timestamp.fromDate(now),
         'lastDateModified': Timestamp.fromDate(now),
       };
+
+      // Only update status if text changed
+      if (textChanged) {
+        updateData['status'] = 'processing';
+        updateData['aiReason'] = null;
+        updateData['adminReason'] = null;
+      }
 
       String? newPhotoUrl;
 
@@ -152,7 +177,7 @@ class FirestoreMethod {
         await _updateResharesOfPost(
           postId,
           postText,
-          newPhotoUrl, // Will be null if no new image was uploaded
+          null, // Will be null if no new image was uploaded
         );
       }
       res = 'success';
@@ -443,8 +468,9 @@ class FirestoreMethod {
 
       // Fetch author doc to get role (fallback to 'user')
       final authorDoc = await _firestore.collection('users').doc(uid).get();
-      final authorRole = (authorDoc.exists && authorDoc.data()!=null)
-          ? (authorDoc.data() as Map<String,dynamic>)['role'] as String? ?? 'user'
+      final authorRole = (authorDoc.exists && authorDoc.data() != null)
+          ? (authorDoc.data() as Map<String, dynamic>)['role'] as String? ??
+                'user'
           : 'user';
 
       // Create the new post data
