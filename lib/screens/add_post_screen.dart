@@ -27,6 +27,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
   Uint8List? _image;
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
+  StreamSubscription<DocumentSnapshot>? _postSubscription; // Add this
 
   Future<void> _selectImage() async {
     // Capture the State's context BEFORE async
@@ -215,107 +216,154 @@ class _AddPostScreenState extends State<AddPostScreen> {
     }
   }
 
-  // Listen to the post document for AI moderation status
+  // Update the listener method
   void _listenToPostStatus(String postId) {
-    StreamSubscription<DocumentSnapshot>? postSubscription;
+    // Cancel any previous subscription
+    _postSubscription?.cancel();
 
     // Listen the changes in the post document
-    postSubscription = FirebaseFirestore.instance
+    _postSubscription = FirebaseFirestore.instance
         .collection('posts')
         .doc(postId)
         .snapshots()
-        .listen((snapshot) async {
-          // Check if snapshot is not exists
-          if (!snapshot.exists) return;
+        .listen(
+          (snapshot) async {
+            // Check if snapshot is not exists or widget is not mounted
+            if (!snapshot.exists || !mounted) return;
 
-          final data = snapshot.data() as Map<String, dynamic>;
-          final status = data['status'] as String?;
-          final aiReason = data['aiReason'] as String?;
+            final data = snapshot.data() as Map<String, dynamic>;
+            final status = data['status'] as String?;
 
-          avoidPrint(
-            "DEBUG - Post $postId status updated: $status, Reason: $aiReason",
-          );
+            final aiReasonText = data['aiReasonText'] as String?;
+            final aiReasonImage = data['aiReasonImage'] as String?;
 
-          // if status changed to 'processed', stop listening
-          if (status != 'processing') {
-            // Cancel the subscription to avoid memory leaks
-            await postSubscription?.cancel();
+            // Combine reasons if both exist
+            String? displayReason;
+            List<String> reasons = [];
 
-            if (!mounted) return;
+            if (aiReasonText != null && aiReasonText.isNotEmpty) {
+              reasons.add("• Văn bản: $aiReasonText");
+            }
 
-            setState(() {
-              _isLoading = false; // Stop loading indicator
-            });
+            if (aiReasonImage != null && aiReasonImage.isNotEmpty) {
+              reasons.add("• Hình ảnh: $aiReasonImage");
+            }
 
-            if (status == 'active') {
-              // AI approved (or AI error -> approved by system_failover) => show success
-              displaySnackBar(
-                "Bài đăng thành công!.",
-                context,
-                SnackBarType.success,
-              );
-              clearImage();
-              _textController.clear();
-
-              // Navigate to Feed Screen
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) => const ResponsiveLayout(
-                    mobileScreenLayout: MobileScreenLayout(),
-                    webScreenLayout: WebScreenLayout(),
-                  ),
-                ),
-                // remove all previous routes
-                (route) => false,
-              );
-            } else if (status == 'rejected') {
-              // displaySnackBar(
-              //   "Bài đăng của bạn đã bị từ chối. Lý do: $aiReason",
-              //   context,
-              //   SnackBarType.error,
-              // );
-
-              // Show detailed rejection dialog
-              RejectionDialog.show(
-                context,
-                title: 'Bài viết bị từ chối',
-                description:
-                    'Hệ thống AI đã phát hiện nội dung không phù hợp:',
-                reason: aiReason ?? 'Vui lòng kiểm tra lại nội dung.',
-              );
-              avoidPrint("DEBUG - Post $postId was rejected: $aiReason");
+            if (reasons.isNotEmpty) {
+              displayReason = reasons.join("\n");
             } else {
+              // Fallback old aiReason
+              displayReason = data['aiReason'] ?? 'Nội dung không phù hợp.';
+            }
+
+            avoidPrint("DEBUG - Post $postId status updated: $status");
+
+            // if status changed to 'processed', stop listening
+            if (status != 'processing') {
+              // Cancel the subscription to avoid memory leaks
+              await _postSubscription?.cancel();
+              _postSubscription = null;
+
+              // Check if widget is still mounted before UI operations
+              if (!mounted) return;
+
+              setState(() {
+                _isLoading = false; // Stop loading indicator
+              });
+
+              if (status == 'active') {
+                // AI approved (or AI error -> approved by system_failover) => show success
+                if (mounted) {
+                  displaySnackBar(
+                    "Bài đăng thành công!.",
+                    context,
+                    SnackBarType.success,
+                  );
+                }
+                clearImage();
+                _textController.clear();
+
+                // Navigate to Feed Screen
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => const ResponsiveLayout(
+                        mobileScreenLayout: MobileScreenLayout(),
+                        webScreenLayout: WebScreenLayout(),
+                      ),
+                    ),
+                    // remove all previous routes
+                    (route) => false,
+                  );
+                }
+              } else if (status == 'rejected') {
+                // Show detailed rejection dialog
+                if (mounted) {
+                  RejectionDialog.show(
+                    context,
+                    title: 'Bài viết bị từ chối',
+                    description:
+                        'Hệ thống AI đã phát hiện nội dung không phù hợp:',
+                    reason: displayReason ?? 'Vui lòng kiểm tra lại nội dung.',
+                  );
+                }
+                avoidPrint("DEBUG - Post $postId was rejected: $displayReason");
+              } else {
+                if (mounted) {
+                  displaySnackBar(
+                    "Bài đăng của bạn có trạng thái không xác định, vui lòng thử lại sau.",
+                    context,
+                    SnackBarType.error,
+                  );
+                }
+                avoidPrint("DEBUG - Post $postId has unknown status: $status");
+              }
+            }
+          },
+          onError: (error) {
+            avoidPrint("DEBUG - Post listener error: $error");
+            _postSubscription?.cancel();
+            _postSubscription = null;
+
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
               displaySnackBar(
-                "Bài đăng của bạn có trạng thái không xác định, vui lòng thử lại sau.",
+                "Có lỗi xảy ra khi theo dõi trạng thái bài đăng",
                 context,
                 SnackBarType.error,
               );
-              avoidPrint("DEBUG - Post $postId has unknown status: $status");
             }
-          }
-        });
+          },
+        );
 
-    // Safe timeout: If the AI ​​doesn't respond after 10 seconds (network lag, server down)
+    // Safe timeout: If the AI doesn't respond after 10 seconds (network lag, server down)
     // Then stop listening and return to the Feed (to prevent the user's computer from freezing indefinitely)
     Future.delayed(const Duration(seconds: 10), () async {
       // Only process if the subscription has not been canceled (it is still loading).
-      if (_isLoading && mounted) {
-        setState(() {
-          _isLoading = false; // Stop loading indicator
-        });
+      if (_postSubscription != null && mounted) {
+        await _postSubscription?.cancel();
+        _postSubscription = null;
 
-        // Navigate back to feed screen after moderation (timeout)
-        // Cloud Function will activate automatically after 5 seconds.
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const ResponsiveLayout(
-              mobileScreenLayout: MobileScreenLayout(),
-              webScreenLayout: WebScreenLayout(),
+        if (mounted) {
+          setState(() {
+            _isLoading = false; // Stop loading indicator
+          });
+
+          // Navigate back to feed screen after moderation (timeout)
+          // Cloud Function will activate automatically after 5 seconds.
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const ResponsiveLayout(
+                mobileScreenLayout: MobileScreenLayout(),
+                webScreenLayout: WebScreenLayout(),
+              ),
             ),
-          ),
-          // remove all previous routes
-          (route) => false,
-        );
+            // remove all previous routes
+            (route) => false,
+          );
+        }
       }
     });
   }
@@ -325,6 +373,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     super.dispose();
     _textController.dispose();
     _image = null;
+    _postSubscription?.cancel(); // Cancel subscription on dispose
   }
 
   @override
