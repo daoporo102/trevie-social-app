@@ -649,6 +649,12 @@ class _PostCardState extends State<PostCard> {
                     return _buildErrorContainer('Bài viết gốc đã bị xóa.');
                   }
 
+                  if ((originalPostSnapshot.data!.data()
+                          as Map<String, dynamic>)['status'] ==
+                      'rejected') {
+                    return _buildErrorContainer('Bài viết gốc đã bị ẩn do vi phạm tiêu chuẩn cộng đồng.');
+                  }
+
                   // Original post exists - display it with live data
                   final originalPostData =
                       originalPostSnapshot.data!.data() as Map<String, dynamic>;
