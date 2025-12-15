@@ -4,6 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
 
 void displaySnackBar(String text, BuildContext context, SnackBarType type) {
+  // Check if context is still valid
+  if (!context.mounted) return;
+
   ScaffoldMessenger.of(context).showSnackBar(
     CustomSnackBar.buildSnackBar(
       text: text,
