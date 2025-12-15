@@ -102,7 +102,7 @@ class RejectionDialog extends StatelessWidget {
 
             // Additional info
             Text(
-              'Bạn có thể xem lại nội dung của mình ở màn cài đặt -> lịch sử vi phạm.',
+              'Bạn có thể xem lại nội dung của mình ở màn hình cài đặt -> lịch sử vi phạm.',
               style: TextStyle(
                 fontSize: 14,
                 color: secondaryColor,

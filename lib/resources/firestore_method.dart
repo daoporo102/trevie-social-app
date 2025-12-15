@@ -69,8 +69,11 @@ class FirestoreMethod {
         likesCount: 0,
         role: authorRole,
         status: 'processing',
-        aiReason: null,
         adminReason: null,
+        aiReasonText: null,
+        aiReasonImage: null,
+        textChecked: false,
+        imageChecked: false,
       );
 
       // Create a map from the Post object
@@ -124,7 +127,6 @@ class FirestoreMethod {
       // Only update status if text changed
       if (textChanged) {
         updateData['status'] = 'processing';
-        updateData['aiReason'] = null;
         updateData['adminReason'] = null;
       }
 
@@ -316,8 +318,6 @@ class FirestoreMethod {
         return res;
       }
 
-      final postData = postDoc.data() as Map<String, dynamic>;
-
       // Check ownership
       if (userUid != postDoc['uid']) {
         res = 'Bạn không có quyền xoá bài viết này!';
@@ -325,54 +325,43 @@ class FirestoreMethod {
         return res;
       }
 
-      String postUrl = postData['postUrl'];
+      final postData = postDoc.data() as Map<String, dynamic>;
+      String postUrl = postData['postUrl'] ?? "";
+      String originalPostId = postData['originalPostId'];
+      String status = postData['status'] ?? 'processing';
 
       // Check if this is a reshared post
       bool isReshare = postData['originalPostId'] != null;
 
-      // Delete post collection in Firestore database
-      await _firestore.collection('posts').doc(postId).delete();
-
-      // Only delete image if it's not a reshared post (reshares reuse the original image)
-      if (!isReshare && postUrl.isNotEmpty) {
-        try {
-          await StorageMethod().deleteImageFromStorage(postUrl);
-        } catch (storageError) {
-          avoidPrint(
-            "Storage deletion warning (post already deleted): $storageError",
-          );
-        }
-      }
-
-      // If this is a post is a reshared post
-      if (isReshare && postData['originalPostId'] != null) {
-        String originalPostId = postData['originalPostId'];
-
-        try {
-          // get original post document
-          DocumentSnapshot originalPostDoc = await _firestore
-              .collection('posts')
-              .doc(originalPostId)
-              .get();
-
-          // Only decrement if the original post exists
-          if (originalPostDoc.exists && originalPostDoc.data() != null) {
-            // Decrement reshareCount on the original post
+      if (isReshare) {
+        // Just decrement reshareCount in original post if the reshare post is active
+        if (status == 'active') {
+          try {
             await _firestore.collection('posts').doc(originalPostId).update({
               'reshareCount': FieldValue.increment(-1),
             });
-            avoidPrint("Decremented reshareCount for post $originalPostId");
-          } else {
             avoidPrint(
-              "Original post $originalPostId doesn't exist, skipping reshareCount decrement",
+              "Decremented reshareCount for original post $originalPostId",
+            );
+          } catch (e) {
+            avoidPrint("Error decrementing reshareCount: ${e.toString()}");
+          }
+        }
+      } else {
+        // Delete the image from storage if postUrl is not empty
+        if (postUrl.isNotEmpty) {
+          try {
+            await StorageMethod().deleteImageFromStorage(postUrl);
+          } catch (storageError) {
+            avoidPrint(
+              "Storage deletion warning (image may be missing): $storageError",
             );
           }
-        } catch (e) {
-          avoidPrint(
-            "Could not decrement reshareCount (original post may be deleted): ${e.toString()}",
-          );
         }
       }
+
+      // Delete post collection in Firestore database
+      await _firestore.collection('posts').doc(postId).delete();
 
       res = 'success';
     } catch (e) {
@@ -494,8 +483,11 @@ class FirestoreMethod {
         likesCount: 0,
         role: authorRole,
         status: 'processing',
-        aiReason: null,
         adminReason: null,
+        aiReasonText: null,
+        aiReasonImage: null,
+        textChecked: false,
+        imageChecked: false,
       );
 
       // Reference to the original post
@@ -518,7 +510,7 @@ class FirestoreMethod {
         'reshareCount': FieldValue.increment(1),
       });
 
-      res = 'success';
+      res = postId;
     } catch (e) {
       avoidPrint("Error in resharePost: ${e.toString()}");
       res = "Đã xảy ra lỗi, vui lòng thử lại sau";
