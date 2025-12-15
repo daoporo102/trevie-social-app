@@ -61,7 +61,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       final data = userSnap.data();
-      // Count posts for the viewed profile
+      // Count posts for the viewed profile (only active posts)
       var postSnap = await FirebaseFirestore.instance
           .collection('posts')
           .where('uid', isEqualTo: widget.uid)
@@ -117,10 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     // If it's the current user
     if (isMe) {
-      query = query.where(
-        'status',
-        whereIn: ['active', 'processing'],
-      );
+      query = query.where('status', whereIn: ['active', 'processing']);
     }
     // If it's another user
     else {
@@ -466,17 +463,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final doc = docs[index];
-
+                  final docData = doc.data();
+                  final status = docData['status'] as String?;
+                  final isProcessing = status == 'processing';
 
                   return Container(
                     margin: EdgeInsets.symmetric(
                       horizontal: width > webScreenSize ? width * 0.3 : 0,
-                      vertical: width > webScreenSize ? 15 : 0,
+                      vertical: width > webScreenSize ? 15 : 4,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        PostCard(snap: doc),
+                        // Show processing indicator overlay if status is 'processing'
+                        Stack(
+                          children: [
+                            PostCard(snap: doc),
+
+                            // Processing overlay (only for current user's own posts)
+                            if (isProcessing && isMe)
+                              Positioned.fill(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.7),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(24),
+                                      decoration: BoxDecoration(
+                                        color: mobileBackgroundColor,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          customCircularProgressIndicator(),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'Đang kiểm tra nội dung...',
+                                            style: TextStyle(
+                                              color: primaryTextColor,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Bài đăng của bạn đang được hệ thống AI kiểm duyệt',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: secondaryColor,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
 
                         if (width <= webScreenSize)
                           const Divider(color: secondaryColor, height: 1),
