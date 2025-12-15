@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +16,7 @@ import 'package:social_media_app/utils/utils.dart';
 import 'package:social_media_app/widgets/custom_button.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/like_animation.dart';
+import 'package:social_media_app/widgets/reject_dialog.dart';
 
 class PostCard extends StatefulWidget {
   final snap;
@@ -25,11 +28,18 @@ class PostCard extends StatefulWidget {
 
 class _PostCardState extends State<PostCard> {
   bool isLikeAnimating = false;
+  StreamSubscription<DocumentSnapshot>? _reshareSubscription; // Add this
 
   @override
   void initState() {
     super.initState();
-    // getComments();
+  }
+
+  @override
+  void dispose() {
+    // Cancel any active subscriptions
+    _reshareSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _deletePost(BuildContext context) async {
@@ -109,6 +119,9 @@ class _PostCardState extends State<PostCard> {
   ) async {
     final TextEditingController textPostController = TextEditingController();
 
+    // Capture root context BEFORE showing bottom sheet
+    final rootContext = context;
+
     // Fetch the post data FIRST
     Post originalPost = Post.fromSnap(
       await FirebaseFirestore.instance
@@ -185,6 +198,9 @@ class _PostCardState extends State<PostCard> {
                     child: CustomButton(
                       onPressed: () async {
                         final String res;
+                        // Close the bottom sheet first
+                        Navigator.pop(context);
+
                         // check if is a reshare post or not
                         if (snapData['originalPostId'] != null) {
                           // if is a reshare post, we need to get the original post
@@ -201,19 +217,6 @@ class _PostCardState extends State<PostCard> {
                             displayName,
                             profImage,
                           );
-                          if (res != 'success') {
-                            if (!context.mounted) return;
-                            displaySnackBar(res, context, SnackBarType.error);
-                            return;
-                          }
-
-                          if (!context.mounted) return;
-                          Navigator.pop(context); // Close the bottom sheet
-                          displaySnackBar(
-                            'Chia sẻ bài viết thành công',
-                            context,
-                            SnackBarType.success,
-                          );
                         } else {
                           // This is an original post
                           res = await FirestoreMethod().resharePost(
@@ -223,19 +226,22 @@ class _PostCardState extends State<PostCard> {
                             displayName,
                             profImage,
                           );
-                          if (res != 'success') {
-                            if (!context.mounted) return;
-                            displaySnackBar(res, context, SnackBarType.error);
-                            return;
-                          }
+                        }
 
-                          if (!context.mounted) return;
-                          Navigator.pop(context); // Close the bottom sheet
+                        // Fix: check for whitespace (not empty string) instead of always-true ''
+                        if (res.length != 36 || res.contains(' ')) {
+                          if (!rootContext.mounted) return;
                           displaySnackBar(
-                            'Chia sẻ bài viết thành công',
-                            context,
-                            SnackBarType.success,
+                            "Có lỗi xảy ra, vui lòng thử lại sau.",
+                            rootContext,
+                            SnackBarType.error,
                           );
+                          avoidPrint("DEBUG - Reshare failed: $res");
+                        } else {
+                          if (!rootContext.mounted) return;
+                          // pass rootContext to listener
+                          _listenToReshareStatus(res, rootContext);
+                          avoidPrint("DEBUG - Reshare success with ID: $res");
                         }
                       },
                       child: const Text(
@@ -266,11 +272,27 @@ class _PostCardState extends State<PostCard> {
     // Extract status and adminReason if needed
     final status = snapData['status'] as String?;
     final adminReason = snapData['adminReason'] as String?;
-    final aiReason = snapData['aiReason'] as String?;
+    // final aiReason = snapData['aiReason'] as String?;
+    final aiReasonImage = snapData['aiReasonImage'] as String?;
+    final aiReasonText = snapData['aiReasonText'] as String?;
+
+    String rejectionReason = "";
+    List<String> reasons = [];
+    if (aiReasonImage != null && aiReasonImage.isNotEmpty) {
+      reasons.add("Hình ảnh: $aiReasonImage");
+    }
+    if (aiReasonText != null && aiReasonText.isNotEmpty) {
+      reasons.add("Văn bản: $aiReasonText");
+    }
+    if (reasons.isNotEmpty) {
+      rejectionReason = reasons.join("\n");
+    } else {
+      rejectionReason =
+          snapData['adminReason'] ?? "Vi phạm tiêu chuẩn cộng đồng";
+    }
 
     bool isRejected = status == 'rejected';
     String rejectionTitle = "";
-    String rejectionReason = "";
     // Set content opacity based on rejection status
     final double contentOpacity = isRejected ? 0.5 : 1.0;
 
@@ -278,9 +300,9 @@ class _PostCardState extends State<PostCard> {
       if (adminReason != null && adminReason.isNotEmpty) {
         rejectionTitle = "Bài viết đã bị Admin gỡ";
         rejectionReason = "Lý do: $adminReason";
-      } else if (aiReason != null && aiReason.isNotEmpty) {
+      } else if (reasons.isNotEmpty) {
         rejectionTitle = "Bài viết đã bị AI gỡ";
-        rejectionReason = "Lý do: $aiReason";
+        rejectionReason = "Lý do: ${reasons.join("\n")}";
       } else {
         rejectionTitle = "Bài viết đã bị từ chối";
         rejectionReason = "Vi phạm tiêu chuẩn cộng đồng";
@@ -743,9 +765,12 @@ class _PostCardState extends State<PostCard> {
                     );
 
                     if (!mounted) return; // Check again before setState
-                    setState(() {
-                      isLikeAnimating = true;
-                    });
+
+                    if (mounted) {
+                      setState(() {
+                        isLikeAnimating = true;
+                      });
+                    }
                   },
                   child: Stack(
                     alignment: Alignment.center,
@@ -973,5 +998,97 @@ class _PostCardState extends State<PostCard> {
         ],
       ),
     );
+  }
+
+  // Update the listener method
+  void _listenToReshareStatus(String postId, BuildContext rootContext) {
+    // Cancel any previous subscription
+    _reshareSubscription?.cancel();
+
+    // Listen to the changes in the post document
+    _reshareSubscription = FirebaseFirestore.instance
+        .collection('posts')
+        .doc(postId)
+        .snapshots()
+        .listen(
+          (snapshot) async {
+            // Check if snapshot exists and widget is still mounted
+            if (!snapshot.exists || !mounted) return;
+
+            final data = snapshot.data() as Map<String, dynamic>;
+            final status = data['status'] as String?;
+
+            avoidPrint("DEBUG - Reshare Post $postId status updated: $status");
+
+            // if status changed from 'processing', stop listening
+            if (status != 'processing') {
+              // Cancel the subscription
+              await _reshareSubscription?.cancel();
+              _reshareSubscription = null;
+
+              // Check if context and widget are still valid
+              if (!mounted || !rootContext.mounted) return;
+
+              if (status == 'active') {
+                displaySnackBar(
+                  "Chia sẻ bài đăng thành công!",
+                  rootContext,
+                  SnackBarType.success,
+                );
+              } else if (status == 'rejected') {
+                // get AI reason text
+                final aiReasonText = data['aiReasonText'] as String?;
+                final oldAiReason = data['aiReason'] as String?;
+
+                // Logic fallback safe
+                String displayReason = 'Vi phạm tiêu chuẩn cộng đồng.';
+
+                if (aiReasonText != null && aiReasonText.isNotEmpty) {
+                  displayReason = "Văn bản: $aiReasonText";
+                } else if (oldAiReason != null && oldAiReason.isNotEmpty) {
+                  displayReason = oldAiReason;
+                }
+
+                // Show rejection dialog
+                RejectionDialog.show(
+                  rootContext,
+                  title: 'Bài chia sẻ bị từ chối',
+                  description:
+                      'Hệ thống AI đã phát hiện nội dung không phù hợp trong văn bản chia sẻ:',
+                  reason: displayReason,
+                );
+                avoidPrint("DEBUG - Post $postId was rejected: $displayReason");
+              } else {
+                displaySnackBar(
+                  "Bài đăng của bạn có trạng thái không xác định, vui lòng thử lại sau.",
+                  rootContext,
+                  SnackBarType.error,
+                );
+                avoidPrint("DEBUG - Post $postId has unknown status: $status");
+              }
+            }
+          },
+          onError: (error) {
+            avoidPrint("DEBUG - Reshare listener error: $error");
+            _reshareSubscription?.cancel();
+            _reshareSubscription = null;
+          },
+        );
+
+    // Safe timeout
+    Future.delayed(const Duration(seconds: 15), () async {
+      if (_reshareSubscription != null && mounted) {
+        await _reshareSubscription?.cancel();
+        _reshareSubscription = null;
+
+        if (mounted && rootContext.mounted) {
+          displaySnackBar(
+            "Hết thời gian chờ xử lý bài chia sẻ. Vui lòng kiểm tra trạng thái bài đăng trong hồ sơ của bạn.",
+            rootContext,
+            SnackBarType.error,
+          );
+        }
+      }
+    });
   }
 }
