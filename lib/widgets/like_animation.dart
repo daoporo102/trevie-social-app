@@ -46,11 +46,25 @@ class _LikeAnimationState extends State<LikeAnimation>
 
   void startAnimation() async {
     if (widget.isAnimating || widget.smallLike) {
-      await controller.forward();
-      await controller.reverse();
-      await Future.delayed(const Duration(milliseconds: 200));
-      if (widget.onEnd != null) {
-        widget.onEnd!();
+      // Check if the widget is still mounted before calling setState
+      if (!mounted) return;
+
+      try {
+        await controller.forward();
+        // Check again before reverse
+        if (!mounted) return;
+        await controller.reverse();
+        // Check again before delay and callback
+        if (!mounted) return;
+        await Future.delayed(const Duration(milliseconds: 200));
+        // Final check before calling onEnd
+        if (!mounted) return;
+        if (widget.onEnd != null) {
+          widget.onEnd!();
+        }
+      } catch (e) {
+        if (!mounted) return;
+        debugPrint("Animation error: $e");
       }
     }
   }
