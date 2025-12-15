@@ -57,3 +57,5 @@ ios/firebase_app_id_file.json
 macos/firebase_app_id_file.json
 
 firebase.json
+
+.vscode/
