@@ -28,7 +28,7 @@ class Post {
   final String? updateStatus;
   final String? updateError;
   final String? attemptedUpdateText;
-    final String? attemptedUpdateImage;
+  final String? attemptedUpdateImage;
   final String? aiReasonText;
   final String? aiReasonImage;
   final bool? textChecked;
@@ -60,7 +60,7 @@ class Post {
     this.updateStatus,
     this.updateError,
     this.attemptedUpdateText,
-    this.attemptedUpdateImage;
+    this.attemptedUpdateImage,
     this.aiReasonText,
     this.aiReasonImage,
     this.textChecked = false,
