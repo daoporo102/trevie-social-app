@@ -271,28 +271,33 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
           if (!snapshot.exists) return;
 
           final data = snapshot.data() as Map<String, dynamic>;
-          final status = data['status'] as String?;
           final updateStatus =
               data['updateStatus']
-                  as String?; // Field mới do Cloud Function set
+                  as String?; // the status of the update operation
           final updateError =
-              data['updateError'] as String?; // Field mới chứa lý do lỗi
+              data['updateError'] as String?; // the reason for rejection
+          final moderatedBy = data['moderatedBy'] as String?; // Who moderated
 
-          // Nếu vẫn đang xử lý thì đợi tiếp
-          if (status == 'processing') return;
-          avoidPrint("DEBUG - Post $postId status updated: $status");
+          avoidPrint(
+            "DEBUG - Update Listener: By=$moderatedBy, Status=$updateStatus",
+          );
 
-          // Cancel the subscription to avoid memory leaks
-          await postSubscription?.cancel();
+          // if AI moderation hasn't processed yet, WAIT
+          if (moderatedBy == null && updateStatus == null) return;
 
-          if (!mounted) return;
+          // CASE 1: UPDATE FAILED DUE TO AI MODERATION (ROLLBACK)
+          if (moderatedBy == 'AI_Rollback' || updateStatus == 'failed') {
+            avoidPrint("DEBUG - Post $postId status updated: $updateStatus");
 
-          setState(() {
-            _isLoading = false; // Stop loading indicator
-          });
+            // Cancel the subscription to avoid memory leaks
+            await postSubscription?.cancel();
 
-          // Update failed due to AI moderation (Rollback)
-          if (updateStatus == 'failed') {
+            if (!mounted) return;
+
+            setState(() {
+              _isLoading = false; // Stop loading indicator
+            });
+
             // Show detailed rejection dialog
             RejectionDialog.show(
               context,
@@ -304,9 +309,18 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
               "DEBUG - Post $postId was rejected during update: $updateError",
             );
           }
-          // Update approved (active)
-          else if (status == 'active') {
+          // CASE 2: UPDATE APPROVED BY AI
+          else if (moderatedBy == 'AI_Update' ||
+              updateStatus == 'success' ||
+              moderatedBy == 'system_failover') {
             // AI approved (or AI error -> approved by system_failover) => show success
+            await postSubscription?.cancel();
+            if (!mounted) return;
+
+            setState(() {
+              _isLoading = false; // Stop loading indicator
+            });
+
             displaySnackBar(
               "Cập nhật bài viết thành công!",
               context,
@@ -329,37 +343,21 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
 
             avoidPrint("DEBUG - Post $postId update approved and active.");
           }
-          // Unknown status
-          else {
-            displaySnackBar(
-              "Bài đăng của bạn có trạng thái không xác định, vui lòng thử lại sau.",
-              context,
-              SnackBarType.error,
-            );
-            avoidPrint("DEBUG - Post $postId has unknown status: $status");
-          }
         });
 
-    // Safe timeout: If the AI ​​doesn't respond after 15 seconds (network lag, server down)
-    // Then stop listening and return to the Feed (to prevent the user's computer from freezing indefinitely)
+    // Timeout safeguard: cancel subscription after 15 seconds
     Future.delayed(const Duration(seconds: 15), () async {
-      // Only process if the subscription has not been canceled (it is still loading).
       if (_isLoading && mounted) {
+        await postSubscription?.cancel();
+        if (!mounted) return;
         setState(() {
-          _isLoading = false; // Stop loading indicator
+          _isLoading = false;
         });
-
-        // Navigate back to feed screen after moderation (timeout)
-        // Cloud Function will activate automatically after 10 seconds.
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const ResponsiveLayout(
-              mobileScreenLayout: MobileScreenLayout(),
-              webScreenLayout: WebScreenLayout(),
-            ),
-          ),
-          // remove all previous routes
-          (route) => false,
+        avoidPrint("DEBUG - Post $postId update listener timed out.");
+        displaySnackBar(
+          'Hết thời gian chờ xử lý từ hệ thống. Vui lòng kiểm tra trạng thái bài đăng sau.',
+          context,
+          SnackBarType.info,
         );
       }
     });
