@@ -652,7 +652,9 @@ class _PostCardState extends State<PostCard> {
                   if ((originalPostSnapshot.data!.data()
                           as Map<String, dynamic>)['status'] ==
                       'rejected') {
-                    return _buildErrorContainer('Bài viết gốc đã bị ẩn do vi phạm tiêu chuẩn cộng đồng.');
+                    return _buildErrorContainer(
+                      'Bài viết gốc đã bị ẩn do vi phạm tiêu chuẩn cộng đồng.',
+                    );
                   }
 
                   // Original post exists - display it with live data
@@ -1055,14 +1057,49 @@ class _PostCardState extends State<PostCard> {
                   displayReason = oldAiReason;
                 }
 
-                // Show rejection dialog
-                RejectionDialog.show(
-                  rootContext,
-                  title: 'Bài chia sẻ bị từ chối',
-                  description:
-                      'Hệ thống AI đã phát hiện nội dung không phù hợp trong văn bản chia sẻ:',
-                  reason: displayReason,
-                );
+                // Fetch scores from violation_logs
+                try {
+                  final logSnapshot = await FirebaseFirestore.instance
+                      .collection('violation_logs')
+                      .where('targetId', isEqualTo: postId)
+                      .orderBy('createdAt', descending: true)
+                      .limit(1)
+                      .get();
+
+                  double? textScore;
+                  double? imageScore;
+
+                  if (logSnapshot.docs.isNotEmpty) {
+                    final logData = logSnapshot.docs.first.data();
+                    textScore = (logData['textScore'] as num?)?.toDouble();
+                    imageScore = (logData['imageScore'] as num?)?.toDouble();
+                  }
+
+                  if (rootContext.mounted) {
+                    RejectionDialog.show(
+                      rootContext,
+                      title: 'Bài chia sẻ bị từ chối',
+                      description:
+                          'Hệ thống AI đã phát hiện nội dung không phù hợp trong văn bản chia sẻ:',
+                      reason: displayReason,
+                      textScore: textScore,
+                      imageScore: imageScore,
+                    );
+                  }
+                } catch (e) {
+                  // Fallback if fetching log fails
+                  if (rootContext.mounted) {
+                    RejectionDialog.show(
+                      rootContext,
+                      title: 'Bài chia sẻ bị từ chối',
+                      description:
+                          'Hệ thống AI đã phát hiện nội dung không phù hợp trong văn bản chia sẻ:',
+                      reason: displayReason,
+                    );
+                  }
+                  avoidPrint("Error fetching violation log for reshare: $e");
+                }
+
                 avoidPrint("DEBUG - Post $postId was rejected: $displayReason");
               } else {
                 displaySnackBar(
