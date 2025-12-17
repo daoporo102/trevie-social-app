@@ -298,13 +298,49 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
               _isLoading = false; // Stop loading indicator
             });
 
-            // Show detailed rejection dialog
-            RejectionDialog.show(
-              context,
-              title: 'Cập nhật thất bại',
-              description: 'Nội dung chỉnh sửa chứa thông tin không phù hợp:',
-              reason: updateError ?? 'Vi phạm tiêu chuẩn cộng đồng.',
-            );
+            // Fetch scores from violation_logs
+            try {
+              final logSnapshot = await FirebaseFirestore.instance
+                  .collection('violation_logs')
+                  .where('targetId', isEqualTo: postId)
+                  .orderBy('createdAt', descending: true)
+                  .limit(1)
+                  .get();
+
+              double? textScore;
+              double? imageScore;
+
+              if (logSnapshot.docs.isNotEmpty) {
+                final logData = logSnapshot.docs.first.data();
+                textScore = (logData['textScore'] as num?)?.toDouble();
+                imageScore = (logData['imageScore'] as num?)?.toDouble();
+
+                if (mounted) {
+                  RejectionDialog.show(
+                    context,
+                    title: 'Cập nhật thất bại',
+                    description:
+                        'Nội dung chỉnh sửa chứa thông tin không phù hợp:',
+                    reason: updateError ?? 'Vi phạm tiêu chuẩn cộng đồng.',
+                    textScore: textScore,
+                    imageScore: imageScore,
+                  );
+                }
+              }
+            } catch (e) {
+              // Fallback if fetching log fails
+              if (mounted) {
+                RejectionDialog.show(
+                  context,
+                  title: 'Cập nhật thất bại',
+                  description:
+                      'Nội dung chỉnh sửa chứa thông tin không phù hợp:',
+                  reason: updateError ?? 'Vi phạm tiêu chuẩn cộng đồng.',
+                );
+              }
+              avoidPrint("Error fetching violation log for update: $e");
+            }
+
             avoidPrint(
               "DEBUG - Post $postId was rejected during update: $updateError",
             );
