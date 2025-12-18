@@ -568,6 +568,11 @@ class FirestoreMethod {
         'postText': postText,
         'dateUpdated': Timestamp.fromDate(now),
         'lastDateModified': Timestamp.fromDate(now),
+        // Reset moderation fields
+        'updateStatus': null,
+        'updateError': null,
+        'moderatedBy': null,
+        'attemptedUpdateText': null,
       };
 
       // just update the text
