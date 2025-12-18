@@ -7,6 +7,8 @@ class RejectionDialog extends StatelessWidget {
   final String title;
   final String description;
   final VoidCallback? onDismiss;
+  final double? textScore;
+  final double? imageScore;
 
   const RejectionDialog({
     super.key,
@@ -14,6 +16,8 @@ class RejectionDialog extends StatelessWidget {
     required this.title,
     required this.description,
     this.onDismiss,
+    this.textScore,
+    this.imageScore,
   });
 
   @override
@@ -93,6 +97,23 @@ class RejectionDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
+            // AI Score Analysis
+            if (textScore != null && textScore! > 0 ||
+                imageScore != null && imageScore! > 0) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  if (textScore != null && textScore! > 0) ...[
+                    _buildScoreBadge("Điểm văn bản", textScore!),
+                    const SizedBox(width: 12),
+                  ],
+                  if (imageScore != null && imageScore! > 0)
+                    _buildScoreBadge("Điểm hình ảnh", imageScore!),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Helper text
             Text(
               'Vui lòng chỉnh sửa nội dung và thử lại.',
@@ -102,7 +123,7 @@ class RejectionDialog extends StatelessWidget {
 
             // Additional info
             Text(
-              'Bạn có thể xem lại nội dung của mình ở màn hình cài đặt -> lịch sử vi phạm.',
+              'Bạn có thể xem lại nội dung vi phạm của mình ở màn hình cài đặt -> lịch sử vi phạm.',
               style: TextStyle(
                 fontSize: 14,
                 color: secondaryColor,
@@ -139,6 +160,44 @@ class RejectionDialog extends StatelessWidget {
     );
   }
 
+  // Widget hiển thị điểm số
+  Widget _buildScoreBadge(String title, double score) {
+    // Màu sắc dựa trên mức độ nguy hiểm
+    Color color = Colors.green;
+    if (score > 0.8) {
+      color = Colors.red;
+    } else if (score > 0.5) {
+      color = Colors.orange;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(color: secondaryColor, fontSize: 10),
+        ),
+        const SizedBox(height: 2),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withAlpha(25), 
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color),
+          ),
+          child: Text(
+            "${(score * 100).toStringAsFixed(2)}%",
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Static method to show the dialog
   static Future<void> show(
     BuildContext context, {
@@ -146,6 +205,9 @@ class RejectionDialog extends StatelessWidget {
     String? title,
     String? description,
     VoidCallback? onDismiss,
+    double? aiConfidence,
+    double? textScore,
+    double? imageScore,
   }) {
     return showDialog(
       context: context,
@@ -157,6 +219,8 @@ class RejectionDialog extends StatelessWidget {
           description:
               description ?? 'Hệ thống đã phát hiện nội dung không phù hợp:',
           onDismiss: onDismiss,
+          textScore: textScore,
+          imageScore: imageScore,
         );
       },
     );

@@ -122,6 +122,9 @@ class FirestoreMethod {
         'postText': postText,
         'dateUpdated': Timestamp.fromDate(now),
         'lastDateModified': Timestamp.fromDate(now),
+        'updateStatus': null, 
+        'updateError': null,
+        'moderatedBy': null,
       };
 
       // Only update status if text changed
@@ -134,16 +137,19 @@ class FirestoreMethod {
 
       // Only update image if user selected a new one
       if (file != null) {
+        // -- THIS SECTION HAS BEEN REMOVED TO BE SENT TO THE SERVER FOR PROCESSING --
+
         // Delete the old image from storage if it exists
-        if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
-          try {
-            await StorageMethod().deleteImageFromStorage(existingImageUrl);
-          } catch (storageError) {
-            avoidPrint(
-              "Storage deletion warning (old image may be missing): $storageError",
-            );
-          }
-        }
+
+        // if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
+        //   try {
+        //     await StorageMethod().deleteImageFromStorage(existingImageUrl);
+        //   } catch (storageError) {
+        //     avoidPrint(
+        //       "Storage deletion warning (old image may be missing): $storageError",
+        //     );
+        //   }
+        // }
 
         // Upload the new image to storage
         newPhotoUrl = await StorageMethod().uploadImageToStorage(
@@ -306,6 +312,13 @@ class FirestoreMethod {
   Future<String> deletePost(String postId) async {
     String res = "Một lỗi đã xảy ra";
     try {
+      // Get current user UID safely
+      final currentUserUid = FirebaseAuth.instance.currentUser?.uid;
+
+      if (currentUserUid == null) {
+        return 'Không tìm thấy thông tin người dùng';
+      }
+
       // Get the post document to retrieve the postUrl
       DocumentSnapshot postDoc = await _firestore
           .collection('posts')
@@ -318,20 +331,22 @@ class FirestoreMethod {
         return res;
       }
 
-      // Check ownership
-      if (userUid != postDoc['uid']) {
+      final postData = postDoc.data() as Map<String, dynamic>;
+
+      // Check ownership with null safety
+      final postUid = postData['uid'] as String?;
+      if (postUid == null || currentUserUid != postUid) {
         res = 'Bạn không có quyền xoá bài viết này!';
         avoidPrint(res);
         return res;
       }
 
-      final postData = postDoc.data() as Map<String, dynamic>;
       String postUrl = postData['postUrl'] ?? "";
-      String originalPostId = postData['originalPostId'];
+      String originalPostId = postData['originalPostId'] ?? "";
       String status = postData['status'] ?? 'processing';
 
       // Check if this is a reshared post
-      bool isReshare = postData['originalPostId'] != null;
+      bool isReshare = originalPostId.isNotEmpty;
 
       if (isReshare) {
         // Just decrement reshareCount in original post if the reshare post is active
@@ -356,6 +371,32 @@ class FirestoreMethod {
             avoidPrint(
               "Storage deletion warning (image may be missing): $storageError",
             );
+            // Continue with post deletion even if image deletion fails
+          }
+        }
+
+        // Delete all comments in the post subcollection
+        QuerySnapshot commentsSnapshot = await _firestore
+            .collection('posts')
+            .doc(postId)
+            .collection('comments')
+            .get();
+
+        // Delete comments in batch
+        if (commentsSnapshot.docs.isNotEmpty) {
+          WriteBatch batch = _firestore.batch();
+          for (var doc in commentsSnapshot.docs) {
+            batch.delete(doc.reference);
+          }
+
+          try {
+            await batch.commit();
+            avoidPrint(
+              "Deleted ${commentsSnapshot.docs.length} comments for post $postId",
+            );
+          } catch (e) {
+            avoidPrint("Error deleting comments: ${e.toString()}");
+            // Continue with post deletion even if comment deletion fails
           }
         }
       }
@@ -527,6 +568,11 @@ class FirestoreMethod {
         'postText': postText,
         'dateUpdated': Timestamp.fromDate(now),
         'lastDateModified': Timestamp.fromDate(now),
+        // Reset moderation fields
+        'updateStatus': null,
+        'updateError': null,
+        'moderatedBy': null,
+        'attemptedUpdateText': null,
       };
 
       // just update the text
@@ -565,7 +611,6 @@ class FirestoreMethod {
       for (var doc in reshareSnapshot.docs) {
         Map<String, dynamic> reshareUpdateData = {
           'originalPostText': newPostText,
-          'lastDateModified': Timestamp.now(),
         };
 
         // Only update photoUrl if a new one is provided

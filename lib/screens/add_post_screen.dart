@@ -297,15 +297,49 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   );
                 }
               } else if (status == 'rejected') {
-                // Show detailed rejection dialog
-                if (mounted) {
-                  RejectionDialog.show(
-                    context,
-                    title: 'Bài viết bị từ chối',
-                    description:
-                        'Hệ thống AI đã phát hiện nội dung không phù hợp:',
-                    reason: displayReason ?? 'Vui lòng kiểm tra lại nội dung.',
-                  );
+                // Post was rejected, now fetch the scores from violation_logs
+                try {
+                  final violationLogs = await FirebaseFirestore.instance
+                      .collection('violation_logs')
+                      .where('targetId', isEqualTo: postId)
+                      .orderBy('createdAt', descending: true)
+                      .limit(1)
+                      .get();
+
+                  double? textScore;
+                  double? imageScore;
+
+                  if (violationLogs.docs.isNotEmpty) {
+                    final data = violationLogs.docs.first.data();
+                    textScore = data['textScore'] as double?;
+                    imageScore = data['imageScore'] as double?;
+
+                    // Show rejection dialog with detailed information
+                    if (mounted) {
+                      RejectionDialog.show(
+                        context,
+                        title: 'Bài viết bị từ chối',
+                        description:
+                            'Hệ thống AI đã phát hiện nội dung không phù hợp:',
+                        reason: displayReason ?? 'Vui lòng kiểm tra lại nội dung.',
+                        textScore: textScore,
+                        imageScore: imageScore,
+                      );
+                    }
+                  }
+                } catch (e) {
+                  // Fallback if fetching log fails
+                  if (mounted) {
+                    RejectionDialog.show(
+                      context,
+                      title: 'Bài viết bị từ chối',
+                      description:
+                          'Hệ thống AI đã phát hiện nội dung không phù hợp:',
+                      reason:
+                          displayReason ?? 'Vui lòng kiểm tra lại nội dung.',
+                    );
+                  }
+                  avoidPrint("DEBUG - Error fetching violation logs: $e");
                 }
                 avoidPrint("DEBUG - Post $postId was rejected: $displayReason");
               } else {

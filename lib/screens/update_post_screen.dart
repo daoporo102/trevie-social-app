@@ -28,6 +28,8 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
   bool _isReshare = false;
+  // New flag to track if we are awaiting AI moderation for update reshare or post
+  bool _isAwaitingModeration = false;
 
   @override
   void initState() {
@@ -148,6 +150,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
 
     setState(() {
       _isLoading = true;
+      _isAwaitingModeration = true;
     });
     try {
       // For reshared posts, only update the text (not the image)
@@ -159,30 +162,12 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
         if (!mounted) return; // guard context after async
 
         if (res == 'success') {
-          setState(() {
-            _isLoading = false;
-          });
-          displaySnackBar(
-            'Cập nhật bài đăng thành công!',
-            context,
-            SnackBarType.success,
-          );
-          clearImage();
-          _textController.clear();
-          //Navigate back to feed screen
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const ResponsiveLayout(
-                mobileScreenLayout: MobileScreenLayout(),
-                webScreenLayout: WebScreenLayout(),
-              ),
-            ),
-            // remove all previous routes
-            (route) => false,
-          );
+          // Listen to the post status for AI moderation result
+          _listenToPostStatus(postId);
         } else {
           setState(() {
             _isLoading = false;
+            _isAwaitingModeration = false;
           });
           displaySnackBar(
             'Có lỗi xảy ra, vui lòng thử lại sau.',
@@ -234,6 +219,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
         } else {
           setState(() {
             _isLoading = false;
+            _isAwaitingModeration = false;
           });
           displaySnackBar(
             'Có lỗi xảy ra, vui lòng thử lại sau.',
@@ -247,6 +233,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
       if (!mounted) return; // guard context after async
       setState(() {
         _isLoading = false;
+        _isAwaitingModeration = false;
       });
       avoidPrint("Exception in updatePost: $e");
       displaySnackBar(
@@ -268,45 +255,103 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
         .snapshots()
         .listen((snapshot) async {
           // Check if snapshot is not exists
-          if (!snapshot.exists) return;
+          if (!snapshot.exists || !mounted) return;
 
           final data = snapshot.data() as Map<String, dynamic>;
-          final status = data['status'] as String?;
           final updateStatus =
               data['updateStatus']
-                  as String?; // Field mới do Cloud Function set
+                  as String?; // the status of the update operation
           final updateError =
-              data['updateError'] as String?; // Field mới chứa lý do lỗi
+              data['updateError'] as String?; // the reason for rejection
+          final moderatedBy = data['moderatedBy'] as String?; // Who moderated
 
-          // Nếu vẫn đang xử lý thì đợi tiếp
-          if (status == 'processing') return;
-          avoidPrint("DEBUG - Post $postId status updated: $status");
+          // UNLESS IT'S AWAITING MODERATION, IGNORE OLD ERROR STATES.
+          if (!_isAwaitingModeration && updateStatus == 'failed') {
+            avoidPrint("DEBUG - Ignoring old 'failed' status.");
+            return;
+          }
 
-          // Cancel the subscription to avoid memory leaks
-          await postSubscription?.cancel();
+          avoidPrint(
+            "DEBUG - Update Listener: By=$moderatedBy, Status=$updateStatus",
+          );
 
-          if (!mounted) return;
+          // if AI moderation hasn't processed yet, WAIT
+          if (moderatedBy == null && updateStatus == null) return;
 
-          setState(() {
-            _isLoading = false; // Stop loading indicator
-          });
+          // CASE 1: UPDATE FAILED DUE TO AI MODERATION (ROLLBACK)
+          if (moderatedBy == 'AI_Rollback' || updateStatus == 'failed') {
+            avoidPrint("DEBUG - Post $postId status updated: $updateStatus");
 
-          // Update failed due to AI moderation (Rollback)
-          if (updateStatus == 'failed') {
-            // Show detailed rejection dialog
-            RejectionDialog.show(
-              context,
-              title: 'Cập nhật thất bại',
-              description: 'Nội dung chỉnh sửa chứa thông tin không phù hợp:',
-              reason: updateError ?? 'Vi phạm tiêu chuẩn cộng đồng.',
-            );
+            // Cancel the subscription to avoid memory leaks
+            await postSubscription?.cancel();
+
+            if (!mounted) return;
+
+            setState(() {
+              _isLoading = false; // Stop loading indicator
+              _isAwaitingModeration = false;
+            });
+
+            // Fetch scores from violation_logs
+            try {
+              final logSnapshot = await FirebaseFirestore.instance
+                  .collection('violation_logs')
+                  .where('targetId', isEqualTo: postId)
+                  .orderBy('createdAt', descending: true)
+                  .limit(1)
+                  .get();
+
+              double? textScore;
+              double? imageScore;
+
+              if (logSnapshot.docs.isNotEmpty) {
+                final logData = logSnapshot.docs.first.data();
+                textScore = (logData['textScore'] as num?)?.toDouble();
+                imageScore = (logData['imageScore'] as num?)?.toDouble();
+
+                if (mounted) {
+                  RejectionDialog.show(
+                    context,
+                    title: 'Cập nhật thất bại',
+                    description:
+                        'Nội dung chỉnh sửa chứa thông tin không phù hợp:',
+                    reason: updateError ?? 'Vi phạm tiêu chuẩn cộng đồng.',
+                    textScore: textScore,
+                    imageScore: imageScore,
+                  );
+                }
+              }
+            } catch (e) {
+              // Fallback if fetching log fails
+              if (mounted) {
+                RejectionDialog.show(
+                  context,
+                  title: 'Cập nhật thất bại',
+                  description:
+                      'Nội dung chỉnh sửa chứa thông tin không phù hợp:',
+                  reason: updateError ?? 'Vi phạm tiêu chuẩn cộng đồng.',
+                );
+              }
+              avoidPrint("Error fetching violation log for update: $e");
+            }
+
             avoidPrint(
               "DEBUG - Post $postId was rejected during update: $updateError",
             );
           }
-          // Update approved (active)
-          else if (status == 'active') {
+          // CASE 2: UPDATE APPROVED BY AI
+          else if (moderatedBy == 'AI_Update' ||
+              updateStatus == 'success' ||
+              moderatedBy == 'system_failover') {
             // AI approved (or AI error -> approved by system_failover) => show success
+            await postSubscription?.cancel();
+            if (!mounted) return;
+
+            setState(() {
+              _isLoading = false; // Stop loading indicator
+              _isAwaitingModeration = false;
+            });
+
             displaySnackBar(
               "Cập nhật bài viết thành công!",
               context,
@@ -329,37 +374,21 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
 
             avoidPrint("DEBUG - Post $postId update approved and active.");
           }
-          // Unknown status
-          else {
-            displaySnackBar(
-              "Bài đăng của bạn có trạng thái không xác định, vui lòng thử lại sau.",
-              context,
-              SnackBarType.error,
-            );
-            avoidPrint("DEBUG - Post $postId has unknown status: $status");
-          }
         });
 
-    // Safe timeout: If the AI ​​doesn't respond after 15 seconds (network lag, server down)
-    // Then stop listening and return to the Feed (to prevent the user's computer from freezing indefinitely)
+    // Timeout safeguard: cancel subscription after 15 seconds
     Future.delayed(const Duration(seconds: 15), () async {
-      // Only process if the subscription has not been canceled (it is still loading).
       if (_isLoading && mounted) {
+        await postSubscription?.cancel();
+        if (!mounted) return;
         setState(() {
-          _isLoading = false; // Stop loading indicator
+          _isLoading = false;
         });
-
-        // Navigate back to feed screen after moderation (timeout)
-        // Cloud Function will activate automatically after 10 seconds.
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const ResponsiveLayout(
-              mobileScreenLayout: MobileScreenLayout(),
-              webScreenLayout: WebScreenLayout(),
-            ),
-          ),
-          // remove all previous routes
-          (route) => false,
+        avoidPrint("DEBUG - Post $postId update listener timed out.");
+        displaySnackBar(
+          'Hết thời gian chờ xử lý từ hệ thống. Vui lòng kiểm tra trạng thái bài đăng sau.',
+          context,
+          SnackBarType.info,
         );
       }
     });
