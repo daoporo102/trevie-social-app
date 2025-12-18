@@ -28,6 +28,8 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
   bool _isReshare = false;
+  // New flag to track if we are awaiting AI moderation for update reshare or post
+  bool _isAwaitingModeration = false;
 
   @override
   void initState() {
@@ -148,6 +150,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
 
     setState(() {
       _isLoading = true;
+      _isAwaitingModeration = true;
     });
     try {
       // For reshared posts, only update the text (not the image)
@@ -159,30 +162,12 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
         if (!mounted) return; // guard context after async
 
         if (res == 'success') {
-          setState(() {
-            _isLoading = false;
-          });
-          displaySnackBar(
-            'Cập nhật bài đăng thành công!',
-            context,
-            SnackBarType.success,
-          );
-          clearImage();
-          _textController.clear();
-          //Navigate back to feed screen
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const ResponsiveLayout(
-                mobileScreenLayout: MobileScreenLayout(),
-                webScreenLayout: WebScreenLayout(),
-              ),
-            ),
-            // remove all previous routes
-            (route) => false,
-          );
+          // Listen to the post status for AI moderation result
+          _listenToPostStatus(postId);
         } else {
           setState(() {
             _isLoading = false;
+            _isAwaitingModeration = false;
           });
           displaySnackBar(
             'Có lỗi xảy ra, vui lòng thử lại sau.',
@@ -234,6 +219,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
         } else {
           setState(() {
             _isLoading = false;
+            _isAwaitingModeration = false;
           });
           displaySnackBar(
             'Có lỗi xảy ra, vui lòng thử lại sau.',
@@ -247,6 +233,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
       if (!mounted) return; // guard context after async
       setState(() {
         _isLoading = false;
+        _isAwaitingModeration = false;
       });
       avoidPrint("Exception in updatePost: $e");
       displaySnackBar(
@@ -268,7 +255,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
         .snapshots()
         .listen((snapshot) async {
           // Check if snapshot is not exists
-          if (!snapshot.exists) return;
+          if (!snapshot.exists || !mounted) return;
 
           final data = snapshot.data() as Map<String, dynamic>;
           final updateStatus =
@@ -277,6 +264,12 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
           final updateError =
               data['updateError'] as String?; // the reason for rejection
           final moderatedBy = data['moderatedBy'] as String?; // Who moderated
+
+          // UNLESS IT'S AWAITING MODERATION, IGNORE OLD ERROR STATES.
+          if (!_isAwaitingModeration && updateStatus == 'failed') {
+            avoidPrint("DEBUG - Ignoring old 'failed' status.");
+            return;
+          }
 
           avoidPrint(
             "DEBUG - Update Listener: By=$moderatedBy, Status=$updateStatus",
@@ -296,6 +289,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
 
             setState(() {
               _isLoading = false; // Stop loading indicator
+              _isAwaitingModeration = false;
             });
 
             // Fetch scores from violation_logs
@@ -355,6 +349,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
 
             setState(() {
               _isLoading = false; // Stop loading indicator
+              _isAwaitingModeration = false;
             });
 
             displaySnackBar(
