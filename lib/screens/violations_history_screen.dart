@@ -1,3 +1,4 @@
+import 'package:social_media_app/utils/utils.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -12,65 +13,120 @@ class ViolationsHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUserUid = FirebaseAuth.instance.currentUser?.uid;
+    final width = MediaQuery.of(context).size.width;
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: mobileBackgroundColor,
         title: const Text('Lịch sử vi phạm'),
       ),
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance
-            .collection('violation_logs')
-            .where('uid', isEqualTo: currentUserUid)
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: customCircularProgressIndicator());
-          }
+      body: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: width > webScreenSize ? width * 0.3 : 0,
+          vertical: width > webScreenSize ? 15 : 0,
+        ),
+        child: StreamBuilder(
+          stream: FirebaseFirestore.instance
+              .collection('violation_logs')
+              .where('uid', isEqualTo: currentUserUid)
+              .orderBy('createdAt', descending: true)
+              .snapshots(),
+          builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: customCircularProgressIndicator());
+            }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    size: 64,
-                    color: Colors.green,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Hồ sơ của bạn rất sạch!',
-                    style: TextStyle(color: primaryTextColor, fontSize: 18),
-                  ),
-                  Text(
-                    'Chưa ghi nhận vi phạm nào.',
-                    style: TextStyle(color: secondaryColor),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              ViolationLog log = ViolationLog.fromSnap(
-                snapshot.data!.docs[index],
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 64,
+                      color: Colors.green,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Hồ sơ của bạn rất sạch!',
+                      style: TextStyle(color: primaryTextColor, fontSize: 18),
+                    ),
+                    Text(
+                      'Chưa ghi nhận vi phạm nào.',
+                      style: TextStyle(color: secondaryColor),
+                    ),
+                  ],
+                ),
               );
-              return _buildLogCard(context, log);
-            },
-          );
-        },
+            }
+
+            return ListView.builder(
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                ViolationLog log = ViolationLog.fromSnap(
+                  snapshot.data!.docs[index],
+                );
+                return _LogCard(log: log);
+              },
+            );
+          },
+        ),
       ),
     );
   }
+}
 
-  Widget _buildLogCard(BuildContext context, ViolationLog log) {
+class _LogCard extends StatefulWidget {
+  final ViolationLog log;
+  const _LogCard({required this.log});
+
+  @override
+  State<_LogCard> createState() => _LogCardState();
+}
+
+class _LogCardState extends State<_LogCard> {
+  Map<String, dynamic>? _postData;
+  bool _isLoadingPost = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPostData();
+  }
+
+  Future<void> _fetchPostData() async {
+    try {
+      final postSnap = await FirebaseFirestore.instance
+          .collection('posts')
+          .doc(widget.log.targetId)
+          .get();
+
+      // Check if the widget is still mounted before updating the state
+      if (!mounted) return;
+
+      if (postSnap.exists) {
+        setState(() {
+          _postData = postSnap.data();
+        });
+      }
+    } catch (e) {
+      avoidPrint("Error fetching post for violation log: $e");
+    } finally {
+      // Also check here, as the finally block always runs
+      if (mounted) {
+        setState(() {
+          _isLoadingPost = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final log = widget.log;
     final dateStr = DateFormat('dd/MM/yyyy HH:mm').format(log.createdAt);
 
-    // Icon dựa trên Action
+    // Icon based on Action
     IconData actionIcon;
     String actionText;
     if (log.actionType == 'update') {
@@ -91,19 +147,19 @@ class ViolationsHistoryScreen extends StatelessWidget {
       color: mobileBackgroundColor,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
+        side: BorderSide(color: errorBackgroundColor.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: Colors.red.withValues(alpha: 0.1),
+          backgroundColor: errorBackgroundColor.withValues(alpha: 0.1),
           child: Icon(actionIcon, color: Colors.red),
         ),
         title: Text(
           log.reason,
           style: const TextStyle(
-            color: Colors.red,
+            color: errorBackgroundColor,
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),
@@ -129,7 +185,18 @@ class ViolationsHistoryScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. PHẦN ĐIỂM SỐ CHI TIẾT
+                // 1. POST CONTEXT (Show only for 'update' or 'reshare')
+                if (log.actionType == 'update' ||
+                    log.actionType == 'reshare') ...[
+                  if (_isLoadingPost)
+                    Center(child: customCircularProgressIndicator())
+                  else if (_postData != null) ...[
+                    _buildPostPreview(_postData!),
+                    const Divider(height: 24),
+                  ],
+                ],
+
+                // 2. AI ANALYSIS
                 const Text(
                   "Phân tích AI:",
                   style: TextStyle(
@@ -140,14 +207,17 @@ class ViolationsHistoryScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _buildScoreBadge("Text Score", log.textScore),
-                    const SizedBox(width: 12),
-                    _buildScoreBadge("Image Score", log.imageScore),
+                    if (log.textScore > 0) ...[
+                      _buildScoreBadge("Điểm văn bản", log.textScore),
+                      const SizedBox(width: 12),
+                    ],
+                    if (log.imageScore > 0)
+                      _buildScoreBadge("Điểm hình ảnh", log.imageScore),
                   ],
                 ),
                 const Divider(height: 24),
 
-                // 2. NỘI DUNG VI PHẠM
+                // 3. BLOCKED CONTENT
                 const Text(
                   "Nội dung bị chặn:",
                   style: TextStyle(
@@ -157,8 +227,9 @@ class ViolationsHistoryScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                if (log.toxicText != null)
+                if (log.toxicText != null && log.toxicText!.isNotEmpty)
                   Container(
+                    width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -214,9 +285,177 @@ class ViolationsHistoryScreen extends StatelessWidget {
     );
   }
 
-  // Widget hiển thị điểm số
+  // Widget to show post preview
+  Widget _buildPostPreview(Map<String, dynamic> postData) {
+    final bool isReshare = postData['originalPostId'] != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Ngữ cảnh bài đăng:",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: primaryTextColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Case 1: It's a regular post (for 'create' or 'update' violations)
+        if (!isReshare)
+          _buildPostInfoBox(
+            avatarUrl: postData['profImage'],
+            displayName: postData['displayName'],
+            postText: postData['postText'],
+            postUrl: postData['postUrl'],
+          ),
+        // Case 2: It's a reshare post. We'll mimic the PostCard structure.
+        if (isReshare)
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: secondaryColor.withValues(alpha: 0.5)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Reshare author header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundImage:
+                            (postData['profImage'] != null &&
+                                postData['profImage'].isNotEmpty)
+                            ? NetworkImage(postData['profImage'])
+                            : null,
+                        child:
+                            (postData['profImage'] == null ||
+                                postData['profImage'].isEmpty)
+                            ? const Icon(Icons.person, size: 16)
+                            : null,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          postData['displayName'] ??
+                              'Người dùng không xác định',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: primaryTextColor,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Reshare text
+                if (postData['postText'] != null &&
+                    postData['postText'].isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                    child: Text(
+                      postData['postText'],
+                      style: const TextStyle(color: primaryTextColor),
+                    ),
+                  ),
+                // Nested original post
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                  child: _buildPostInfoBox(
+                    avatarUrl: postData['originalProfImage'],
+                    displayName: postData['originalDisplayName'],
+                    postText: postData['originalPostText'],
+                    postUrl: postData['postUrl'],
+                    isNested: true, // Add a flag for nested style
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Helper widget to build the post preview box
+  Widget _buildPostInfoBox({
+    String? avatarUrl,
+    String? displayName,
+    String? postText,
+    String? postUrl,
+    bool isNested = false, // Flag to control background color
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isNested ? secondaryColor.withValues(alpha: 0.1) : null,
+        border: Border.all(color: secondaryColor.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with avatar and name
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                    ? NetworkImage(avatarUrl)
+                    : null,
+                child: (avatarUrl == null || avatarUrl.isEmpty)
+                    ? const Icon(Icons.person, size: 16)
+                    : null,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  displayName ?? 'Người dùng không xác định',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: primaryTextColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Post text
+          if (postText != null && postText.isNotEmpty)
+            Text(
+              postText,
+              style: const TextStyle(color: primaryTextColor),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+          // Post image
+          if (postUrl != null && postUrl.isNotEmpty) ...[
+            if (postText != null && postText.isNotEmpty)
+              const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                postUrl,
+                height: 100,
+                width: double.infinity,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox.shrink(),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // Widget to show score badge
   Widget _buildScoreBadge(String title, double score) {
-    // Màu sắc dựa trên mức độ nguy hiểm
     Color color = Colors.green;
     if (score > 0.8) {
       color = Colors.red;
