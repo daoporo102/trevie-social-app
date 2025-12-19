@@ -163,9 +163,9 @@ class RejectionDialog extends StatelessWidget {
   // Widget hiển thị điểm số
   Widget _buildScoreBadge(String title, double score) {
     // Màu sắc dựa trên mức độ nguy hiểm
-    Color color = Colors.green;
+    Color color = errorBackgroundColor;
     if (score > 0.8) {
-      color = Colors.red;
+      color = errorBackgroundColor;
     } else if (score > 0.5) {
       color = Colors.orange;
     }
@@ -181,7 +181,7 @@ class RejectionDialog extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: color.withAlpha(25), 
+            color: color.withAlpha(25),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: color),
           ),

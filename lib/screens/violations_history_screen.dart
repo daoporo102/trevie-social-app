@@ -456,9 +456,9 @@ class _LogCardState extends State<_LogCard> {
 
   // Widget to show score badge
   Widget _buildScoreBadge(String title, double score) {
-    Color color = Colors.green;
+    Color color=errorBackgroundColor;
     if (score > 0.8) {
-      color = Colors.red;
+      color = errorBackgroundColor;
     } else if (score > 0.5) {
       color = Colors.orange;
     }
