@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:social_media_app/screens/chat/chat_list_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/widgets/compose_widget.dart';
@@ -31,7 +32,13 @@ class FeedScreen extends StatelessWidget {
               title: SvgPicture.asset('assets/images/trevie.svg', height: 32),
               actions: [
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ChatListScreen(),
+                      ),
+                    );
+                  },
                   icon: const Icon(
                     Icons.messenger_outline_rounded,
                     color: primaryTextColor,

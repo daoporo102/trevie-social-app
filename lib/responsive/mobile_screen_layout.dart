@@ -76,10 +76,10 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
             ),
             BottomNavigationBarItem(
               icon: Icon(
-                Icons.post_add,
+                Icons.message_outlined,
                 color: _page == 2 ? appPrimaryColor : secondaryColor,
               ),
-              label: 'Bài viết',
+              label: 'Tin nhắn',
               backgroundColor: mobileBackgroundColor,
             ),
             BottomNavigationBarItem(
