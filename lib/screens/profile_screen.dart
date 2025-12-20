@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
+import 'package:social_media_app/screens/chat/chat_screen.dart';
 import 'package:social_media_app/screens/edit_profile_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
@@ -267,149 +268,189 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ? 420
                                     : constraints.maxWidth;
 
-                                Widget btn;
-                                if (FirebaseAuth.instance.currentUser!.uid ==
-                                    widget.uid) {
-                                  btn = CustomButton(
-                                    backgroundColor: width > webScreenSize
-                                        ? webBackgroundColor
-                                        : mobileBackgroundColor,
-                                    borderRadius: BorderRadius.circular(8),
-                                    overlayColor: appPrimaryColor,
-                                    hasBorder: true,
-                                    onPressed: () async {
-                                      // 1. Get context-dependent values FIRST (before any await)
-                                      final userProvider =
-                                          Provider.of<UserProvider>(
-                                            context,
-                                            listen: false,
-                                          );
+                                if (isMe) {
+                                  // Display Edit Profile button for own profile
+                                  return Align(
+                                    alignment: Alignment.center,
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 50,
+                                      ),
+                                      child: SizedBox(
+                                        width: buttonWidth,
+                                        height: 40,
+                                        child: CustomButton(
+                                          backgroundColor: width > webScreenSize
+                                              ? webBackgroundColor
+                                              : mobileBackgroundColor,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          overlayColor: appPrimaryColor,
+                                          hasBorder: true,
+                                          onPressed: () async {
+                                            // 1. Get context-dependent values FIRST (before any await)
+                                            final userProvider =
+                                                Provider.of<UserProvider>(
+                                                  context,
+                                                  listen: false,
+                                                );
 
-                                      // 2. do async operations
-                                      await Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              EditProfileScreen(),
+                                            // 2. do async operations
+                                            await Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    EditProfileScreen(),
+                                              ),
+                                            );
+
+                                            //3. Check mounted after earch asysnc gap
+                                            if (!mounted) return;
+
+                                            await getData();
+
+                                            if (!mounted) return;
+
+                                            //4. Use stored references (no context access)
+                                            await userProvider.refreshUser();
+                                          },
+                                          child: Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.edit_outlined,
+                                                  color: primaryTextColor,
+                                                  size: 20,
+                                                ),
+                                                SizedBox(width: 8),
+                                                Text(
+                                                  'Chỉnh sửa hồ sơ',
+                                                  style: TextStyle(
+                                                    color: primaryTextColor,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
-                                      );
-
-                                      //3. Check mounted after earch asysnc gap
-                                      if (!mounted) return;
-
-                                      await getData();
-
-                                      if (!mounted) return;
-
-                                      //4. Use stored references (no context access)
-                                      await userProvider.refreshUser();
-                                    },
-                                    child: Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-
-                                        children: [
-                                          Icon(
-                                            Icons.edit_outlined,
-                                            color: primaryTextColor,
-                                          ),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            'Chỉnh sửa hồ sơ',
-                                            style: TextStyle(
-                                              color: primaryTextColor,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                } else if (isFollowing) {
-                                  btn = CustomButton(
-                                    backgroundColor: width > webScreenSize
-                                        ? webBackgroundColor
-                                        : mobileBackgroundColor,
-                                    overlayColor: appPrimaryColor,
-                                    hasBorder: true,
-                                    onPressed: () async {
-                                      //unfollow user
-                                      await FirestoreMethod().followUser(
-                                        FirebaseAuth.instance.currentUser!.uid,
-                                        userData['uid'],
-                                      );
-
-                                      setState(() {
-                                        isFollowing = false;
-                                        followers--;
-                                      });
-                                    },
-                                    child: Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.person_remove_alt_1_outlined,
-                                            color: primaryTextColor,
-                                          ),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            'Huỷ theo dõi',
-                                            style: TextStyle(
-                                              color: primaryTextColor,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                } else {
-                                  btn = CustomButton(
-                                    borderRadius: BorderRadius.circular(8),
-                                    hasBorder: true,
-                                    onPressed: () async {
-                                      //follow user
-                                      await FirestoreMethod().followUser(
-                                        FirebaseAuth.instance.currentUser!.uid,
-                                        userData['uid'],
-                                      );
-                                      setState(() {
-                                        isFollowing = true;
-                                        followers++;
-                                      });
-                                    },
-                                    child: Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.person_add_alt_1_outlined,
-                                            color: onPrimaryColor,
-                                          ),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            'Theo dõi',
-                                            style: TextStyle(
-                                              color: onPrimaryColor,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
                                       ),
                                     ),
                                   );
                                 }
+                                // Display Follow/Unfollow and Message buttons for other users
                                 return Align(
                                   alignment: Alignment.center,
                                   child: SizedBox(
                                     width: buttonWidth,
-                                    height: 80,
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: btn,
+                                    height: 50,
+                                    child: Row(
+                                      children: [
+                                        // Follow/Unfollow button
+                                        Expanded(
+                                          child: isFollowing
+                                              ? CustomButton(
+                                                  // Unfollow button
+                                                  backgroundColor:
+                                                      width > webScreenSize
+                                                      ? webBackgroundColor
+                                                      : mobileBackgroundColor,
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  overlayColor: appPrimaryColor,
+                                                  hasBorder: true,
+                                                  onPressed: () async {
+                                                    await FirestoreMethod()
+                                                        .followUser(
+                                                          currentUserUid!,
+                                                          widget.uid,
+                                                        );
+                                                    if (!mounted) return;
+                                                    setState(() {
+                                                      isFollowing = false;
+                                                      followers--;
+                                                    });
+                                                  },
+                                                  child: Text(
+                                                    'Đang theo dõi',
+                                                    style: TextStyle(
+                                                      color: primaryTextColor,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                )
+                                              : CustomButton(
+                                                  // Follow button
+                                                  backgroundColor:
+                                                      appPrimaryColor,
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  overlayColor: onPrimaryColor,
+                                                  hasBorder: false,
+                                                  onPressed: () async {
+                                                    await FirestoreMethod()
+                                                        .followUser(
+                                                          currentUserUid!,
+                                                          widget.uid,
+                                                        );
+                                                    if (!mounted) return;
+                                                    setState(() {
+                                                      isFollowing = true;
+                                                      followers++;
+                                                    });
+                                                  },
+                                                  child: Text(
+                                                    'Theo dõi',
+                                                    style: TextStyle(
+                                                      color: onPrimaryColor,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // Message button
+                                        Expanded(
+                                          child: CustomButton(
+                                            backgroundColor:
+                                                width > webScreenSize
+                                                ? webBackgroundColor
+                                                : mobileBackgroundColor,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            overlayColor: appPrimaryColor,
+                                            hasBorder: true,
+                                            onPressed: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      ChatScreen(
+                                                        receiverId: widget.uid,
+                                                        receiverName:
+                                                            displayName,
+                                                        receiverPhotoUrl:
+                                                            photoUrl,
+                                                      ),
+                                                ),
+                                              );
+                                            },
+                                            child: Text(
+                                              'Nhắn tin',
+                                              style: TextStyle(
+                                                color: primaryTextColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 );
