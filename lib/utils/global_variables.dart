@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:social_media_app/screens/add_post_screen.dart';
+import 'package:social_media_app/screens/chat/chat_list_screen.dart';
 import 'package:social_media_app/screens/feed_screen.dart';
 import 'package:social_media_app/screens/more_screen.dart';
 import 'package:social_media_app/screens/profile_screen.dart';
@@ -18,7 +19,7 @@ List<Widget> homeMobileScreenItems() {
   return [
     const FeedScreen(),
     const SearchScreen(),
-    const AddPostScreen(),
+    const ChatListScreen(),
     const Text('Notifications'),
     ProfileScreen(uid: uid),
     MoreScreen(uid: uid),
@@ -31,7 +32,7 @@ List<Widget> homeWebScreenItems() {
     const FeedScreen(),
     const SearchScreen(),
     const AddPostScreen(),
-    const Text('Chat'),
+    const ChatListScreen(),
     const Text('Notifications'),
     ProfileScreen(uid: uid),
     MoreScreen(uid: uid),
