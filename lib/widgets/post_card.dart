@@ -678,9 +678,22 @@ class _PostCardState extends State<PostCard> {
                             children: [
                               CircleAvatar(
                                 radius: 12,
-                                backgroundImage: NetworkImage(
-                                  originalPostData['profImage'] ?? '',
-                                ),
+                                backgroundImage:
+                                    (originalPostData['profImage'] != null &&
+                                        (originalPostData['profImage']
+                                                as String)
+                                            .isNotEmpty)
+                                    ? NetworkImage(
+                                        originalPostData['profImage'],
+                                      )
+                                    : null,
+                                child:
+                                    (originalPostData['profImage'] == null ||
+                                        (originalPostData['profImage']
+                                                as String)
+                                            .isEmpty)
+                                    ? const Icon(Icons.person, size: 12)
+                                    : null,
                               ),
                               const SizedBox(width: 8),
                               Text(
