@@ -112,6 +112,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Check if the current user is viewing their own profile
     final isMe = currentUserUid == widget.uid;
 
+    // Refresh the user provider
+    final refreshProvider = Provider.of<UserProvider>(
+      context,
+      listen: false,
+    ).refreshUser();
+
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance
         .collection('posts')
         .where('uid', isEqualTo: widget.uid);
@@ -369,6 +375,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                           currentUserUid!,
                                                           widget.uid,
                                                         );
+
+                                                    refreshProvider;
+
                                                     if (!mounted) return;
                                                     setState(() {
                                                       isFollowing = false;
@@ -398,6 +407,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                           currentUserUid!,
                                                           widget.uid,
                                                         );
+
+                                                    refreshProvider;
+
                                                     if (!mounted) return;
                                                     setState(() {
                                                       isFollowing = true;
@@ -428,15 +440,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             overlayColor: appPrimaryColor,
                                             hasBorder: true,
                                             onPressed: () {
+                                              // Calculate chat room ID 1-1
+                                              List<String> ids = [
+                                                currentUserUid!,
+                                                widget.uid,
+                                              ];
+                                              ids.sort();
+                                              String oneToOneChatId = ids.join(
+                                                "_",
+                                              );
+
                                               Navigator.of(context).push(
                                                 MaterialPageRoute(
                                                   builder: (context) =>
                                                       ChatScreen(
+                                                        chatRoomId:
+                                                            oneToOneChatId,
                                                         receiverId: widget.uid,
-                                                        receiverName:
-                                                            displayName,
-                                                        receiverPhotoUrl:
-                                                            photoUrl,
+                                                        name: displayName,
+                                                        photoUrl: photoUrl,
+                                                        isGroup: false,
                                                       ),
                                                 ),
                                               );

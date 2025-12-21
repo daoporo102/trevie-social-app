@@ -7,6 +7,8 @@ class Message {
   final String type; // 'text', 'image'
   final DateTime datePublished;
   final String messageId;
+  final String senderDisplayName;
+  final String senderPhotoUrl;
 
   Message({
     required this.senderId,
@@ -15,6 +17,8 @@ class Message {
     required this.type,
     required this.datePublished,
     required this.messageId,
+    required this.senderDisplayName,
+    required this.senderPhotoUrl,
   });
 
   Map<String, dynamic> toJson() {
@@ -25,6 +29,8 @@ class Message {
       'type': type,
       'datePublished': Timestamp.fromDate(datePublished),
       'messageId': messageId,
+      'senderDisplayName': senderDisplayName,
+      'senderPhotoUrl': senderPhotoUrl,
     };
   }
 
@@ -51,6 +57,8 @@ class Message {
       datePublished:
           parseDateField(snapshotData['datePublished']) ?? DateTime.now(),
       messageId: snapshotData['messageId'] ?? '',
+      senderDisplayName: snapshotData['senderDisplayName'] ?? '',
+      senderPhotoUrl: snapshotData['senderPhotoUrl'] ?? '',
     );
   }
 }
