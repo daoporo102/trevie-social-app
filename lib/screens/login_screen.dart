@@ -58,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final parts = res.split(':');
       final timestampStr = parts.length > 1 ? parts[1] : '0';
       final deletionReason = parts.length > 2 ? parts[2] : '';
-      
+
       final timestamp = int.tryParse(timestampStr);
       final deletedAt = timestamp != null
           ? DateTime.fromMillisecondsSinceEpoch(timestamp)
@@ -90,8 +90,12 @@ class _LoginScreenState extends State<LoginScreen> {
     // Handle suspended account
     if (res.startsWith("SUSPENDED:")) {
       final suspendedParts = res.split(':');
-      final suspendedTimestampStr = suspendedParts.length > 1 ? suspendedParts[1] : '0';
-      final suspendedReason = suspendedParts.length > 2 ? suspendedParts[2] : '';
+      final suspendedTimestampStr = suspendedParts.length > 1
+          ? suspendedParts[1]
+          : '0';
+      final suspendedReason = suspendedParts.length > 2
+          ? suspendedParts[2]
+          : '';
 
       final suspendedTimestamp = int.tryParse(suspendedTimestampStr);
       final suspendedAt = suspendedTimestamp != null
@@ -112,7 +116,9 @@ class _LoginScreenState extends State<LoginScreen> {
             reason:
                 'Tài khoản đã bị tạm khóa${suspendedAt != null ? ' vào ${suspendedAt.day}/${suspendedAt.month}/${suspendedAt.year}' : ''}.',
             suspendedAt: suspendedAt,
-            suspensionReason: suspendedReason.isNotEmpty ? suspendedReason : null,
+            suspensionReason: suspendedReason.isNotEmpty
+                ? suspendedReason
+                : null,
           ),
         ),
         (route) => false,
@@ -216,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: const Text("Don't have an account?"),
+                    child: const Text("Bạn chưa có tài khoản?"),
                   ),
                   GestureDetector(
                     onTap: () {
@@ -225,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: const Text(
-                        " Sign up.",
+                        " Đăng ký.",
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
