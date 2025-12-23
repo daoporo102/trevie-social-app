@@ -285,7 +285,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ),
                                       child: SizedBox(
                                         width: buttonWidth,
-                                        height: 40,
+                                        height: 56,
                                         child: CustomButton(
                                           backgroundColor: width > webScreenSize
                                               ? webBackgroundColor
@@ -351,129 +351,135 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 // Display Follow/Unfollow and Message buttons for other users
                                 return Align(
                                   alignment: Alignment.center,
-                                  child: SizedBox(
-                                    width: buttonWidth,
-                                    height: 50,
-                                    child: Row(
-                                      children: [
-                                        // Follow/Unfollow button
-                                        Expanded(
-                                          child: isFollowing
-                                              ? CustomButton(
-                                                  // Unfollow button
-                                                  backgroundColor:
-                                                      width > webScreenSize
-                                                      ? webBackgroundColor
-                                                      : mobileBackgroundColor,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  overlayColor: appPrimaryColor,
-                                                  hasBorder: true,
-                                                  onPressed: () async {
-                                                    await FirestoreMethod()
-                                                        .followUser(
-                                                          currentUserUid!,
-                                                          widget.uid,
-                                                        );
-
-                                                    refreshProvider;
-
-                                                    if (!mounted) return;
-                                                    setState(() {
-                                                      isFollowing = false;
-                                                      followers--;
-                                                    });
-                                                  },
-                                                  child: Text(
-                                                    'Đang theo dõi',
-                                                    style: TextStyle(
-                                                      color: primaryTextColor,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                )
-                                              : CustomButton(
-                                                  // Follow button
-                                                  backgroundColor:
-                                                      appPrimaryColor,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  overlayColor: onPrimaryColor,
-                                                  hasBorder: false,
-                                                  onPressed: () async {
-                                                    await FirestoreMethod()
-                                                        .followUser(
-                                                          currentUserUid!,
-                                                          widget.uid,
-                                                        );
-
-                                                    refreshProvider;
-
-                                                    if (!mounted) return;
-                                                    setState(() {
-                                                      isFollowing = true;
-                                                      followers++;
-                                                    });
-                                                  },
-                                                  child: Text(
-                                                    'Theo dõi',
-                                                    style: TextStyle(
-                                                      color: onPrimaryColor,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        // Message button
-                                        Expanded(
-                                          child: CustomButton(
-                                            backgroundColor:
-                                                width > webScreenSize
-                                                ? webBackgroundColor
-                                                : mobileBackgroundColor,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            overlayColor: appPrimaryColor,
-                                            hasBorder: true,
-                                            onPressed: () {
-                                              // Calculate chat room ID 1-1
-                                              List<String> ids = [
-                                                currentUserUid!,
-                                                widget.uid,
-                                              ];
-                                              ids.sort();
-                                              String oneToOneChatId = ids.join(
-                                                "_",
-                                              );
-
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      ChatScreen(
-                                                        chatRoomId:
-                                                            oneToOneChatId,
-                                                        receiverId: widget.uid,
-                                                        name: displayName,
-                                                        photoUrl: photoUrl,
-                                                        isGroup: false,
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 50,
+                                      ),
+                                    child: SizedBox(
+                                      width: buttonWidth,
+                                      height: 50,
+                                      child: Row(
+                                        children: [
+                                          // Follow/Unfollow button
+                                          Expanded(
+                                            child: isFollowing
+                                                ? CustomButton(
+                                                    // Unfollow button
+                                                    backgroundColor:
+                                                        width > webScreenSize
+                                                        ? webBackgroundColor
+                                                        : mobileBackgroundColor,
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                    overlayColor: appPrimaryColor,
+                                                    hasBorder: true,
+                                                    onPressed: () async {
+                                                      await FirestoreMethod()
+                                                          .followUser(
+                                                            currentUserUid!,
+                                                            widget.uid,
+                                                          );
+                                    
+                                                      refreshProvider;
+                                    
+                                                      if (!mounted) return;
+                                                      setState(() {
+                                                        isFollowing = false;
+                                                        followers--;
+                                                      });
+                                                    },
+                                                    child: Text(
+                                                      'Đang theo dõi',
+                                                      style: TextStyle(
+                                                        color: primaryTextColor,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                       ),
+                                                    ),
+                                                  )
+                                                : CustomButton(
+                                                    // Follow button
+                                                    backgroundColor:
+                                                        appPrimaryColor,
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                    overlayColor: onPrimaryColor,
+                                                    hasBorder: false,
+                                                    onPressed: () async {
+                                                      await FirestoreMethod()
+                                                          .followUser(
+                                                            currentUserUid!,
+                                                            widget.uid,
+                                                          );
+                                    
+                                                      refreshProvider;
+                                    
+                                                      if (!mounted) return;
+                                                      setState(() {
+                                                        isFollowing = true;
+                                                        followers++;
+                                                      });
+                                                    },
+                                                    child: Text(
+                                                      'Theo dõi',
+                                                      style: TextStyle(
+                                                        color: onPrimaryColor,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          // Message button
+                                          Expanded(
+                                            child: CustomButton(
+                                              backgroundColor:
+                                                  width > webScreenSize
+                                                  ? webBackgroundColor
+                                                  : mobileBackgroundColor,
+                                              borderRadius: BorderRadius.circular(
+                                                8,
+                                              ),
+                                              overlayColor: appPrimaryColor,
+                                              hasBorder: true,
+                                              onPressed: () {
+                                                // Calculate chat room ID 1-1
+                                                List<String> ids = [
+                                                  currentUserUid!,
+                                                  widget.uid,
+                                                ];
+                                                ids.sort();
+                                                String oneToOneChatId = ids.join(
+                                                  "_",
+                                                );
+                                    
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        ChatScreen(
+                                                          chatRoomId:
+                                                              oneToOneChatId,
+                                                          receiverId: widget.uid,
+                                                          name: displayName,
+                                                          photoUrl: photoUrl,
+                                                          isGroup: false,
+                                                        ),
+                                                  ),
+                                                );
+                                              },
+                                              child: Text(
+                                                'Nhắn tin',
+                                                style: TextStyle(
+                                                  color: primaryTextColor,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
-                                              );
-                                            },
-                                            child: Text(
-                                              'Nhắn tin',
-                                              style: TextStyle(
-                                                color: primaryTextColor,
-                                                fontWeight: FontWeight.bold,
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 );

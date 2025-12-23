@@ -149,7 +149,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             'assets/images/trevie.svg',
                             height: 64,
                           ),
-                          const SizedBox(height: 64),
+                          const SizedBox(height: 16),
                           //
                           Stack(
                             children: [
