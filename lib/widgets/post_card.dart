@@ -684,98 +684,145 @@ class _PostCardState extends State<PostCard> {
                   // Original post exists - display it with live data
                   final originalPostData =
                       originalPostSnapshot.data!.data() as Map<String, dynamic>;
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: mobileBackgroundColor.withValues(alpha: 0.5),
-                      border: Border.all(color: secondaryColor),
-                    ),
-                    // padding: const EdgeInsets.all(8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  return GestureDetector(
+                    onDoubleTap: () async {
+                      if (!mounted) return;
+
+                      await FirestoreMethod().likePost(
+                        snapData['postId'],
+                        user.uid,
+                        snapData['likes'],
+                      );
+
+                      if (!mounted) return;
+
+                      if (mounted) {
+                        setState(() {
+                          isLikeAnimating = true;
+                        });
+                      }
+                    },
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        // Original post header
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => ProfileScreen(
-                                    uid: originalPostData['uid'],
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: mobileBackgroundColor.withValues(alpha: 0.5),
+                            border: Border.all(color: secondaryColor),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Original post header
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => ProfileScreen(
+                                          uid: originalPostData['uid'],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 12,
+                                        backgroundImage:
+                                            (originalPostData['profImage'] !=
+                                                    null &&
+                                                (originalPostData['profImage']
+                                                        as String)
+                                                    .isNotEmpty)
+                                            ? NetworkImage(
+                                                originalPostData['profImage'],
+                                              )
+                                            : null,
+                                        child:
+                                            (originalPostData['profImage'] ==
+                                                    null ||
+                                                (originalPostData['profImage']
+                                                        as String)
+                                                    .isEmpty)
+                                            ? const Icon(Icons.person, size: 12)
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        originalPostData['displayName'] ??
+                                            'Tên người dùng',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              );
+                              ),
+                              // Original post text
+                              if (originalPostData['postText'] != null &&
+                                  originalPostData['postText']!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0,
+                                  ),
+                                  child: Text(
+                                    originalPostData['postText'] ?? '',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              const SizedBox(height: 4),
+                              // Original post image
+                              if (originalPostData['postUrl'] != null &&
+                                  originalPostData['postUrl'].isNotEmpty)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.only(
+                                    bottomLeft: Radius.circular(12),
+                                    bottomRight: Radius.circular(12),
+                                  ),
+                                  child: Image.network(
+                                    originalPostData['postUrl'],
+                                    height:
+                                        MediaQuery.of(context).size.height *
+                                        0.25,
+                                    width: double.infinity,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return _buildErrorContainer(
+                                        'Không thể tải hình ảnh.',
+                                      );
+                                    },
+                                  ),
+                                ),
+                              const SizedBox(height: 4),
+                            ],
+                          ),
+                        ),
+                        // Like animation overlay
+                        AnimatedOpacity(
+                          opacity: isLikeAnimating ? 1 : 0,
+                          duration: const Duration(milliseconds: 200),
+                          child: LikeAnimation(
+                            isAnimating: isLikeAnimating,
+                            duration: const Duration(milliseconds: 400),
+                            onEnd: () {
+                              if (!mounted) return;
+                              setState(() {
+                                isLikeAnimating = false;
+                              });
                             },
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 12,
-                                  backgroundImage:
-                                      (originalPostData['profImage'] != null &&
-                                          (originalPostData['profImage']
-                                                  as String)
-                                              .isNotEmpty)
-                                      ? NetworkImage(
-                                          originalPostData['profImage'],
-                                        )
-                                      : null,
-                                  child:
-                                      (originalPostData['profImage'] == null ||
-                                          (originalPostData['profImage']
-                                                  as String)
-                                              .isEmpty)
-                                      ? const Icon(Icons.person, size: 12)
-                                      : null,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  originalPostData['displayName'] ??
-                                      'Tên người dùng',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
+                            child: Icon(
+                              Icons.favorite,
+                              color: Colors.red,
+                              size: 120,
                             ),
                           ),
                         ),
-                        // Original post text
-                        if (originalPostData['postText'] != null &&
-                            originalPostData['postText']!.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                            ),
-                            child: Text(
-                              originalPostData['postText'] ?? '',
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ),
-                        const SizedBox(height: 4),
-                        // Original post image
-                        if (originalPostData['postUrl'] != null &&
-                            originalPostData['postUrl'].isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(12),
-                              bottomRight: Radius.circular(12),
-                            ),
-                            child: Image.network(
-                              originalPostData['postUrl'],
-                              height: MediaQuery.of(context).size.height * 0.25,
-                              width: double.infinity,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return _buildErrorContainer(
-                                  'Không thể tải hình ảnh.',
-                                );
-                              },
-                            ),
-                          ),
-                        const SizedBox(height: 4),
                       ],
                     ),
                   );
@@ -1097,7 +1144,7 @@ class _PostCardState extends State<PostCard> {
                 final oldAiReason = data['aiReason'] as String?;
 
                 // Logic fallback safe
-                String displayReason = 'Vi phạm tiêu chuẩn cộng đồng.';
+                String displayReason = 'Vi phạm tiêu chuẩn cộng đồng';
 
                 if (aiReasonText != null && aiReasonText.isNotEmpty) {
                   displayReason = "Văn bản: $aiReasonText";
