@@ -6,8 +6,9 @@ How to build Firebase Hosting with update code:
 
 1.Project rebuild
 
-flutter build web --release
+  flutter build web --release
 
 2.Deploy to Firebase Hosting
 
-firebase deploy --only hosting
+  firebase deploy --only hosting
+
