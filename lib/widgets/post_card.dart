@@ -9,6 +9,7 @@ import 'package:social_media_app/models/user.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/screens/comments_screen.dart';
+import 'package:social_media_app/screens/profile_screen.dart';
 import 'package:social_media_app/screens/update_post_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
@@ -393,9 +394,21 @@ class _PostCardState extends State<PostCard> {
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundImage: NetworkImage(snapData['profImage']),
+                        InkWell(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ProfileScreen(uid: snapData['uid']),
+                              ),
+                            );
+                          },
+                          child: CircleAvatar(
+                            radius: 16,
+                            backgroundImage: NetworkImage(
+                              snapData['profImage'],
+                            ),
+                          ),
                         ),
                         Expanded(
                           child: Padding(
@@ -406,10 +419,21 @@ class _PostCardState extends State<PostCard> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      snapData['displayName'],
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                    InkWell(
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => ProfileScreen(
+                                              uid: snapData['uid'],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Text(
+                                        snapData['displayName'],
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                     // Display admin badge
@@ -660,87 +684,145 @@ class _PostCardState extends State<PostCard> {
                   // Original post exists - display it with live data
                   final originalPostData =
                       originalPostSnapshot.data!.data() as Map<String, dynamic>;
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: mobileBackgroundColor.withValues(alpha: 0.5),
-                      border: Border.all(color: secondaryColor),
-                    ),
-                    // padding: const EdgeInsets.all(8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  return GestureDetector(
+                    onDoubleTap: () async {
+                      if (!mounted) return;
+
+                      await FirestoreMethod().likePost(
+                        snapData['postId'],
+                        user.uid,
+                        snapData['likes'],
+                      );
+
+                      if (!mounted) return;
+
+                      if (mounted) {
+                        setState(() {
+                          isLikeAnimating = true;
+                        });
+                      }
+                    },
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        // Original post header
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: mobileBackgroundColor.withValues(alpha: 0.5),
+                            border: Border.all(color: secondaryColor),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              CircleAvatar(
-                                radius: 12,
-                                backgroundImage:
-                                    (originalPostData['profImage'] != null &&
-                                        (originalPostData['profImage']
-                                                as String)
-                                            .isNotEmpty)
-                                    ? NetworkImage(
-                                        originalPostData['profImage'],
-                                      )
-                                    : null,
-                                child:
-                                    (originalPostData['profImage'] == null ||
-                                        (originalPostData['profImage']
-                                                as String)
-                                            .isEmpty)
-                                    ? const Icon(Icons.person, size: 12)
-                                    : null,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                originalPostData['displayName'] ??
-                                    'Tên người dùng',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                              // Original post header
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => ProfileScreen(
+                                          uid: originalPostData['uid'],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 12,
+                                        backgroundImage:
+                                            (originalPostData['profImage'] !=
+                                                    null &&
+                                                (originalPostData['profImage']
+                                                        as String)
+                                                    .isNotEmpty)
+                                            ? NetworkImage(
+                                                originalPostData['profImage'],
+                                              )
+                                            : null,
+                                        child:
+                                            (originalPostData['profImage'] ==
+                                                    null ||
+                                                (originalPostData['profImage']
+                                                        as String)
+                                                    .isEmpty)
+                                            ? const Icon(Icons.person, size: 12)
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        originalPostData['displayName'] ??
+                                            'Tên người dùng',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
+                              // Original post text
+                              if (originalPostData['postText'] != null &&
+                                  originalPostData['postText']!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0,
+                                  ),
+                                  child: Text(
+                                    originalPostData['postText'] ?? '',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              const SizedBox(height: 4),
+                              // Original post image
+                              if (originalPostData['postUrl'] != null &&
+                                  originalPostData['postUrl'].isNotEmpty)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.only(
+                                    bottomLeft: Radius.circular(12),
+                                    bottomRight: Radius.circular(12),
+                                  ),
+                                  child: Image.network(
+                                    originalPostData['postUrl'],
+                                    height:
+                                        MediaQuery.of(context).size.height *
+                                        0.25,
+                                    width: double.infinity,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return _buildErrorContainer(
+                                        'Không thể tải hình ảnh.',
+                                      );
+                                    },
+                                  ),
+                                ),
+                              const SizedBox(height: 4),
                             ],
                           ),
                         ),
-                        // Original post text
-                        if (originalPostData['postText'] != null &&
-                            originalPostData['postText']!.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                            ),
-                            child: Text(
-                              originalPostData['postText'] ?? '',
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ),
-                        const SizedBox(height: 4),
-                        // Original post image
-                        if (originalPostData['postUrl'] != null &&
-                            originalPostData['postUrl'].isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(12),
-                              bottomRight: Radius.circular(12),
-                            ),
-                            child: Image.network(
-                              originalPostData['postUrl'],
-                              height: MediaQuery.of(context).size.height * 0.25,
-                              width: double.infinity,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return _buildErrorContainer(
-                                  'Không thể tải hình ảnh.',
-                                );
-                              },
+                        // Like animation overlay
+                        AnimatedOpacity(
+                          opacity: isLikeAnimating ? 1 : 0,
+                          duration: const Duration(milliseconds: 200),
+                          child: LikeAnimation(
+                            isAnimating: isLikeAnimating,
+                            duration: const Duration(milliseconds: 400),
+                            onEnd: () {
+                              if (!mounted) return;
+                              setState(() {
+                                isLikeAnimating = false;
+                              });
+                            },
+                            child: Icon(
+                              Icons.favorite,
+                              color: Colors.red,
+                              size: 120,
                             ),
                           ),
-                        const SizedBox(height: 4),
+                        ),
                       ],
                     ),
                   );
@@ -1062,7 +1144,7 @@ class _PostCardState extends State<PostCard> {
                 final oldAiReason = data['aiReason'] as String?;
 
                 // Logic fallback safe
-                String displayReason = 'Vi phạm tiêu chuẩn cộng đồng.';
+                String displayReason = 'Vi phạm tiêu chuẩn cộng đồng';
 
                 if (aiReasonText != null && aiReasonText.isNotEmpty) {
                   displayReason = "Văn bản: $aiReasonText";
