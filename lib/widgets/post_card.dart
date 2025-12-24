@@ -9,6 +9,7 @@ import 'package:social_media_app/models/user.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/screens/comments_screen.dart';
+import 'package:social_media_app/screens/profile_screen.dart';
 import 'package:social_media_app/screens/update_post_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
@@ -393,9 +394,21 @@ class _PostCardState extends State<PostCard> {
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundImage: NetworkImage(snapData['profImage']),
+                        InkWell(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ProfileScreen(uid: snapData['uid']),
+                              ),
+                            );
+                          },
+                          child: CircleAvatar(
+                            radius: 16,
+                            backgroundImage: NetworkImage(
+                              snapData['profImage'],
+                            ),
+                          ),
                         ),
                         Expanded(
                           child: Padding(
@@ -406,10 +419,21 @@ class _PostCardState extends State<PostCard> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      snapData['displayName'],
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                    InkWell(
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => ProfileScreen(
+                                              uid: snapData['uid'],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Text(
+                                        snapData['displayName'],
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                     // Display admin badge
@@ -674,37 +698,48 @@ class _PostCardState extends State<PostCard> {
                         // Original post header
                         Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 12,
-                                backgroundImage:
-                                    (originalPostData['profImage'] != null &&
-                                        (originalPostData['profImage']
-                                                as String)
-                                            .isNotEmpty)
-                                    ? NetworkImage(
-                                        originalPostData['profImage'],
-                                      )
-                                    : null,
-                                child:
-                                    (originalPostData['profImage'] == null ||
-                                        (originalPostData['profImage']
-                                                as String)
-                                            .isEmpty)
-                                    ? const Icon(Icons.person, size: 12)
-                                    : null,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                originalPostData['displayName'] ??
-                                    'Tên người dùng',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => ProfileScreen(
+                                    uid: originalPostData['uid'],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              );
+                            },
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 12,
+                                  backgroundImage:
+                                      (originalPostData['profImage'] != null &&
+                                          (originalPostData['profImage']
+                                                  as String)
+                                              .isNotEmpty)
+                                      ? NetworkImage(
+                                          originalPostData['profImage'],
+                                        )
+                                      : null,
+                                  child:
+                                      (originalPostData['profImage'] == null ||
+                                          (originalPostData['profImage']
+                                                  as String)
+                                              .isEmpty)
+                                      ? const Icon(Icons.person, size: 12)
+                                      : null,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  originalPostData['displayName'] ??
+                                      'Tên người dùng',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         // Original post text

@@ -165,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   // Add back button for Web layout
                   if (width > webScreenSize &&
-                      FirebaseAuth.instance.currentUser!.uid != widget.uid)
+                      Navigator.of(context).canPop()) // Changed condition
                     Align(
                       alignment: Alignment.topLeft,
                       child: IconButton(
@@ -353,9 +353,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   alignment: Alignment.center,
                                   child: Container(
                                     margin: const EdgeInsets.symmetric(
-                                        vertical: 8,
-                                        horizontal: 50,
-                                      ),
+                                      vertical: 8,
+                                      horizontal: 50,
+                                    ),
                                     child: SizedBox(
                                       width: buttonWidth,
                                       height: 50,
@@ -371,8 +371,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                         ? webBackgroundColor
                                                         : mobileBackgroundColor,
                                                     borderRadius:
-                                                        BorderRadius.circular(8),
-                                                    overlayColor: appPrimaryColor,
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    overlayColor:
+                                                        appPrimaryColor,
                                                     hasBorder: true,
                                                     onPressed: () async {
                                                       await FirestoreMethod()
@@ -380,9 +383,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                             currentUserUid!,
                                                             widget.uid,
                                                           );
-                                    
+
                                                       refreshProvider;
-                                    
+
                                                       if (!mounted) return;
                                                       setState(() {
                                                         isFollowing = false;
@@ -403,8 +406,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                     backgroundColor:
                                                         appPrimaryColor,
                                                     borderRadius:
-                                                        BorderRadius.circular(8),
-                                                    overlayColor: onPrimaryColor,
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    overlayColor:
+                                                        onPrimaryColor,
                                                     hasBorder: false,
                                                     onPressed: () async {
                                                       await FirestoreMethod()
@@ -412,9 +418,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                             currentUserUid!,
                                                             widget.uid,
                                                           );
-                                    
+
                                                       refreshProvider;
-                                    
+
                                                       if (!mounted) return;
                                                       setState(() {
                                                         isFollowing = true;
@@ -439,9 +445,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   width > webScreenSize
                                                   ? webBackgroundColor
                                                   : mobileBackgroundColor,
-                                              borderRadius: BorderRadius.circular(
-                                                8,
-                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                               overlayColor: appPrimaryColor,
                                               hasBorder: true,
                                               onPressed: () {
@@ -451,17 +456,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   widget.uid,
                                                 ];
                                                 ids.sort();
-                                                String oneToOneChatId = ids.join(
-                                                  "_",
-                                                );
-                                    
+                                                String oneToOneChatId = ids
+                                                    .join("_");
+
                                                 Navigator.of(context).push(
                                                   MaterialPageRoute(
                                                     builder: (context) =>
                                                         ChatScreen(
                                                           chatRoomId:
                                                               oneToOneChatId,
-                                                          receiverId: widget.uid,
+                                                          receiverId:
+                                                              widget.uid,
                                                           name: displayName,
                                                           photoUrl: photoUrl,
                                                           isGroup: false,
