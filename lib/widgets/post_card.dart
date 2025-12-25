@@ -29,11 +29,49 @@ class PostCard extends StatefulWidget {
 
 class _PostCardState extends State<PostCard> {
   bool isLikeAnimating = false;
-  StreamSubscription<DocumentSnapshot>? _reshareSubscription; // Add this
+  StreamSubscription<DocumentSnapshot>? _reshareSubscription;
+  // Stream for the original post in reshared posts
+  Stream<DocumentSnapshot>? _originalPostStream;
 
   @override
   void initState() {
     super.initState();
+    // Initialize the stream for the original post in reshared posts
+    _initializeStream();
+  }
+
+  @override
+  void didUpdateWidget(covariant PostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update the stream if the widget changes (important for ListView).
+    final oldSnap = _getSnapDataFromSnap(oldWidget.snap);
+    final newSnap = _getSnapData();
+    if (oldSnap['originalPostId'] != newSnap['originalPostId']) {
+      _initializeStream();
+    }
+  }
+
+  Map<String, dynamic> _getSnapDataFromSnap(dynamic snap) {
+    if (snap is DocumentSnapshot) {
+      return (snap).data() as Map<String, dynamic>;
+    } else if (snap is Map<String, dynamic>) {
+      return snap;
+    } else {
+      return {};
+    }
+  }
+
+  // Initialize the stream for the original post in reshared posts
+  void _initializeStream() {
+    final snapData = _getSnapData();
+    if (snapData['originalPostId'] != null) {
+      _originalPostStream = FirebaseFirestore.instance
+          .collection('posts')
+          .doc(snapData['originalPostId'])
+          .snapshots();
+    } else {
+      _originalPostStream = null;
+    }
   }
 
   @override
@@ -653,12 +691,7 @@ class _PostCardState extends State<PostCard> {
             if (isResharePost) ...[
               const SizedBox(height: 4),
               StreamBuilder<DocumentSnapshot>(
-                stream: snapData['originalPostId'] != null
-                    ? FirebaseFirestore.instance
-                          .collection('posts')
-                          .doc(snapData['originalPostId'])
-                          .snapshots()
-                    : null,
+                stream: _originalPostStream,
                 builder: (context, originalPostSnapshot) {
                   // Check loading state
                   if (originalPostSnapshot.connectionState ==
@@ -688,19 +721,31 @@ class _PostCardState extends State<PostCard> {
                     onDoubleTap: () async {
                       if (!mounted) return;
 
-                      await FirestoreMethod().likePost(
-                        snapData['postId'],
-                        user.uid,
-                        snapData['likes'],
-                      );
+                      // Start the like animation immediately
+                      setState(() {
+                        isLikeAnimating = true;
+                      });
+
+                      try {
+                        // Like the post
+                        await FirestoreMethod().likePost(
+                          snapData['postId'],
+                          user.uid,
+                          snapData['likes'],
+                        );
+                      } catch (e) {
+                        // Handle any errors that occur during the like operation
+                        if (context.mounted) {
+                          avoidPrint('Error liking post: $e');
+                          displaySnackBar(
+                            "Lỗi khi thích bài viết, vui lòng thử lại sau.",
+                            context,
+                            SnackBarType.error,
+                          );
+                        }
+                      }
 
                       if (!mounted) return;
-
-                      if (mounted) {
-                        setState(() {
-                          isLikeAnimating = true;
-                        });
-                      }
                     },
                     child: Stack(
                       alignment: Alignment.center,
@@ -861,18 +906,28 @@ class _PostCardState extends State<PostCard> {
                   onDoubleTap: () async {
                     if (!mounted) return; // Add this check
 
-                    await FirestoreMethod().likePost(
-                      snapData['postId'],
-                      user.uid,
-                      snapData['likes'],
-                    );
-
-                    if (!mounted) return; // Check again before setState
-
+                    // Start the like animation immediately
                     if (mounted) {
                       setState(() {
                         isLikeAnimating = true;
                       });
+                    }
+
+                    try {
+                      await FirestoreMethod().likePost(
+                        snapData['postId'],
+                        user.uid,
+                        snapData['likes'],
+                      );
+                    } catch (e) {
+                      if (context.mounted) {
+                        avoidPrint('Error liking post: $e');
+                        displaySnackBar(
+                          "Lỗi khi thích bài viết, vui lòng thử lại sau.",
+                          context,
+                          SnackBarType.error,
+                        );
+                      }
                     }
                   },
                   child: Stack(
@@ -954,19 +1009,21 @@ class _PostCardState extends State<PostCard> {
                                 snapData['likes'] != null &&
                                     snapData['likes'].length >= 1
                                 ? Text(
-                                    '${(snapData['likes'] as List).length} lượt thích',
+                                    '${(snapData['likes'] as List).length}${width > 400 ? ' lượt thích' : ''}',
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   )
-                                : const Text(
+                                : (width > 400)
+                                ? const Text(
                                     'Thích',
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
-                                  ),
+                                  )
+                                : const SizedBox(),
                           ),
                         ],
                       ),
@@ -1006,19 +1063,21 @@ class _PostCardState extends State<PostCard> {
                                   Flexible(
                                     child: commentCount >= 1
                                         ? Text(
-                                            '$commentCount bình luận',
+                                            '$commentCount${width > 400 ? ' bình luận' : ''}',
                                             overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                             ),
                                           )
-                                        : const Text(
-                                            'bình luận',
+                                        : (width > 400)
+                                        ? const Text(
+                                            'Bình luận',
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                             ),
-                                          ),
+                                          )
+                                        : const SizedBox(),
                                   ),
                                 ],
                               );
@@ -1049,19 +1108,21 @@ class _PostCardState extends State<PostCard> {
                                 snapData['reshareCount'] != null &&
                                     snapData['reshareCount'] >= 1
                                 ? Text(
-                                    '${snapData['reshareCount']} chia sẻ',
+                                    '${snapData['reshareCount']}${width > 400 ? ' chia sẻ' : ''}',
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   )
-                                : const Text(
-                                    'chia sẻ',
+                                : (width > 400)
+                                ? const Text(
+                                    'Chia sẻ',
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
-                                  ),
+                                  )
+                                : const SizedBox(),
                           ),
                         ],
                       ),
