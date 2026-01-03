@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -24,10 +25,11 @@ class AddPostScreen extends StatefulWidget {
 }
 
 class _AddPostScreenState extends State<AddPostScreen> {
-  Uint8List? _image;
+  List<Uint8List> _images = [];
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
   StreamSubscription<DocumentSnapshot>? _postSubscription; // Add this
+  final ScrollController _scrollController = ScrollController();
 
   Future<void> _selectImage() async {
     // Capture the State's context BEFORE async
@@ -59,7 +61,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                     return;
                   }
                   setState(() {
-                    _image = file;
+                    _images.add(file);
                   });
                 } catch (e) {
                   if (!mounted) return;
@@ -80,9 +82,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
               onPressed: () async {
                 try {
                   Navigator.of(dialogContext).pop();
-                  Uint8List? file = await pickImage(ImageSource.gallery);
+                  List<Uint8List>? files = await pickMultipleImages();
                   if (!mounted) return;
-                  if (file == null) {
+                  if (files == null || files.isEmpty) {
                     if (scaffoldContext.mounted) {
                       displaySnackBar(
                         'Không thể chọn ảnh từ thư viện',
@@ -93,7 +95,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                     return;
                   }
                   setState(() {
-                    _image = file;
+                    _images.addAll(files);
                   });
                 } catch (e) {
                   if (!mounted) return;
@@ -121,9 +123,11 @@ class _AddPostScreenState extends State<AddPostScreen> {
     );
   }
 
-  void clearImage() {
+  void removeImage(int index) {
     setState(() {
-      _image = null;
+      if (index >= 0 && index < _images.length) {
+        _images.removeAt(index);
+      }
     });
   }
 
@@ -133,7 +137,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     avoidPrint("DEBUG - displayName: $displayName");
     avoidPrint("DEBUG - profImage: $profImage");
     avoidPrint("DEBUG - postText: ${_textController.text}");
-    avoidPrint("DEBUG - image size: ${_image?.length}");
+    avoidPrint("DEBUG - image size: ${_images.length}");
     // Validate inputs
     if (_textController.text.isEmpty) {
       displaySnackBar(
@@ -144,7 +148,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       return;
     }
 
-    if (_image == null) {
+    if (_images.isEmpty) {
       displaySnackBar(
         'Vui lòng chọn ảnh để đăng bài',
         context,
@@ -170,7 +174,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       // Call the uploadPost method((At this point, the function returns either the postId or an error message.))
       String result = await FirestoreMethod().uploadPost(
         _textController.text.trim(),
-        _image!,
+        _images,
         uid,
         displayName,
         profImage,
@@ -280,7 +284,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                     SnackBarType.success,
                   );
                 }
-                clearImage();
+                removeImage(0); // Clear selected images
                 _textController.clear();
 
                 // Navigate to Feed Screen
@@ -321,7 +325,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         title: 'Bài viết bị từ chối',
                         description:
                             'Hệ thống AI đã phát hiện nội dung không phù hợp:',
-                        reason: displayReason ?? 'Vui lòng kiểm tra lại nội dung.',
+                        reason:
+                            displayReason ?? 'Vui lòng kiểm tra lại nội dung.',
                         textScore: textScore,
                         imageScore: imageScore,
                       );
@@ -406,7 +411,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
   void dispose() {
     super.dispose();
     _textController.dispose();
-    _image = null;
+    _scrollController.dispose();
+    _images = [];
     _postSubscription?.cancel(); // Cancel subscription on dispose
   }
 
@@ -430,7 +436,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
             ? null
             : IconButton(
                 onPressed: () {
-                  clearImage();
+                  removeImage(0);
                   // Navigate to the feed screen
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
@@ -580,97 +586,346 @@ class _AddPostScreenState extends State<AddPostScreen> {
               ),
               const Divider(color: secondaryColor),
               // show the selected image preview
-              _image == null
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+              _images.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          CustomButton(
+                            backgroundColor: width > webScreenSize
+                                ? webBackgroundColor
+                                : mobileBackgroundColor,
+                            borderRadius: BorderRadius.circular(8),
+                            overlayColor: appPrimaryColor,
+                            hasBorder: true,
+                            onPressed: () {
+                              _selectImage();
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(
+                                  Icons.image_outlined,
+                                  color: primaryTextColor,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Ảnh',
+                                  style: TextStyle(color: primaryTextColor),
+                                ),
+                              ],
+                            ),
+                          ),
+                          CustomButton(
+                            backgroundColor: width > webScreenSize
+                                ? webBackgroundColor
+                                : mobileBackgroundColor,
+                            borderRadius: BorderRadius.circular(8),
+                            overlayColor: appPrimaryColor,
+                            hasBorder: true,
+                            onPressed: () {},
+                            child: Row(
+                              children: const [
+                                Icon(
+                                  Icons.video_camera_back_outlined,
+                                  color: primaryTextColor,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Video',
+                                  style: TextStyle(color: primaryTextColor),
+                                ),
+                              ],
+                            ),
+                          ),
+                          CustomButton(
+                            backgroundColor: width > webScreenSize
+                                ? webBackgroundColor
+                                : mobileBackgroundColor,
+                            borderRadius: BorderRadius.circular(8),
+                            overlayColor: appPrimaryColor,
+                            hasBorder: true,
+                            onPressed: () {},
+                            child: Row(
+                              children: const [
+                                Icon(
+                                  Icons.file_open_outlined,
+                                  color: primaryTextColor,
+                                ),
+                                Text(
+                                  'Tài liệu',
+                                  style: TextStyle(color: primaryTextColor),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CustomButton(
-                          backgroundColor: width > webScreenSize
-                              ? webBackgroundColor
-                              : mobileBackgroundColor,
-                          borderRadius: BorderRadius.circular(8),
-                          overlayColor: appPrimaryColor,
-                          hasBorder: true,
-                          onPressed: () {
-                            _selectImage();
-                          },
+                        // Header
+                        Padding(
+                          padding: EdgeInsets.all(16),
                           child: Row(
-                            children: const [
-                              Icon(
-                                Icons.image_outlined,
-                                color: primaryTextColor,
-                              ),
-                              SizedBox(width: 4),
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
                               Text(
-                                'Ảnh',
-                                style: TextStyle(color: primaryTextColor),
+                                '${_images.length} ảnh đã chọn:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: secondaryColor,
+                                ),
+                              ),
+                              CustomButton(
+                                backgroundColor: appPrimaryColor,
+                                borderRadius: BorderRadius.circular(8),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                onPressed: () {
+                                  _selectImage();
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.add,
+                                      color: onPrimaryColor,
+                                      size: 16,
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Thêm ảnh',
+                                      style: TextStyle(
+                                        color: onPrimaryColor,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        CustomButton(
-                          backgroundColor: width > webScreenSize
-                              ? webBackgroundColor
-                              : mobileBackgroundColor,
-                          borderRadius: BorderRadius.circular(8),
-                          overlayColor: appPrimaryColor,
-                          hasBorder: true,
-                          onPressed: () {},
-                          child: Row(
-                            children: const [
-                              Icon(
-                                Icons.video_camera_back_outlined,
-                                color: primaryTextColor,
+
+                        // Image Preview (can scroll)
+                        Container(
+                          height: 220,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: Stack(
+                            children: [
+                              ScrollConfiguration(
+                                behavior: ScrollConfiguration.of(context)
+                                    .copyWith(
+                                      dragDevices: {
+                                        PointerDeviceKind.touch,
+                                        PointerDeviceKind
+                                            .mouse, // Enable mouse drag
+                                      },
+                                      scrollbars:
+                                          width >
+                                          webScreenSize, // Show scrollbar on Web
+                                    ),
+                                child: ListView.builder(
+                                  controller: _scrollController,
+                                  scrollDirection: Axis.horizontal,
+                                  padding: EdgeInsets.symmetric(horizontal: 8),
+                                  physics: const ClampingScrollPhysics(),
+                                  itemCount: _images.length,
+                                  itemBuilder: (context, index) {
+                                    return Stack(
+                                      children: [
+                                        // Image Container
+                                        Container(
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 8.0,
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            child: Image.memory(
+                                              _images[index],
+                                              fit: BoxFit.cover,
+                                              width: 200,
+                                              height: 200,
+                                            ),
+                                          ),
+                                        ),
+
+                                        // Remove button
+                                        Positioned(
+                                          top: 4,
+                                          left: 12,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: onPrimaryColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: IconButton(
+                                              icon: const Icon(
+                                                Icons.close,
+                                                color: secondaryColor,
+                                              ),
+                                              onPressed: () {
+                                                removeImage(index);
+                                              },
+                                            ),
+                                          ),
+                                        ),
+
+                                        // Display image number
+                                        Positioned(
+                                          bottom: 8,
+                                          left: 16,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: onPrimaryColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              '${index + 1}/${_images.length}',
+                                              style: const TextStyle(
+                                                color: secondaryColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
                               ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Video',
-                                style: TextStyle(color: primaryTextColor),
-                              ),
-                            ],
-                          ),
-                        ),
-                        CustomButton(
-                          backgroundColor: width > webScreenSize
-                              ? webBackgroundColor
-                              : mobileBackgroundColor,
-                          borderRadius: BorderRadius.circular(8),
-                          overlayColor: appPrimaryColor,
-                          hasBorder: true,
-                          onPressed: () {},
-                          child: Row(
-                            children: const [
-                              Icon(
-                                Icons.file_open_outlined,
-                                color: primaryTextColor,
-                              ),
-                              Text(
-                                'Tài liệu',
-                                style: TextStyle(color: primaryTextColor),
-                              ),
+
+                              // Scroll hint indicator (chỉ hiện trên web khi có > 2 ảnh)
+                              if (_images.length > 2 &&
+                                  width > webScreenSize) ...[
+                                // Left scroll button
+                                Positioned(
+                                  left: 0,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 40,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.centerRight,
+                                        end: Alignment.centerLeft,
+                                        colors: [
+                                          Colors.transparent,
+                                          mobileBackgroundColor.withValues(
+                                            alpha: 0.7,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: IconButton(
+                                        icon: const Icon(
+                                          Icons.chevron_left,
+                                          color: secondaryColor,
+                                          size: 24,
+                                        ),
+                                        onPressed: () {
+                                          _scrollController.animateTo(
+                                            _scrollController.offset - 200,
+                                            duration: const Duration(
+                                              milliseconds: 300,
+                                            ),
+                                            curve: Curves.easeInOut,
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                // Right scroll button
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 40,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                        colors: [
+                                          Colors.transparent,
+                                          mobileBackgroundColor.withValues(
+                                            alpha: 0.7,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: IconButton(
+                                        icon: const Icon(
+                                          Icons.chevron_right,
+                                          color: secondaryColor,
+                                          size: 24,
+                                        ),
+                                        onPressed: () {
+                                          _scrollController.animateTo(
+                                            _scrollController.offset + 200,
+                                            duration: const Duration(
+                                              milliseconds: 300,
+                                            ),
+                                            curve: Curves.easeInOut,
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+
+                              // Mobile gradient hint (chỉ hiện khi có > 2 ảnh và không phải web)
+                              if (_images.length > 2 && width <= webScreenSize)
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 40,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                        colors: [
+                                          Colors.transparent,
+                                          mobileBackgroundColor.withValues(
+                                            alpha: 0.7,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.chevron_right,
+                                        color: secondaryColor,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
                       ],
-                    )
-                  : Center(
-                      child: Stack(
-                        alignment: Alignment.topRight,
-                        children: [
-                          Image.memory(
-                            _image!,
-                            width: double.infinity,
-                            fit: BoxFit.contain,
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.cancel,
-                              color: secondaryColor,
-                            ),
-                            onPressed: clearImage,
-                          ),
-                        ],
-                      ),
                     ),
             ],
           ),
