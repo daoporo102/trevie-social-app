@@ -14,29 +14,35 @@ class FirestoreMethod {
   //upload post
   Future<String> uploadPost(
     String postText,
-    Uint8List file,
+    List<Uint8List> images,
     String uid,
     String displayName,
     String profImage,
   ) async {
-    // asking uid here because we dont want to make extra calls to firebase auth when we can just get from our state management
     String res = "Một lỗi đã xảy ra";
     try {
-      // Validate proImage before proceeding
+      // Validate profImage before proceeding
       if (profImage.isEmpty) {
         return "Ảnh đại diện không hợp lệ";
       }
 
-      String photoUrl = await StorageMethod().uploadImageToStorage(
+      // Validate images list
+      if (images.isEmpty) {
+        return "Vui lòng chọn ít nhất một ảnh";
+      }
+
+      // Upload all images to storage
+      List<String> photoUrls = await StorageMethod().uploadMultipleImages(
         'posts',
-        file,
+        images,
         true,
       );
 
       // Check if upload succeeded
-      if (photoUrl.isEmpty) {
+      if (photoUrls.isEmpty) {
         return "Lỗi tải ảnh lên, vui lòng thử lại";
       }
+
       // creates unique id based on time
       String postId = const Uuid().v1();
       // get current time
@@ -54,7 +60,7 @@ class FirestoreMethod {
         uid: uid,
         postText: postText,
         displayName: displayName,
-        postUrl: photoUrl,
+        postUrls: photoUrls, // Lưu danh sách URLs
         profImage: profImage,
         datePublished: now,
         likes: [],
@@ -95,8 +101,8 @@ class FirestoreMethod {
   Future<String> updatePost(
     String postId,
     String postText,
-    Uint8List? file,
-    String? existingImageUrl,
+    List<Uint8List>? newImages,
+    List<String>? existingImageUrls,
   ) async {
     String res = "Một lỗi đã xảy ra";
     try {
@@ -122,7 +128,7 @@ class FirestoreMethod {
         'postText': postText,
         'dateUpdated': Timestamp.fromDate(now),
         'lastDateModified': Timestamp.fromDate(now),
-        'updateStatus': null, 
+        'updateStatus': null,
         'updateError': null,
         'moderatedBy': null,
       };
@@ -133,47 +139,45 @@ class FirestoreMethod {
         updateData['adminReason'] = null;
       }
 
-      String? newPhotoUrl;
-
       // Only update image if user selected a new one
-      if (file != null) {
-        // -- THIS SECTION HAS BEEN REMOVED TO BE SENT TO THE SERVER FOR PROCESSING --
+      if (newImages != null && newImages.isNotEmpty) {
+        // Delete old images from storage if they exist
+      if (existingImageUrls != null && existingImageUrls.isNotEmpty) {
+        try {
+          await StorageMethod().deleteMultipleImagesFromStorage(existingImageUrls);
+        } catch (storageError) {
+          avoidPrint(
+            "Storage deletion warning (old images may be missing): $storageError",
+          );
+        }
+      }
 
-        // Delete the old image from storage if it exists
-
-        // if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
-        //   try {
-        //     await StorageMethod().deleteImageFromStorage(existingImageUrl);
-        //   } catch (storageError) {
-        //     avoidPrint(
-        //       "Storage deletion warning (old image may be missing): $storageError",
-        //     );
-        //   }
-        // }
-
-        // Upload the new image to storage
-        newPhotoUrl = await StorageMethod().uploadImageToStorage(
+        // Upload the new images to storage
+        List<String> newPhotoUrls = await StorageMethod().uploadMultipleImages(
           'posts',
-          file,
+          newImages,
           true,
         );
 
         //  Check if upload succeeded
-        if (newPhotoUrl.isEmpty) {
+        if (newPhotoUrls.isEmpty) {
           return "Lỗi tải ảnh lên, vui lòng thử lại";
         }
 
         // Add the new photo Url to updateData
-        updateData['postUrl'] = newPhotoUrl;
+        updateData['postUrls'] = newPhotoUrls;
 
         // Update the post document with the new image URL, text and date
         await _firestore.collection('posts').doc(postId).update(updateData);
+
+        // Update Reshare (Logic này cần sửa để hỗ trợ list, tạm thời lấy ảnh đầu tiên làm đại diện)
+         String? firstNewImage = newPhotoUrls.isNotEmpty ? newPhotoUrls.first : null;
 
         // Update all reshared posts that reference this original post
         await _updateResharesOfPost(
           postId,
           postText,
-          newPhotoUrl, // Will be null if no new image was uploaded
+          firstNewImage, // Will be null if no new image was uploaded
         );
 
         res = 'success';
@@ -341,7 +345,6 @@ class FirestoreMethod {
         return res;
       }
 
-      String postUrl = postData['postUrl'] ?? "";
       String originalPostId = postData['originalPostId'] ?? "";
       String status = postData['status'] ?? 'processing';
 
@@ -363,13 +366,24 @@ class FirestoreMethod {
           }
         }
       } else {
-        // Delete the image from storage if postUrl is not empty
-        if (postUrl.isNotEmpty) {
+        // Delete multiple images from storage if postUrls is not empty
+        List<String> imageUrls = [];
+
+        // Check for postUrls (multiple images)
+        if (postData['postUrls'] != null) {
+          imageUrls = List<String>.from(postData['postUrls']);
+        }
+        // Fallback to single postUrl
+        else if (postData['postUrl'] != null && postData['postUrl'].isNotEmpty) {
+          imageUrls.add(postData['postUrl']);
+        }
+
+        if(imageUrls.isNotEmpty) {
           try {
-            await StorageMethod().deleteImageFromStorage(postUrl);
+            await StorageMethod().deleteMultipleImagesFromStorage(imageUrls);
           } catch (storageError) {
             avoidPrint(
-              "Storage deletion warning (image may be missing): $storageError",
+              "Storage deletion warning (images may be missing): $storageError",
             );
             // Continue with post deletion even if image deletion fails
           }
@@ -509,7 +523,7 @@ class FirestoreMethod {
         uid: uid,
         postText: postText,
         displayName: displayName,
-        postUrl: originalPost.postUrl,
+        postUrls: originalPost.postUrls,
         profImage: profImage,
         datePublished: now,
         likes: [],
