@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:social_media_app/utils/utils.dart';
 import 'package:uuid/uuid.dart';
 
 class StorageMethod {
@@ -50,7 +51,10 @@ class StorageMethod {
 
       // Detect and set exactly the content type
       final contentType = _detectImageType(file);
-      final metadata = SettableMetadata(contentType: contentType, customMetadata: { 'uploaded_by':  'flutter-app' });
+      final metadata = SettableMetadata(
+        contentType: contentType,
+        customMetadata: {'uploaded_by': 'flutter-app'},
+      );
 
       UploadTask uploadTask = ref.putData(file, metadata);
 
@@ -64,21 +68,53 @@ class StorageMethod {
     }
   }
 
+  // Upload multiple images to storage
+  Future<List<String>> uploadMultipleImages(
+    String childName,
+    List<Uint8List> files,
+    bool isPost,
+  ) async {
+    List<String> downloadUrls = [];
+    try {
+      for (var file in files) {
+        String url = await uploadImageToStorage(childName, file, isPost);
+        downloadUrls.add(url);
+      }
+      return downloadUrls;
+    } catch (e) {
+      throw 'Lỗi khi tải lên nhiều ảnh: $e';
+    }
+  }
+
   //Delete post's image in storage
   Future<void> deleteImageFromStorage(String imageUrl) async {
     try {
       // Validate the URL format
       if (!imageUrl.startsWith('gs://') && !imageUrl.startsWith('http')) {
-        throw 'URL ảnh không hợp lệ: $imageUrl';
+        avoidPrint('URL ảnh không hợp lệ: $imageUrl');
+        return;
       }
-      
-      //get a reference 
+
+      //get a reference
       Reference ref = _storage.refFromURL(imageUrl);
       await ref.delete();
     } on FirebaseException catch (e) {
       throw 'Lỗi tải lên: ${e.message ?? e.code}';
     } catch (e) {
-      throw 'Lỗi không xác định khi tải ảnh: $e';
+      avoidPrint('Lỗi xoá ảnh cũ: $e');
+    }
+  }
+
+  // Delete multiple images from storage
+  Future<void> deleteMultipleImagesFromStorage(List<String> imageUrls) async {
+    try {
+      List<Future<void>> deleteTasks = imageUrls.map((url) {
+        return deleteImageFromStorage(url);
+      }).toList();
+
+      await Future.wait(deleteTasks);
+    } catch (e) {
+      avoidPrint('Lỗi khi xoá nhiều ảnh: $e');
     }
   }
 
@@ -94,17 +130,11 @@ class StorageMethod {
       await deleteImageFromStorage(existingImageUrl);
 
       // Then, upload the new image
-      String newImageUrl = await uploadImageToStorage(
-        childName,
-        file,
-        isPost,
-      );
+      String newImageUrl = await uploadImageToStorage(childName, file, isPost);
 
       return newImageUrl;
     } catch (e) {
       throw 'Lỗi khi cập nhật ảnh: $e';
     }
   }
-  
-
 }
