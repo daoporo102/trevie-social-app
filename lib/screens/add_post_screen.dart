@@ -30,6 +30,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
   bool _isLoading = false;
   StreamSubscription<DocumentSnapshot>? _postSubscription; // Add this
   final ScrollController _scrollController = ScrollController();
+  static const int maxTotalImages = 10;
 
   Future<void> _selectImage() async {
     // Capture the State's context BEFORE async
@@ -47,6 +48,19 @@ class _AddPostScreenState extends State<AddPostScreen> {
               child: const Text('Chụp ảnh'),
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
+
+                // Check image limit
+                if (_images.length >= maxTotalImages) {
+                  if (scaffoldContext.mounted) {
+                    displaySnackBar(
+                      'Bạn đã đạt giới hạn $maxTotalImages ảnh',
+                      scaffoldContext,
+                      SnackBarType.error,
+                    );
+                  }
+                  return;
+                }
+
                 try {
                   Uint8List? file = await pickImage(ImageSource.camera);
                   if (!mounted) return;
@@ -82,21 +96,71 @@ class _AddPostScreenState extends State<AddPostScreen> {
               onPressed: () async {
                 try {
                   Navigator.of(dialogContext).pop();
+
+                  // Check current images number
+                  if (_images.length >= maxTotalImages) {
+                    if (scaffoldContext.mounted) {
+                      displaySnackBar(
+                        'Bạn đã đạt giới hạn $maxTotalImages ảnh',
+                        scaffoldContext,
+                        SnackBarType.error,
+                      );
+                    }
+                    return;
+                  }
+
                   List<Uint8List>? files = await pickMultipleImages();
                   if (!mounted) return;
                   if (files == null || files.isEmpty) {
                     if (scaffoldContext.mounted) {
                       displaySnackBar(
-                        'Không thể chọn ảnh từ thư viện',
+                        'Không có ảnh nào được chọn',
                         context,
                         SnackBarType.error,
                       );
                     }
                     return;
                   }
+
+                  // Calculate images number can add more
+                  int remainingSlots = maxTotalImages - _images.length;
+
+                  if (remainingSlots <= 0) {
+                    if (scaffoldContext.mounted) {
+                      displaySnackBar(
+                        'Bạn đã đạt giới hạn $maxTotalImages ảnh',
+                        scaffoldContext,
+                        SnackBarType.error,
+                      );
+                    }
+                    return;
+                  }
+
+                  //ONLY ADD IMAGES WITHIN THE LIMIT
+                  if (files.length > remainingSlots) {
+                    if (scaffoldContext.mounted) {
+                      displaySnackBar(
+                        'Chỉ có thể thêm $remainingSlots ảnh nữa (tối đa $maxTotalImages ảnh)',
+                        scaffoldContext,
+                        SnackBarType.warning,
+                      );
+                    }
+                    // Only take the permitted number of images.
+                    files = files.sublist(0, remainingSlots);
+                  }
+
                   setState(() {
-                    _images.addAll(files);
+                    _images.addAll(files!);
                   });
+
+                  // display successfully snackbar
+                  if (scaffoldContext.mounted) {
+                    displaySnackBar(
+                      'Đã thêm ${files.length} ảnh (${_images.length}/$maxTotalImages)',
+                      scaffoldContext,
+                      SnackBarType.success,
+                    );
+                  }
                 } catch (e) {
                   if (!mounted) return;
                   if (scaffoldContext.mounted) {
@@ -672,35 +736,47 @@ class _AddPostScreenState extends State<AddPostScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
+                              // Display the quantity with a warning color if the limit is nearly reached
                               Text(
-                                '${_images.length} ảnh đã chọn:',
+                                '${_images.length}/$maxTotalImages ảnh đã chọn',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
-                                  color: secondaryColor,
+                                  color: _images.length >= maxTotalImages
+                                      ? errorBackgroundColor
+                                      : secondaryColor,
                                 ),
                               ),
                               CustomButton(
-                                backgroundColor: appPrimaryColor,
+                                backgroundColor:
+                                    _images.length >= maxTotalImages
+                                    ? secondaryColor
+                                    : appPrimaryColor,
                                 borderRadius: BorderRadius.circular(8),
                                 padding: EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 8,
                                 ),
-                                onPressed: () {
-                                  _selectImage();
-                                },
+                                onPressed: _images.length >= maxTotalImages
+                                    ? () {}
+                                    : () {
+                                        _selectImage();
+                                      },
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
-                                      Icons.add,
-                                      color: onPrimaryColor,
-                                      size: 16,
-                                    ),
+                                    _images.length >= maxTotalImages
+                                        ? SizedBox.shrink()
+                                        : Icon(
+                                            Icons.add,
+                                            color: onPrimaryColor,
+                                            size: 16,
+                                          ),
                                     SizedBox(width: 4),
                                     Text(
-                                      'Thêm ảnh',
+                                      _images.length >= maxTotalImages
+                                          ? 'Đã đủ'
+                                          : 'Thêm ảnh',
                                       style: TextStyle(
                                         color: onPrimaryColor,
                                         fontSize: 14,
