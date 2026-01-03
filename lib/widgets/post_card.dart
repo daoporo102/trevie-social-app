@@ -9,6 +9,7 @@ import 'package:social_media_app/models/user.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/screens/comments_screen.dart';
+import 'package:social_media_app/screens/image_gallery_screen.dart';
 import 'package:social_media_app/screens/profile_screen.dart';
 import 'package:social_media_app/screens/update_post_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
@@ -307,6 +308,14 @@ class _PostCardState extends State<PostCard> {
     }
 
     final snapData = _getSnapData();
+
+    // Get image URLs (support both single and multiple)
+    final List<String> imageUrls = [];
+    if (snapData['postUrls'] != null && snapData['postUrls'] is List) {
+      imageUrls.addAll((snapData['postUrls'] as List).cast<String>());
+    } else if (snapData['postUrl'] != null && snapData['postUrl'].isNotEmpty) {
+      imageUrls.add(snapData['postUrl']);
+    }
 
     // Extract status and adminReason if needed
     final status = snapData['status'] as String?;
@@ -878,94 +887,7 @@ class _PostCardState extends State<PostCard> {
               const SizedBox(height: 8),
               Opacity(
                 opacity: contentOpacity,
-                child: GestureDetector(
-                  onTap: () async {
-                    // View image in full screen
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => Scaffold(
-                          appBar: AppBar(
-                            backgroundColor: mobileBackgroundColor,
-                            title: Text('Hình ảnh'),
-                          ),
-                          body: Center(
-                            child: GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: Image.network(
-                                snapData['postUrl'] ?? '',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  onDoubleTap: () async {
-                    if (!mounted) return; // Add this check
-
-                    // Start the like animation immediately
-                    if (mounted) {
-                      setState(() {
-                        isLikeAnimating = true;
-                      });
-                    }
-
-                    try {
-                      await FirestoreMethod().likePost(
-                        snapData['postId'],
-                        user.uid,
-                        snapData['likes'],
-                      );
-                    } catch (e) {
-                      if (context.mounted) {
-                        avoidPrint('Error liking post: $e');
-                        displaySnackBar(
-                          "Lỗi khi thích bài viết, vui lòng thử lại sau.",
-                          context,
-                          SnackBarType.error,
-                        );
-                      }
-                    }
-                  },
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.35,
-                        width: double.infinity,
-                        child: Image.network(
-                          //check if disconnect network
-                          snapData['postUrl'] ?? '',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-
-                      AnimatedOpacity(
-                        opacity: isLikeAnimating ? 1 : 0,
-                        duration: const Duration(milliseconds: 200),
-                        child: LikeAnimation(
-                          isAnimating: isLikeAnimating,
-                          duration: const Duration(milliseconds: 400),
-                          onEnd: () {
-                            // Add mounted check before setState
-                            if (!mounted) return;
-                            setState(() {
-                              isLikeAnimating = false;
-                            });
-                          },
-                          child: Icon(
-                            Icons.favorite,
-                            color: Colors.red,
-                            size: 120,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: _buildImageGrid(imageUrls, snapData),
               ),
             ],
             //LIKE, COMMENT, SHARE SECTION OF THE POST
@@ -1289,5 +1211,322 @@ class _PostCardState extends State<PostCard> {
         }
       }
     });
+  }
+
+  // Helper method to build image grid
+   Widget _buildImageGrid(List<String> imageUrls, Map<String, dynamic> snapData) {
+    if (imageUrls.isEmpty) return const SizedBox.shrink();
+
+    // Single image - hiển thị full
+    if (imageUrls.length == 1) {
+      return _buildSingleImageView(imageUrls[0], snapData);
+    }
+
+    // Multiple images - Grid view
+    return _buildMultipleImagesGrid(imageUrls, snapData);
+  }
+
+  // Build single image view (existing behavior)
+  Widget _buildSingleImageView(String imageUrl, Map<String, dynamic> snapData) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ImageGalleryScreen(
+              imageUrls: [imageUrl],
+              initialIndex: 0,
+            ),
+          ),
+        );
+      },
+      onDoubleTap: () async {
+        if (!mounted) return;
+
+        setState(() {
+          isLikeAnimating = true;
+        });
+
+        try {
+          await FirestoreMethod().likePost(
+            snapData['postId'],
+            Provider.of<UserProvider>(context, listen: false).getUserrOrNull!.uid,
+            snapData['likes'],
+          );
+        } catch (e) {
+          if (context.mounted) {
+            avoidPrint('Error liking post: $e');
+            displaySnackBar(
+              "Lỗi khi thích bài viết, vui lòng thử lại sau.",
+              context,
+              SnackBarType.error,
+            );
+          }
+        }
+      },
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.35,
+            width: double.infinity,
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.broken_image,
+                size: 64,
+              ),
+            ),
+          ),
+          AnimatedOpacity(
+            opacity: isLikeAnimating ? 1 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: LikeAnimation(
+              isAnimating: isLikeAnimating,
+              duration: const Duration(milliseconds: 400),
+              onEnd: () {
+                if (!mounted) return;
+                setState(() {
+                  isLikeAnimating = false;
+                });
+              },
+              child: const Icon(
+                Icons.favorite,
+                color: Colors.red,
+                size: 120,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build grid for multiple images
+  Widget _buildMultipleImagesGrid(List<String> imageUrls, Map<String, dynamic> snapData) {
+    final int imageCount = imageUrls.length;
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Grid layouts
+        if (imageCount == 2)
+          _buildTwoImagesLayout(imageUrls, snapData)
+        else if (imageCount == 3)
+          _buildThreeImagesLayout(imageUrls, snapData)
+        else
+          _buildFourPlusImagesLayout(imageUrls, snapData),
+        
+        // Like animation overlay
+        AnimatedOpacity(
+          opacity: isLikeAnimating ? 1 : 0,
+          duration: const Duration(milliseconds: 200),
+          child: LikeAnimation(
+            isAnimating: isLikeAnimating,
+            duration: const Duration(milliseconds: 400),
+            onEnd: () {
+              if (!mounted) return;
+              setState(() {
+                isLikeAnimating = false;
+              });
+            },
+            child: const Icon(
+              Icons.favorite,
+              color: Colors.red,
+              size: 120,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Layout for 2 images
+  Widget _buildTwoImagesLayout(List<String> imageUrls, Map<String, dynamic> snapData) {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.25,
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildGridImageItem(imageUrls[0], 0, imageUrls, snapData),
+          ),
+          const SizedBox(width: 2),
+          Expanded(
+            child: _buildGridImageItem(imageUrls[1], 1, imageUrls, snapData),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Layout for 3 images
+  Widget _buildThreeImagesLayout(List<String> imageUrls, Map<String, dynamic> snapData) {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.35,
+      child: Row(
+        children: [
+          // Large image on left
+          Expanded(
+            flex: 2,
+            child: _buildGridImageItem(imageUrls[0], 0, imageUrls, snapData),
+          ),
+          const SizedBox(width: 2),
+          // Two small images on right
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                Expanded(
+                  child: _buildGridImageItem(imageUrls[1], 1, imageUrls, snapData),
+                ),
+                const SizedBox(height: 2),
+                Expanded(
+                  child: _buildGridImageItem(imageUrls[2], 2, imageUrls, snapData),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Layout for 4+ images
+  Widget _buildFourPlusImagesLayout(List<String> imageUrls, Map<String, dynamic> snapData) {
+    final int displayCount = imageUrls.length > 4 ? 4 : imageUrls.length;
+    final width = MediaQuery.of(context).size.width;
+    final bool isWeb = width > webScreenSize;
+
+    // Calculate container width based on screen size
+    final double containerWidth = isWeb 
+        ? width * 0.4  // Web: 40% screen (cuz it has padding 0.3 at PostCard)
+        : width - 32;  // Mobile: full width - padding
+
+    // each image = (containerWidth - spacing) / 2
+    final double imageSize = (containerWidth - 2) / 2;
+
+    return Container(
+      height: imageSize*2+2, // 2 rows+ spacing
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 2,
+          mainAxisSpacing: 2,
+          childAspectRatio: 1,
+        ),
+        itemCount: displayCount,
+        itemBuilder: (context, index) {
+          // Show "+N" overlay on last image if more than 4
+          if (index == 3 && imageUrls.length > 4) {
+            return _buildLastImageWithOverlay(
+              imageUrls[3],
+              imageUrls.length - 4,
+              imageUrls,
+              snapData,
+            );
+          }
+          return _buildGridImageItem(imageUrls[index], index, imageUrls, snapData);
+        },
+      ),
+    );
+  }
+
+  // Single grid image item
+  Widget _buildGridImageItem(String imageUrl, int index, List<String> allUrls, Map<String, dynamic> snapData) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ImageGalleryScreen(
+              imageUrls: allUrls,
+              initialIndex: index,
+            ),
+          ),
+        );
+      },
+      onDoubleTap: ()  => _handleDoubleTapLike(snapData),
+      child: Container(
+        decoration: BoxDecoration(
+          color: secondaryColor.withValues(alpha: 0.1),
+        ),
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => const Center(
+            child: Icon(Icons.broken_image, color: secondaryColor),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Last image with "+N" overlay
+  Widget _buildLastImageWithOverlay(String imageUrl, int remaining, List<String> allUrls, Map<String, dynamic> snapData) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ImageGalleryScreen(
+              imageUrls: allUrls,
+              initialIndex: 3,
+            ),
+          ),
+        );
+      },
+      onDoubleTap: () => _handleDoubleTapLike(snapData),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const Center(
+              child: Icon(Icons.broken_image, color: secondaryColor),
+            ),
+          ),
+          Container(
+            color: Colors.black54,
+            child: Center(
+              child: Text(
+                '+$remaining',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to handle double tap like for grid images
+  Future<void> _handleDoubleTapLike(Map<String, dynamic> snapData) async {
+    if (!mounted) return;
+
+    setState(() {
+      isLikeAnimating = true;
+    });
+
+    try {
+      await FirestoreMethod().likePost(
+        snapData['postId'],
+        Provider.of<UserProvider>(context, listen: false).getUserrOrNull!.uid,
+        snapData['likes'],
+      );
+    } catch (e) {
+        avoidPrint('Error liking post: $e');
+        if (!mounted) return;
+        displaySnackBar(
+          "Lỗi khi thích bài viết, vui lòng thử lại sau.",
+          context,
+          SnackBarType.error,
+        );
+    }
   }
 }
