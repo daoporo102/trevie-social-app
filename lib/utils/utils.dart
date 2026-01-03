@@ -50,3 +50,28 @@ String formatTimestamp(Timestamp timestamp) {
     return DateFormat('dd/MM/yyyy', 'vi').format(messageTime);
   }
 }
+
+Future<List<Uint8List>?> pickMultipleImages() async {
+  final ImagePicker imagePicker = ImagePicker();
+  final List<XFile> files = await imagePicker.pickMultiImage();
+  
+  if (files.isEmpty) {
+    avoidPrint("No images selected");
+    return null;
+  }
+  
+  // Giới hạn số lượng ảnh tối đa (ví dụ: 10 ảnh)
+  const maxImages = 10;
+  if (files.length > maxImages) {
+    avoidPrint("Too many images selected. Maximum is $maxImages");
+    return null;
+  }
+  
+  List<Uint8List> images = [];
+  for (var file in files) {
+    final bytes = await file.readAsBytes();
+    images.add(bytes);
+  }
+  
+  return images;
+}
