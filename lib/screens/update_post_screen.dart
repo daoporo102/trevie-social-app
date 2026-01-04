@@ -864,6 +864,14 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
 
   // Build original post preview (for reshare)
   Widget _buildOriginalPostPreview(Map<String, dynamic> postData) {
+    // Get list of original post images (support both single and multiple)
+    List<String> originalImageUrls = [];
+    if (postData['postUrls'] != null && postData['postUrls'] is List) {
+      originalImageUrls = List<String>.from(postData['postUrls']);
+    } else if (postData['postUrl'] != null && postData['postUrl'].isNotEmpty) {
+      originalImageUrls = [postData['postUrl']];
+    }
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -875,13 +883,21 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Original post author info
           Row(
             children: [
               CircleAvatar(
                 radius: 12,
-                backgroundImage: NetworkImage(
-                  postData['originalProfImage'] ?? '',
-                ),
+                backgroundImage:
+                    (postData['originalProfImage'] != null &&
+                        postData['originalProfImage'].isNotEmpty)
+                    ? NetworkImage(postData['originalProfImage'])
+                    : null,
+                child:
+                    (postData['originalProfImage'] == null ||
+                        postData['originalProfImage'].isEmpty)
+                    ? const Icon(Icons.person, size: 12)
+                    : null,
               ),
               const SizedBox(width: 8),
               Text(
@@ -894,6 +910,8 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
               ),
             ],
           ),
+
+          // Original post text
           if (postData['originalPostText'] != null &&
               postData['originalPostText'].isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -902,21 +920,13 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
               style: const TextStyle(color: primaryTextColor, fontSize: 14),
             ),
           ],
-          if (postData['postUrl'] != null &&
-              postData['postUrl'].isNotEmpty) ...[
+
+          // Original post images (support multiple images)
+          if (originalImageUrls.isNotEmpty) ...[
             const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8.0),
-              child: Image.network(
-                postData['postUrl'],
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const Text(
-                  'Không thể tải ảnh gốc',
-                  style: TextStyle(color: primaryTextColor),
-                ),
-              ),
-            ),
+            _buildOriginalImagesPreview(originalImageUrls),
           ],
+
           const SizedBox(height: 8),
           const Text(
             'Bạn không thể chỉnh sửa nội dung gốc',
@@ -927,6 +937,98 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Build original images preview widget
+  Widget _buildOriginalImagesPreview(List<String> imageUrls) {
+    if (imageUrls.isEmpty) return const SizedBox.shrink();
+
+    // Single image - display normally
+    if (imageUrls.length == 1) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8.0),
+        child: Image.network(
+          imageUrls[0],
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 200,
+          errorBuilder: (context, error, stackTrace) => Container(
+            height: 200,
+            color: secondaryColor.withValues(alpha: 0.1),
+            child: const Center(
+              child: Text(
+                'Không thể tải ảnh gốc',
+                style: TextStyle(color: primaryTextColor),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Multiple images - display in horizontal scrollable list
+    return SizedBox(
+      height: 150,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: imageUrls.length,
+        itemBuilder: (context, index) {
+          return Container(
+            margin: EdgeInsets.only(
+              right: index < imageUrls.length - 1 ? 8 : 0,
+            ),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: Image.network(
+                    imageUrls[index],
+                    fit: BoxFit.cover,
+                    width: 150,
+                    height: 150,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 150,
+                      height: 150,
+                      color: secondaryColor.withValues(alpha: 0.1),
+                      child: const Center(
+                        child: Icon(
+                          Icons.broken_image,
+                          color: secondaryColor,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Image counter badge
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${index + 1}/${imageUrls.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

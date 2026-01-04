@@ -162,141 +162,226 @@ class _PostCardState extends State<PostCard> {
     // Capture root context BEFORE showing bottom sheet
     final rootContext = context;
 
-    // Fetch the post data FIRST
-    Post originalPost = Post.fromSnap(
-      await FirebaseFirestore.instance
+    try {
+      // Fetch the post document and check if the field exists before converting.
+      final postDoc = await FirebaseFirestore.instance
           .collection('posts')
           .doc(snapData['postId'])
-          .get(),
-    );
+          .get();
 
-    // Check if context is still valid after async operation
-    if (!context.mounted) return;
+      if (!postDoc.exists || postDoc.data() == null) {
+        if (!context.mounted) return;
+        displaySnackBar(
+          'Bài viết không tồn tại hoặc đã bị xóa',
+          rootContext,
+          SnackBarType.error,
+        );
+        return;
+      }
 
-    showModalBottomSheet(
-      useSafeArea: true,
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: mobileBackgroundColor,
-      // Dim the background less or change color
-      barrierColor: primaryTextColor.withValues(alpha: 0.5),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16.0,
-            right: 16.0,
-            top: 16.0,
-          ),
-          child: SingleChildScrollView(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // TITLE
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Chia sẻ bài viết",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+      final postData = postDoc.data()!;
+
+      // Normalize postUrls field for old posts
+      if (!postData.containsKey('postUrls') || postData['postUrls'] == null) {
+        // Old post format - convert postUrl to postUrls array
+        if (postData.containsKey('postUrl') && postData['postUrl'] != null) {
+          postData['postUrls'] = [postData['postUrl']];
+        } else {
+          postData['postUrls'] = [];
+        }
+      }
+
+      // Ensure postUrls is a List
+      if (postData['postUrls'] is! List) {
+        postData['postUrls'] = [];
+      }
+
+      // Now safe to convert
+      Post originalPost = Post.fromSnap(postDoc);
+
+      // Check if context is still valid after async operation
+      if (!context.mounted) return;
+
+      showModalBottomSheet(
+        useSafeArea: true,
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: mobileBackgroundColor,
+        // Dim the background less or change color
+        barrierColor: primaryTextColor.withValues(alpha: 0.5),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              left: 16.0,
+              right: 16.0,
+              top: 16.0,
+            ),
+            child: SingleChildScrollView(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // TITLE
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Chia sẻ bài viết",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // TEXTFIELD
+                    TextField(
+                      controller: textPostController,
+                      maxLines: null,
+                      decoration: InputDecoration(
+                        hintText: "Nhập nội dung bài chia sẻ...",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
+                    ),
 
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
-                  // TEXTFIELD
-                  TextField(
-                    controller: textPostController,
-                    maxLines: null,
-                    decoration: InputDecoration(
-                      hintText: "Nhập nội dung bài chia sẻ...",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                    // SHARE BUTTON
+                    SizedBox(
+                      width: double.infinity,
+                      child: CustomButton(
+                        onPressed: () async {
+                          final String res;
+                          // Close the bottom sheet first
+                          Navigator.pop(context);
+
+                          // check if is a reshare post or not
+                          if (snapData['originalPostId'] != null) {
+                            // if is a reshare post, we need to get the original post
+                            try {
+                              final originalReshareDoc = await FirebaseFirestore
+                                  .instance
+                                  .collection('posts')
+                                  .doc(snapData['originalPostId'])
+                                  .get();
+
+                              if (!originalReshareDoc.exists ||
+                                  originalReshareDoc.data() == null) {
+                                if (!rootContext.mounted) return;
+                                displaySnackBar(
+                                  'Bài viết gốc đã bị xóa',
+                                  rootContext,
+                                  SnackBarType.error,
+                                );
+                                return;
+                              }
+
+                              final originalData = originalReshareDoc.data()!;
+
+                              // Normalize postUrls
+                              if (!originalData.containsKey('postUrls') ||
+                                  originalData['postUrls'] == null) {
+                                if (originalData.containsKey('postUrl') &&
+                                    originalData['postUrl'] != null) {
+                                  originalData['postUrls'] = [
+                                    originalData['postUrl'],
+                                  ];
+                                } else {
+                                  originalData['postUrls'] = [];
+                                }
+                              }
+
+                              if (originalData['postUrls'] is! List) {
+                                originalData['postUrls'] = [];
+                              }
+
+                              Post originalResharePost = Post.fromSnap(
+                                originalReshareDoc,
+                              );
+
+                              res = await FirestoreMethod().resharePost(
+                                textPostController.text.trim(),
+                                originalResharePost,
+                                uid,
+                                displayName,
+                                profImage,
+                              );
+                            } catch (e) {
+                              if (!rootContext.mounted) return;
+                              avoidPrint(
+                                "Error fetching original reshare post: $e",
+                              );
+                              displaySnackBar(
+                                "Có lỗi xảy ra, vui lòng thử lại sau.",
+                                rootContext,
+                                SnackBarType.error,
+                              );
+                              return;
+                            }
+                          } else {
+                            // This is an original post
+                            res = await FirestoreMethod().resharePost(
+                              textPostController.text.trim(),
+                              originalPost,
+                              uid,
+                              displayName,
+                              profImage,
+                            );
+                          }
+
+                          // Fix: check for whitespace (not empty string) instead of always-true ''
+                          if (res.length != 36 || res.contains(' ')) {
+                            if (!rootContext.mounted) return;
+                            displaySnackBar(
+                              "Có lỗi xảy ra, vui lòng thử lại sau.",
+                              rootContext,
+                              SnackBarType.error,
+                            );
+                            avoidPrint("DEBUG - Reshare failed: $res");
+                          } else {
+                            if (!rootContext.mounted) return;
+                            // pass rootContext to listener
+                            _listenToReshareStatus(res, rootContext);
+                            avoidPrint("DEBUG - Reshare success with ID: $res");
+                          }
+                        },
+                        child: const Text(
+                          'Chia sẻ',
+                          style: TextStyle(fontSize: 16, color: onPrimaryColor),
+                        ),
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // SHARE BUTTON
-                  SizedBox(
-                    width: double.infinity,
-                    child: CustomButton(
-                      onPressed: () async {
-                        final String res;
-                        // Close the bottom sheet first
-                        Navigator.pop(context);
-
-                        // check if is a reshare post or not
-                        if (snapData['originalPostId'] != null) {
-                          // if is a reshare post, we need to get the original post
-                          Post originalResharePost = Post.fromSnap(
-                            await FirebaseFirestore.instance
-                                .collection('posts')
-                                .doc(snapData['originalPostId'])
-                                .get(),
-                          );
-                          res = await FirestoreMethod().resharePost(
-                            textPostController.text.trim(),
-                            originalResharePost,
-                            uid,
-                            displayName,
-                            profImage,
-                          );
-                        } else {
-                          // This is an original post
-                          res = await FirestoreMethod().resharePost(
-                            textPostController.text.trim(),
-                            originalPost,
-                            uid,
-                            displayName,
-                            profImage,
-                          );
-                        }
-
-                        // Fix: check for whitespace (not empty string) instead of always-true ''
-                        if (res.length != 36 || res.contains(' ')) {
-                          if (!rootContext.mounted) return;
-                          displaySnackBar(
-                            "Có lỗi xảy ra, vui lòng thử lại sau.",
-                            rootContext,
-                            SnackBarType.error,
-                          );
-                          avoidPrint("DEBUG - Reshare failed: $res");
-                        } else {
-                          if (!rootContext.mounted) return;
-                          // pass rootContext to listener
-                          _listenToReshareStatus(res, rootContext);
-                          avoidPrint("DEBUG - Reshare success with ID: $res");
-                        }
-                      },
-                      child: const Text(
-                        'Chia sẻ',
-                        style: TextStyle(fontSize: 16, color: onPrimaryColor),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    } catch (e) {
+      avoidPrint("Error in _openShareBottomSheet: $e");
+      if (!rootContext.mounted) return;
+      displaySnackBar(
+        "Có lỗi xảy ra khi tải bài viết, vui lòng thử lại sau",
+        rootContext,
+        SnackBarType.error,
+      );
+    }
   }
 
   @override
@@ -726,164 +811,122 @@ class _PostCardState extends State<PostCard> {
                   // Original post exists - display it with live data
                   final originalPostData =
                       originalPostSnapshot.data!.data() as Map<String, dynamic>;
+
                   return GestureDetector(
-                    onDoubleTap: () async {
-                      if (!mounted) return;
-
-                      // Start the like animation immediately
-                      setState(() {
-                        isLikeAnimating = true;
-                      });
-
-                      try {
-                        // Like the post
-                        await FirestoreMethod().likePost(
-                          snapData['postId'],
-                          user.uid,
-                          snapData['likes'],
-                        );
-                      } catch (e) {
-                        // Handle any errors that occur during the like operation
-                        if (context.mounted) {
-                          avoidPrint('Error liking post: $e');
-                          displaySnackBar(
-                            "Lỗi khi thích bài viết, vui lòng thử lại sau.",
-                            context,
-                            SnackBarType.error,
-                          );
-                        }
-                      }
-
-                      if (!mounted) return;
-                    },
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: mobileBackgroundColor.withValues(alpha: 0.5),
-                            border: Border.all(color: secondaryColor),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Original post header
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: InkWell(
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => ProfileScreen(
-                                          uid: originalPostData['uid'],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 12,
-                                        backgroundImage:
-                                            (originalPostData['profImage'] !=
-                                                    null &&
-                                                (originalPostData['profImage']
-                                                        as String)
-                                                    .isNotEmpty)
-                                            ? NetworkImage(
-                                                originalPostData['profImage'],
-                                              )
-                                            : null,
-                                        child:
-                                            (originalPostData['profImage'] ==
-                                                    null ||
-                                                (originalPostData['profImage']
-                                                        as String)
-                                                    .isEmpty)
-                                            ? const Icon(Icons.person, size: 12)
-                                            : null,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        originalPostData['displayName'] ??
-                                            'Tên người dùng',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
+                    onDoubleTap: () => _handleDoubleTapLike(snapData),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: mobileBackgroundColor.withValues(alpha: 0.5),
+                        border: Border.all(color: secondaryColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Original post header
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => ProfileScreen(
+                                      uid: originalPostData['uid'],
+                                    ),
                                   ),
-                                ),
+                                );
+                              },
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 12,
+                                    backgroundImage:
+                                        (originalPostData['profImage'] !=
+                                                null &&
+                                            (originalPostData['profImage']
+                                                    as String)
+                                                .isNotEmpty)
+                                        ? NetworkImage(
+                                            originalPostData['profImage'],
+                                          )
+                                        : null,
+                                    child:
+                                        (originalPostData['profImage'] ==
+                                                null ||
+                                            (originalPostData['profImage']
+                                                    as String)
+                                                .isEmpty)
+                                        ? const Icon(Icons.person, size: 12)
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    originalPostData['displayName'] ??
+                                        'Tên người dùng',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              // Original post text
-                              if (originalPostData['postText'] != null &&
-                                  originalPostData['postText']!.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12.0,
-                                  ),
-                                  child: Text(
-                                    originalPostData['postText'] ?? '',
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                ),
-                              const SizedBox(height: 4),
-                              // Original post images (for single or multiple)
-                              Builder(builder:(context){
-                                // Build list of image URLs supporting both `postUrls` (List) and legacy `postUrl` (String)
-                                List<String> originalImageUrls = [];
-                                if (originalPostData['postUrls'] != null &&
-                                    originalPostData['postUrls'] is List) {
-                                  originalImageUrls = List<String>.from(
-                                    originalPostData['postUrls'],
-                                  );
-                                } else if (originalPostData['postUrl'] !=
-                                        null &&
-                                    originalPostData['postUrl'].isNotEmpty) {
-                                  originalImageUrls = [originalPostData['postUrl']];
-                                }
-
-                                if (originalImageUrls.isEmpty) {
-                                  return const SizedBox.shrink();
-                                }
-
-                                // Reuse the existing image grid builder so reshare shows the same layout as regular posts
-                                try{
-                                  return _buildImageGrid(originalImageUrls, originalPostData);
-                                } catch (e) {
-                                  // Fallback to a simple image or error container on unexpected errors
-                                  avoidPrint('Error building original post images: $e');
-                                  return _buildErrorContainer('Không thể tải hình ảnh.');
-                                }
-                              }),
-                              const SizedBox(height: 4),
-                            ],
-                          ),
-                        ),
-                        // Like animation overlay
-                        AnimatedOpacity(
-                          opacity: isLikeAnimating ? 1 : 0,
-                          duration: const Duration(milliseconds: 200),
-                          child: LikeAnimation(
-                            isAnimating: isLikeAnimating,
-                            duration: const Duration(milliseconds: 400),
-                            onEnd: () {
-                              if (!mounted) return;
-                              setState(() {
-                                isLikeAnimating = false;
-                              });
-                            },
-                            child: Icon(
-                              Icons.favorite,
-                              color: Colors.red,
-                              size: 120,
                             ),
                           ),
-                        ),
-                      ],
+                          // Original post text
+                          if (originalPostData['postText'] != null &&
+                              originalPostData['postText']!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                              ),
+                              child: Text(
+                                originalPostData['postText'] ?? '',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          // Original post images (for single or multiple)
+                          Builder(
+                            builder: (context) {
+                              // Build list of image URLs supporting both `postUrls` (List) and legacy `postUrl` (String)
+                              List<String> originalImageUrls = [];
+                              if (originalPostData['postUrls'] != null &&
+                                  originalPostData['postUrls'] is List) {
+                                originalImageUrls = List<String>.from(
+                                  originalPostData['postUrls'],
+                                );
+                              } else if (originalPostData['postUrl'] != null &&
+                                  originalPostData['postUrl'].isNotEmpty) {
+                                originalImageUrls = [
+                                  originalPostData['postUrl'],
+                                ];
+                              }
+
+                              if (originalImageUrls.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+
+                              // Reuse the existing image grid builder
+                              // Note: _buildImageGrid already has its own like animation
+                              try {
+                                return _buildImageGrid(
+                                  originalImageUrls,
+                                  snapData, // Pass the RESHARE post data for liking
+                                );
+                              } catch (e) {
+                                avoidPrint(
+                                  'Error building original post images: $e',
+                                );
+                                return _buildErrorContainer(
+                                  'Không thể tải hình ảnh.',
+                                );
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 4),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -1220,7 +1263,10 @@ class _PostCardState extends State<PostCard> {
   }
 
   // Helper method to build image grid
-   Widget _buildImageGrid(List<String> imageUrls, Map<String, dynamic> snapData) {
+  Widget _buildImageGrid(
+    List<String> imageUrls,
+    Map<String, dynamic> snapData,
+  ) {
     if (imageUrls.isEmpty) return const SizedBox.shrink();
 
     // Single image - hiển thị full
@@ -1238,10 +1284,8 @@ class _PostCardState extends State<PostCard> {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => ImageGalleryScreen(
-              imageUrls: [imageUrl],
-              initialIndex: 0,
-            ),
+            builder: (context) =>
+                ImageGalleryScreen(imageUrls: [imageUrl], initialIndex: 0),
           ),
         );
       },
@@ -1255,7 +1299,10 @@ class _PostCardState extends State<PostCard> {
         try {
           await FirestoreMethod().likePost(
             snapData['postId'],
-            Provider.of<UserProvider>(context, listen: false).getUserrOrNull!.uid,
+            Provider.of<UserProvider>(
+              context,
+              listen: false,
+            ).getUserrOrNull!.uid,
             snapData['likes'],
           );
         } catch (e) {
@@ -1278,10 +1325,8 @@ class _PostCardState extends State<PostCard> {
             child: Image.network(
               imageUrl,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.broken_image,
-                size: 64,
-              ),
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.broken_image, size: 64),
             ),
           ),
           AnimatedOpacity(
@@ -1296,11 +1341,7 @@ class _PostCardState extends State<PostCard> {
                   isLikeAnimating = false;
                 });
               },
-              child: const Icon(
-                Icons.favorite,
-                color: Colors.red,
-                size: 120,
-              ),
+              child: const Icon(Icons.favorite, color: Colors.red, size: 120),
             ),
           ),
         ],
@@ -1309,7 +1350,10 @@ class _PostCardState extends State<PostCard> {
   }
 
   // Build grid for multiple images
-  Widget _buildMultipleImagesGrid(List<String> imageUrls, Map<String, dynamic> snapData) {
+  Widget _buildMultipleImagesGrid(
+    List<String> imageUrls,
+    Map<String, dynamic> snapData,
+  ) {
     final int imageCount = imageUrls.length;
 
     return Stack(
@@ -1322,7 +1366,7 @@ class _PostCardState extends State<PostCard> {
           _buildThreeImagesLayout(imageUrls, snapData)
         else
           _buildFourPlusImagesLayout(imageUrls, snapData),
-        
+
         // Like animation overlay
         AnimatedOpacity(
           opacity: isLikeAnimating ? 1 : 0,
@@ -1336,11 +1380,7 @@ class _PostCardState extends State<PostCard> {
                 isLikeAnimating = false;
               });
             },
-            child: const Icon(
-              Icons.favorite,
-              color: Colors.red,
-              size: 120,
-            ),
+            child: const Icon(Icons.favorite, color: Colors.red, size: 120),
           ),
         ),
       ],
@@ -1348,7 +1388,10 @@ class _PostCardState extends State<PostCard> {
   }
 
   // Layout for 2 images
-  Widget _buildTwoImagesLayout(List<String> imageUrls, Map<String, dynamic> snapData) {
+  Widget _buildTwoImagesLayout(
+    List<String> imageUrls,
+    Map<String, dynamic> snapData,
+  ) {
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.25,
       child: Row(
@@ -1366,7 +1409,10 @@ class _PostCardState extends State<PostCard> {
   }
 
   // Layout for 3 images
-  Widget _buildThreeImagesLayout(List<String> imageUrls, Map<String, dynamic> snapData) {
+  Widget _buildThreeImagesLayout(
+    List<String> imageUrls,
+    Map<String, dynamic> snapData,
+  ) {
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.35,
       child: Row(
@@ -1383,11 +1429,21 @@ class _PostCardState extends State<PostCard> {
             child: Column(
               children: [
                 Expanded(
-                  child: _buildGridImageItem(imageUrls[1], 1, imageUrls, snapData),
+                  child: _buildGridImageItem(
+                    imageUrls[1],
+                    1,
+                    imageUrls,
+                    snapData,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Expanded(
-                  child: _buildGridImageItem(imageUrls[2], 2, imageUrls, snapData),
+                  child: _buildGridImageItem(
+                    imageUrls[2],
+                    2,
+                    imageUrls,
+                    snapData,
+                  ),
                 ),
               ],
             ),
@@ -1398,21 +1454,25 @@ class _PostCardState extends State<PostCard> {
   }
 
   // Layout for 4+ images
-  Widget _buildFourPlusImagesLayout(List<String> imageUrls, Map<String, dynamic> snapData) {
+  Widget _buildFourPlusImagesLayout(
+    List<String> imageUrls,
+    Map<String, dynamic> snapData,
+  ) {
     final int displayCount = imageUrls.length > 4 ? 4 : imageUrls.length;
     final width = MediaQuery.of(context).size.width;
     final bool isWeb = width > webScreenSize;
 
     // Calculate container width based on screen size
-    final double containerWidth = isWeb 
-        ? width * 0.4  // Web: 40% screen (cuz it has padding 0.3 at PostCard)
-        : width - 32;  // Mobile: full width - padding
+    final double containerWidth = isWeb
+        ? width *
+              0.4 // Web: 40% screen (cuz it has padding 0.3 at PostCard)
+        : width - 32; // Mobile: full width - padding
 
     // each image = (containerWidth - spacing) / 2
     final double imageSize = (containerWidth - 2) / 2;
 
     return Container(
-      height: imageSize*2+2, // 2 rows+ spacing
+      height: imageSize * 2 + 2, // 2 rows+ spacing
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.builder(
         shrinkWrap: true,
@@ -1434,30 +1494,36 @@ class _PostCardState extends State<PostCard> {
               snapData,
             );
           }
-          return _buildGridImageItem(imageUrls[index], index, imageUrls, snapData);
+          return _buildGridImageItem(
+            imageUrls[index],
+            index,
+            imageUrls,
+            snapData,
+          );
         },
       ),
     );
   }
 
   // Single grid image item
-  Widget _buildGridImageItem(String imageUrl, int index, List<String> allUrls, Map<String, dynamic> snapData) {
+  Widget _buildGridImageItem(
+    String imageUrl,
+    int index,
+    List<String> allUrls,
+    Map<String, dynamic> snapData,
+  ) {
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => ImageGalleryScreen(
-              imageUrls: allUrls,
-              initialIndex: index,
-            ),
+            builder: (context) =>
+                ImageGalleryScreen(imageUrls: allUrls, initialIndex: index),
           ),
         );
       },
-      onDoubleTap: ()  => _handleDoubleTapLike(snapData),
+      onDoubleTap: () => _handleDoubleTapLike(snapData),
       child: Container(
-        decoration: BoxDecoration(
-          color: secondaryColor.withValues(alpha: 0.1),
-        ),
+        decoration: BoxDecoration(color: secondaryColor.withValues(alpha: 0.1)),
         child: Image.network(
           imageUrl,
           fit: BoxFit.cover,
@@ -1470,15 +1536,18 @@ class _PostCardState extends State<PostCard> {
   }
 
   // Last image with "+N" overlay
-  Widget _buildLastImageWithOverlay(String imageUrl, int remaining, List<String> allUrls, Map<String, dynamic> snapData) {
+  Widget _buildLastImageWithOverlay(
+    String imageUrl,
+    int remaining,
+    List<String> allUrls,
+    Map<String, dynamic> snapData,
+  ) {
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => ImageGalleryScreen(
-              imageUrls: allUrls,
-              initialIndex: 3,
-            ),
+            builder: (context) =>
+                ImageGalleryScreen(imageUrls: allUrls, initialIndex: 3),
           ),
         );
       },
@@ -1526,13 +1595,13 @@ class _PostCardState extends State<PostCard> {
         snapData['likes'],
       );
     } catch (e) {
-        avoidPrint('Error liking post: $e');
-        if (!mounted) return;
-        displaySnackBar(
-          "Lỗi khi thích bài viết, vui lòng thử lại sau.",
-          context,
-          SnackBarType.error,
-        );
+      avoidPrint('Error liking post: $e');
+      if (!mounted) return;
+      displaySnackBar(
+        "Lỗi khi thích bài viết, vui lòng thử lại sau.",
+        context,
+        SnackBarType.error,
+      );
     }
   }
 }
