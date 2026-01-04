@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 void displaySnackBar(String text, BuildContext context, SnackBarType type) {
   // Check if context is still valid
@@ -12,17 +13,6 @@ void displaySnackBar(String text, BuildContext context, SnackBarType type) {
   ScaffoldMessenger.of(
     context,
   ).showSnackBar(CustomSnackBar.buildSnackBar(text: text, type: type));
-}
-
-Future<Uint8List?> pickImage(ImageSource source) async {
-  // Your image picking logic here
-  final ImagePicker imagePicker = ImagePicker();
-  final XFile? file = await imagePicker.pickImage(source: source);
-  if (file == null) {
-    avoidPrint("No image selected");
-    return null;
-  }
-  return await file.readAsBytes();
 }
 
 void avoidPrint(String s) {
@@ -54,24 +44,96 @@ String formatTimestamp(Timestamp timestamp) {
 Future<List<Uint8List>?> pickMultipleImages() async {
   final ImagePicker imagePicker = ImagePicker();
   final List<XFile> files = await imagePicker.pickMultiImage();
-  
+
   if (files.isEmpty) {
     avoidPrint("No images selected");
     return null;
   }
-  
+
   // Giới hạn số lượng ảnh tối đa (ví dụ: 10 ảnh)
   const maxImages = 10;
   if (files.length > maxImages) {
     avoidPrint("Too many images selected. Maximum is $maxImages");
     return null;
   }
-  
+
   List<Uint8List> images = [];
   for (var file in files) {
     final bytes = await file.readAsBytes();
-    images.add(bytes);
+    // Auto-compress khi pick
+    final compressed = await compressImage(bytes);
+    if (compressed != null) {
+      images.add(compressed);
+    }
   }
-  
+
   return images;
+}
+
+// Compress single image
+Future<Uint8List?> compressImage(Uint8List imageBytes) async {
+  try {
+    // Validate size before compress
+    if (imageBytes.length > 10 * 1024 * 1024) {
+      throw 'Ảnh gốc quá lớn (>10MB). Vui lòng chọn ảnh nhỏ hơn';
+    }
+
+    final result = await FlutterImageCompress.compressWithList(
+      imageBytes,
+      minWidth: 1920,
+      minHeight: 1080,
+      quality: 85,
+      format: CompressFormat.jpeg,
+    );
+
+    // Check if compressed size is still too large
+    if (result.length > 5 * 1024 * 1024) {
+      throw 'Ảnh quá lớn (>5MB sau khi nén). Vui lòng chọn ảnh nhỏ hơn';
+    }
+
+    // Only use image compression if the image is smaller than the original image.
+    if (result.length < imageBytes.length) {
+      final originalSize = imageBytes.length;
+      final compressedSize = result.length;
+      final ratio = ((originalSize - compressedSize) / originalSize * 100);
+      
+      avoidPrint('Original size: $originalSize bytes');
+      avoidPrint('Compressed size: $compressedSize bytes');
+      avoidPrint('Compression ratio: ${ratio.toStringAsFixed(1)}%');
+      
+      return result;
+    } else {
+      avoidPrint('Image already optimized, keeping original (${imageBytes.length} bytes)');
+      return imageBytes;
+    }
+  } catch (e) {
+    avoidPrint('Error compressing image: $e');
+    rethrow;
+  }
+}
+
+// Compress multiple images
+Future<List<Uint8List>> compressImages(List<Uint8List> images) async {
+  List<Uint8List> compressed = [];
+  for (var image in images) {
+    final result = await compressImage(image);
+    if (result != null) {
+      compressed.add(result);
+    }
+  }
+  return compressed;
+}
+
+// Update pickImage to auto-compress
+Future<Uint8List?> pickImage(ImageSource source) async {
+  final ImagePicker imagePicker = ImagePicker();
+  final XFile? file = await imagePicker.pickImage(source: source);
+
+  if (file != null) {
+    final bytes = await file.readAsBytes();
+    return await compressImage(bytes);
+  }
+
+  avoidPrint("No images selected");
+  return null;
 }
