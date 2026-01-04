@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:social_media_app/models/toxic_image.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
 import 'package:social_media_app/responsive/mobile_screen_layout.dart';
@@ -376,11 +377,24 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
                   double? textScore;
                   double? imageScore;
+                  List<ToxicImage>? toxicImages;
 
                   if (violationLogs.docs.isNotEmpty) {
                     final data = violationLogs.docs.first.data();
                     textScore = data['textScore'] as double?;
                     imageScore = data['imageScore'] as double?;
+
+                    // Parse toxicImages
+                    if (data['toxicImages'] != null &&
+                        data['toxicImages'] is List) {
+                      toxicImages = (data['toxicImages'] as List)
+                          .map(
+                            (item) => ToxicImage.fromJson(
+                              item as Map<String, dynamic>,
+                            ),
+                          )
+                          .toList();
+                    }
 
                     // Show rejection dialog with detailed information
                     if (mounted) {
@@ -393,6 +407,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                             displayReason ?? 'Vui lòng kiểm tra lại nội dung.',
                         textScore: textScore,
                         imageScore: imageScore,
+                        toxicImages: toxicImages,
                       );
                     }
                   }
@@ -441,9 +456,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
           },
         );
 
-    // Safe timeout: If the AI doesn't respond after 10 seconds (network lag, server down)
+    // Safe timeout: If the AI doesn't respond after 60 seconds (network lag, server down)
     // Then stop listening and return to the Feed (to prevent the user's computer from freezing indefinitely)
-    Future.delayed(const Duration(seconds: 10), () async {
+    Future.delayed(const Duration(seconds: 60), () async {
       // Only process if the subscription has not been canceled (it is still loading).
       if (_postSubscription != null && mounted) {
         await _postSubscription?.cancel();
@@ -737,16 +752,20 @@ class _AddPostScreenState extends State<AddPostScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               // Display the quantity with a warning color if the limit is nearly reached
-                              Text(
-                                '${_images.length}/$maxTotalImages ảnh đã chọn',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: _images.length >= maxTotalImages
-                                      ? errorBackgroundColor
-                                      : secondaryColor,
+                              Flexible(
+                                child: Text(
+                                  '${_images.length}/$maxTotalImages ảnh đã chọn',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: _images.length >= maxTotalImages
+                                        ? errorBackgroundColor
+                                        : secondaryColor,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               CustomButton(
                                 backgroundColor:
                                     _images.length >= maxTotalImages
