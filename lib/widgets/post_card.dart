@@ -831,28 +831,34 @@ class _PostCardState extends State<PostCard> {
                                   ),
                                 ),
                               const SizedBox(height: 4),
-                              // Original post image
-                              if (originalPostData['postUrl'] != null &&
-                                  originalPostData['postUrl'].isNotEmpty)
-                                ClipRRect(
-                                  borderRadius: BorderRadius.only(
-                                    bottomLeft: Radius.circular(12),
-                                    bottomRight: Radius.circular(12),
-                                  ),
-                                  child: Image.network(
-                                    originalPostData['postUrl'],
-                                    height:
-                                        MediaQuery.of(context).size.height *
-                                        0.25,
-                                    width: double.infinity,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return _buildErrorContainer(
-                                        'Không thể tải hình ảnh.',
-                                      );
-                                    },
-                                  ),
-                                ),
+                              // Original post images (for single or multiple)
+                              Builder(builder:(context){
+                                // Build list of image URLs supporting both `postUrls` (List) and legacy `postUrl` (String)
+                                List<String> originalImageUrls = [];
+                                if (originalPostData['postUrls'] != null &&
+                                    originalPostData['postUrls'] is List) {
+                                  originalImageUrls = List<String>.from(
+                                    originalPostData['postUrls'],
+                                  );
+                                } else if (originalPostData['postUrl'] !=
+                                        null &&
+                                    originalPostData['postUrl'].isNotEmpty) {
+                                  originalImageUrls = [originalPostData['postUrl']];
+                                }
+
+                                if (originalImageUrls.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                // Reuse the existing image grid builder so reshare shows the same layout as regular posts
+                                try{
+                                  return _buildImageGrid(originalImageUrls, originalPostData);
+                                } catch (e) {
+                                  // Fallback to a simple image or error container on unexpected errors
+                                  avoidPrint('Error building original post images: $e');
+                                  return _buildErrorContainer('Không thể tải hình ảnh.');
+                                }
+                              }),
                               const SizedBox(height: 4),
                             ],
                           ),
