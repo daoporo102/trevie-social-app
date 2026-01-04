@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:social_media_app/models/toxic_image.dart';
 
 class ViolationLog {
   final String logId;
@@ -18,7 +19,9 @@ class ViolationLog {
 
   final String reason; // Reason of the violation
   final String? toxicText;
-  final String? toxicImageUrl;
+  final String? toxicImageUrl; // URL of the toxic image (for backward compatible)
+  final List<ToxicImage> toxicImages; // List of toxic images
+
   final DateTime createdAt;
   final bool isRead; // Whether the log has been read by user
 
@@ -35,6 +38,7 @@ class ViolationLog {
     required this.reason,
     this.toxicText,
     this.toxicImageUrl,
+    this.toxicImages = const [],
     required this.createdAt,
     this.isRead = false,
     required this.textScore,
@@ -54,6 +58,7 @@ class ViolationLog {
     "reason": reason,
     "toxicText": toxicText,
     "toxicImageUrl": toxicImageUrl,
+    "toxicImages": toxicImages.map((image) => image.toJson()).toList(),
     "createdAt": Timestamp.fromDate(createdAt),
     "isRead": isRead,
     "textScore": textScore,
@@ -75,6 +80,23 @@ class ViolationLog {
       return null;
     }
 
+    // Parse toxicImages array
+    List<ToxicImage> parseToxicImages(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value
+            .map((item) {
+              if (item is Map<String, dynamic>) {
+                return ToxicImage.fromJson(item);
+              }
+              return null;
+            })
+            .whereType<ToxicImage>()
+            .toList();
+      }
+      return [];
+    }
+
     return ViolationLog(
       logId: snapshotData["logId"]??'',
       uid: snapshotData["uid"]??'',
@@ -93,6 +115,7 @@ class ViolationLog {
       reason: snapshotData["reason"]??'Vi phạm tiêu chuẩn',
       toxicText: snapshotData["toxicText"],
       toxicImageUrl: snapshotData["toxicImageUrl"],
+      toxicImages: parseToxicImages(snapshotData["toxicImages"]),
       createdAt: parseCreatedAt(snapshotData["createdAt"]) ?? DateTime.now(),
       isRead: snapshotData["isRead"]??false,
       textScore: snapshotData["textScore"] != null

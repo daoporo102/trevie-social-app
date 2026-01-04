@@ -38,6 +38,7 @@ dependencies:
   firebase_storage: ^13.0.3
   flutter:
     sdk: flutter
+  flutter_image_compress: ^2.4.0
   flutter_launcher_icons: ^0.14.4
   flutter_svg: ^2.2.1
   image_picker: ^1.2.0
@@ -90,7 +91,6 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true

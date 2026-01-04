@@ -39,6 +39,11 @@ class StorageMethod {
     bool isPost,
   ) async {
     try {
+      // Validate size BEFORE upload
+      if (file.length > 5 * 1024 * 1024) {
+        throw 'Ảnh quá lớn, vui lòng chọn ảnh dưới 5MB';
+      }
+
       Reference ref = _storage
           .ref()
           .child(childName)
@@ -62,8 +67,18 @@ class StorageMethod {
       String downloadUrl = await snap.ref.getDownloadURL();
       return downloadUrl;
     } on FirebaseException catch (e) {
+      // Handle Firebase-specific errors
+      if (e.code == 'unauthorized' || e.code == 'permission-denied') {
+        throw 'Ảnh quá lớn hoặc không đúng định dạng. Vui lòng chọn ảnh dưới 5MB';
+      } else if (e.code == 'retry-limit-exceeded') {
+        throw 'Kết nối mạng không ổn định, vui lòng thử lại';
+      }
       throw 'Lỗi tải lên: ${e.message ?? e.code}';
     } catch (e) {
+      // Re-throw custom errors
+      if (e.toString().contains('quá lớn')) {
+        rethrow;
+      }
       throw 'Lỗi không xác định khi tải ảnh: $e';
     }
   }
@@ -74,14 +89,38 @@ class StorageMethod {
     List<Uint8List> files,
     bool isPost,
   ) async {
-    List<String> downloadUrls = [];
     try {
+      final startTime = DateTime.now();
+      avoidPrint("Starting upload of ${files.length} images...");
+
+      // Validate all files first
       for (var file in files) {
-        String url = await uploadImageToStorage(childName, file, isPost);
-        downloadUrls.add(url);
+        if (file.length > 5 * 1024 * 1024) {
+          throw 'Một hoặc nhiều ảnh quá lớn. Vui lòng chọn ảnh dưới 5MB';
+        }
       }
+
+      // Upload all images in parallel
+      final uploadTasks = files.map(
+        (file) => uploadImageToStorage(childName, file, isPost),
+      );
+
+      final downloadUrls = await Future.wait(uploadTasks);
+
+      final duration = DateTime.now().difference(startTime);
+      avoidPrint("Uploaded ${files.length} images in ${duration.inSeconds}s");
+
       return downloadUrls;
+    } on FirebaseException catch (e) {
+      if (e.code == 'unauthorized' || e.code == 'permission-denied') {
+        throw 'Một hoặc nhiều ảnh không hợp lệ. Vui lòng chọn ảnh dưới 5MB';
+      }
+      throw 'Lỗi khi tải lên nhiều ảnh: ${e.message ?? e.code}';
     } catch (e) {
+      // Re-throw custom errors
+      if (e.toString().contains('quá lớn')) {
+        rethrow;
+      }
       throw 'Lỗi khi tải lên nhiều ảnh: $e';
     }
   }

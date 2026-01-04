@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,6 +13,7 @@ import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
+import 'package:social_media_app/widgets/custom_button.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/reject_dialog.dart';
 
@@ -24,12 +26,19 @@ class UpdatePostScreen extends StatefulWidget {
 }
 
 class _UpdatePostScreenState extends State<UpdatePostScreen> {
-  var _image;
+  List<Uint8List> _newImages = [];
+  List<String> _existingImageUrls = [];
+
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
   bool _isReshare = false;
-  // New flag to track if we are awaiting AI moderation for update reshare or post
   bool _isAwaitingModeration = false;
+  static const int maxTotalImages = 10;
+  final ScrollController _scrollController = ScrollController();
+  String _uploadStatus = '';
+
+  // Add StreamSubscription to manage
+  StreamSubscription<DocumentSnapshot>? _postStatusSubscription;
 
   @override
   void initState() {
@@ -37,14 +46,20 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
     final postData = widget.snap;
     // Initialize text controller with existing post text
     _textController.text = postData['postText'];
-    // Initialize _image with existing post URL
-    _image = postData['postUrl'];
+
+    // Initialize _image with existing images
+    // Initialize existing images
+    if (postData['postUrls'] != null && postData['postUrls'] is List) {
+      _existingImageUrls = List<String>.from(postData['postUrls']);
+    } else if (postData['postUrl'] != null && postData['postUrl'].isNotEmpty) {
+      _existingImageUrls = [postData['postUrl']];
+    }
 
     // Check if the post is a reshare
     _isReshare = postData['originalPostId'] != null;
   }
 
-  Future<void> _selectImage() async {
+  Future<void> _selectImages() async {
     // Capture the State's context BEFORE async
     final scaffoldContext = context;
 
@@ -60,6 +75,20 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
               child: const Text('Chụp ảnh'),
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
+
+                // Check if the total number of images exceeds the limit
+                if (_existingImageUrls.length + _newImages.length >=
+                    maxTotalImages) {
+                  if (scaffoldContext.mounted) {
+                    displaySnackBar(
+                      'Bạn đã đạt giới hạn $maxTotalImages ảnh',
+                      scaffoldContext,
+                      SnackBarType.error,
+                    );
+                  }
+                  return;
+                }
+
                 try {
                   Uint8List? file = await pickImage(ImageSource.camera);
                   if (!mounted) return;
@@ -75,7 +104,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
                     return;
                   }
                   setState(() {
-                    _image = file;
+                    _newImages.add(file);
                   });
                 } catch (e) {
                   if (!mounted) return;
@@ -96,21 +125,69 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
               onPressed: () async {
                 try {
                   Navigator.of(dialogContext).pop();
-                  Uint8List? file = await pickImage(ImageSource.gallery);
-                  if (!mounted) return;
-                  if (file == null) {
+
+                  final currentTotal =
+                      _existingImageUrls.length + _newImages.length;
+                  if (currentTotal >= maxTotalImages) {
                     if (scaffoldContext.mounted) {
                       displaySnackBar(
-                        'Không thể chọn ảnh từ thư viện',
+                        'Bạn đã đạt giới hạn $maxTotalImages ảnh',
                         scaffoldContext,
                         SnackBarType.error,
                       );
                     }
                     return;
                   }
+
+                  List<Uint8List>? files = await pickMultipleImages();
+                  if (!mounted) return;
+                  if (files == null || files.isEmpty) {
+                    if (scaffoldContext.mounted) {
+                      displaySnackBar(
+                        'Không có ảnh nào được chọn',
+                        scaffoldContext,
+                        SnackBarType.error,
+                      );
+                    }
+                    return;
+                  }
+                  // Calculate remaining slots
+                  int remainingSlots = maxTotalImages - currentTotal;
+
+                  if (remainingSlots <= 0) {
+                    if (scaffoldContext.mounted) {
+                      displaySnackBar(
+                        'Bạn đã đạt giới hạn $maxTotalImages ảnh',
+                        scaffoldContext,
+                        SnackBarType.error,
+                      );
+                    }
+                    return;
+                  }
+
+                  // Only add photos within the limit.
+                  if (files.length > remainingSlots) {
+                    if (scaffoldContext.mounted) {
+                      displaySnackBar(
+                        'Chỉ có thể thêm $remainingSlots ảnh nữa (tối đa $maxTotalImages ảnh)',
+                        scaffoldContext,
+                        SnackBarType.warning,
+                      );
+                    }
+                    files = files.sublist(0, remainingSlots);
+                  }
+
                   setState(() {
-                    _image = file;
+                    _newImages.addAll(files!);
                   });
+
+                  if (scaffoldContext.mounted) {
+                    displaySnackBar(
+                      'Đã thêm ${files.length} ảnh',
+                      scaffoldContext,
+                      SnackBarType.success,
+                    );
+                  }
                 } catch (e) {
                   if (!mounted) return;
                   if (scaffoldContext.mounted) {
@@ -137,6 +214,22 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
     );
   }
 
+  void removeExistingImage(int index) {
+    setState(() {
+      if (index >= 0 && index < _existingImageUrls.length) {
+        _existingImageUrls.removeAt(index);
+      }
+    });
+  }
+
+  void removeNewImage(int index) {
+    setState(() {
+      if (index >= 0 && index < _newImages.length) {
+        _newImages.removeAt(index);
+      }
+    });
+  }
+
   Future<void> updatePost(String postId) async {
     // Validate inputs
     if (_textController.text.isEmpty) {
@@ -148,23 +241,34 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
       return;
     }
 
+    if (_existingImageUrls.isEmpty && _newImages.isEmpty) {
+      displaySnackBar(
+        'Vui lòng chọn ít nhất một ảnh',
+        context,
+        SnackBarType.error,
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _isAwaitingModeration = true;
+      _uploadStatus = 'Đang chuẩn bị...';
     });
+
     try {
-      // For reshared posts, only update the text (not the image)
       if (_isReshare) {
         String res = await FirestoreMethod().updateResharePost(
           postId,
           _textController.text.trim(),
         );
-        if (!mounted) return; // guard context after async
+
+        if (!mounted) return;
 
         if (res == 'success') {
-          // Listen to the post status for AI moderation result
           _listenToPostStatus(postId);
         } else {
+          if (!mounted) return;
           setState(() {
             _isLoading = false;
             _isAwaitingModeration = false;
@@ -176,47 +280,48 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
           );
         }
       } else {
-        // For regular posts, update both text and image
+        setState(() {
+          _uploadStatus = 'Đang tải ảnh lên...';
+        });
+        // Regular post update
+        List<Uint8List>? imagesToUpload = _newImages.isNotEmpty
+            ? _newImages
+            : null;
 
-        // Determine if we have a new image (Uint8List) or existing URL (String)
-        Uint8List? fileToUpload;
-        String? existingUrl;
-
-        if (_image is Uint8List) {
-          // User selected a new image
-          fileToUpload = _image;
-          existingUrl = widget.snap['postUrl']; // Pass the old URL to delete it
-        } else if (_image is String) {
-          // User kept the existing image
-          fileToUpload = null;
-          existingUrl = null;
-        } else {
-          // No image at all
-          fileToUpload = null;
-          existingUrl = widget.snap['postUrl']; // Delete existing image
+        List<String> originalUrls = [];
+        if (widget.snap['postUrls'] != null &&
+            widget.snap['postUrls'] is List) {
+          originalUrls = List<String>.from(widget.snap['postUrls']);
+        } else if (widget.snap['postUrl'] != null &&
+            widget.snap['postUrl'].isNotEmpty) {
+          originalUrls = [widget.snap['postUrl']];
         }
 
-        // Add debug logging
-        avoidPrint("DEBUG - Updating post:");
-        avoidPrint(
-          "  fileToUpload: ${fileToUpload != null ? 'New image' : 'null'}",
-        );
-        avoidPrint("existingUrl: $existingUrl");
-        avoidPrint("_image type: ${_image.runtimeType}");
+        List<String> urlsToDelete = originalUrls
+            .where((url) => !_existingImageUrls.contains(url))
+            .toList();
 
-        // Update post's text and image
+        avoidPrint("DEBUG - Updating post:");
+        avoidPrint("  New images: ${_newImages.length}");
+        avoidPrint("  Existing URLs kept: ${_existingImageUrls.length}");
+        avoidPrint("  URLs to delete: ${urlsToDelete.length}");
+
         String res = await FirestoreMethod().updatePost(
           postId,
           _textController.text.trim(),
-          fileToUpload,
-          existingUrl,
+          imagesToUpload,
+          urlsToDelete.isNotEmpty ? urlsToDelete : null,
         );
 
-        if (!mounted) return; // guard context after async
+        if (!mounted) return;
 
         if (res == 'success') {
+          setState(() {
+            _uploadStatus = 'Đang kiểm duyệt...';
+          });
           _listenToPostStatus(postId);
         } else {
+          if (!mounted) return;
           setState(() {
             _isLoading = false;
             _isAwaitingModeration = false;
@@ -230,7 +335,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
         }
       }
     } catch (e) {
-      if (!mounted) return; // guard context after async
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _isAwaitingModeration = false;
@@ -244,71 +349,77 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
     }
   }
 
-  // Listen to the post document for AI moderation status
+  // Manage subscriptions and increase timeouts.
   void _listenToPostStatus(String postId) {
-    StreamSubscription<DocumentSnapshot>? postSubscription;
+    // Cancel previous subscription if exists
+    _postStatusSubscription?.cancel();
 
-    // Listen to the changes in the post document
-    postSubscription = FirebaseFirestore.instance
+    // Listen to post changes
+    _postStatusSubscription = FirebaseFirestore.instance
         .collection('posts')
         .doc(postId)
         .snapshots()
-        .listen((snapshot) async {
-          // Check if snapshot is not exists
-          if (!snapshot.exists || !mounted) return;
+        .listen(
+          (snapshot) async {
+            if (!snapshot.exists || !mounted) return;
 
-          final data = snapshot.data() as Map<String, dynamic>;
-          final updateStatus =
-              data['updateStatus']
-                  as String?; // the status of the update operation
-          final updateError =
-              data['updateError'] as String?; // the reason for rejection
-          final moderatedBy = data['moderatedBy'] as String?; // Who moderated
+            final data = snapshot.data() as Map<String, dynamic>;
+            final updateStatus = data['updateStatus'] as String?;
+            final updateError = data['updateError'] as String?;
+            final moderatedBy = data['moderatedBy'] as String?;
 
-          // UNLESS IT'S AWAITING MODERATION, IGNORE OLD ERROR STATES.
-          if (!_isAwaitingModeration && updateStatus == 'failed') {
-            avoidPrint("DEBUG - Ignoring old 'failed' status.");
-            return;
-          }
+            if (!_isAwaitingModeration && updateStatus == 'failed') {
+              avoidPrint("DEBUG - Ignoring old 'failed' status.");
+              return;
+            }
 
-          avoidPrint(
-            "DEBUG - Update Listener: By=$moderatedBy, Status=$updateStatus",
-          );
+            avoidPrint(
+              "DEBUG - Update Listener: By=$moderatedBy, Status=$updateStatus",
+            );
 
-          // if AI moderation hasn't processed yet, WAIT
-          if (moderatedBy == null && updateStatus == null) return;
+            if (moderatedBy == null && updateStatus == null) return;
 
-          // CASE 1: UPDATE FAILED DUE TO AI MODERATION (ROLLBACK)
-          if (moderatedBy == 'AI_Rollback' || updateStatus == 'failed') {
-            avoidPrint("DEBUG - Post $postId status updated: $updateStatus");
+            // CASE 1: UPDATE FAILED
+            if (moderatedBy == 'AI_Rollback' || updateStatus == 'failed') {
+              await _postStatusSubscription?.cancel();
+              _postStatusSubscription = null;
 
-            // Cancel the subscription to avoid memory leaks
-            await postSubscription?.cancel();
+              if (!mounted) return;
 
-            if (!mounted) return;
+              setState(() {
+                _isLoading = false;
+                _isAwaitingModeration = false;
+              });
 
-            setState(() {
-              _isLoading = false; // Stop loading indicator
-              _isAwaitingModeration = false;
-            });
+              try {
+                final logSnapshot = await FirebaseFirestore.instance
+                    .collection('violation_logs')
+                    .where('targetId', isEqualTo: postId)
+                    .orderBy('createdAt', descending: true)
+                    .limit(1)
+                    .get();
 
-            // Fetch scores from violation_logs
-            try {
-              final logSnapshot = await FirebaseFirestore.instance
-                  .collection('violation_logs')
-                  .where('targetId', isEqualTo: postId)
-                  .orderBy('createdAt', descending: true)
-                  .limit(1)
-                  .get();
+                double? textScore;
+                double? imageScore;
 
-              double? textScore;
-              double? imageScore;
+                if (logSnapshot.docs.isNotEmpty) {
+                  final logData = logSnapshot.docs.first.data();
+                  textScore = (logData['textScore'] as num?)?.toDouble();
+                  imageScore = (logData['imageScore'] as num?)?.toDouble();
 
-              if (logSnapshot.docs.isNotEmpty) {
-                final logData = logSnapshot.docs.first.data();
-                textScore = (logData['textScore'] as num?)?.toDouble();
-                imageScore = (logData['imageScore'] as num?)?.toDouble();
-
+                  if (mounted) {
+                    RejectionDialog.show(
+                      context,
+                      title: 'Cập nhật thất bại',
+                      description:
+                          'Nội dung chỉnh sửa chứa thông tin không phù hợp:',
+                      reason: updateError ?? 'Vi phạm tiêu chuẩn cộng đồng.',
+                      textScore: textScore,
+                      imageScore: imageScore,
+                    );
+                  }
+                }
+              } catch (e) {
                 if (mounted) {
                   RejectionDialog.show(
                     context,
@@ -316,95 +427,124 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
                     description:
                         'Nội dung chỉnh sửa chứa thông tin không phù hợp:',
                     reason: updateError ?? 'Vi phạm tiêu chuẩn cộng đồng.',
-                    textScore: textScore,
-                    imageScore: imageScore,
                   );
                 }
+                avoidPrint("Error fetching violation log: $e");
               }
-            } catch (e) {
-              // Fallback if fetching log fails
+            }
+            // CASE 2: UPDATE APPROVED
+            else if (moderatedBy == 'AI_Update' ||
+                updateStatus == 'success' ||
+                moderatedBy == 'system_failover') {
+              await _postStatusSubscription?.cancel();
+              _postStatusSubscription = null;
+
+              if (!mounted) return;
+
+              setState(() {
+                _isLoading = false;
+                _isAwaitingModeration = false;
+              });
+
+              displaySnackBar(
+                "Cập nhật bài viết thành công!",
+                context,
+                SnackBarType.success,
+              );
+
+              clearImage();
+              _textController.clear();
+
+              // Navigate after clear
               if (mounted) {
-                RejectionDialog.show(
-                  context,
-                  title: 'Cập nhật thất bại',
-                  description:
-                      'Nội dung chỉnh sửa chứa thông tin không phù hợp:',
-                  reason: updateError ?? 'Vi phạm tiêu chuẩn cộng đồng.',
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const ResponsiveLayout(
+                      mobileScreenLayout: MobileScreenLayout(),
+                      webScreenLayout: WebScreenLayout(),
+                    ),
+                  ),
+                  (route) => false,
                 );
               }
-              avoidPrint("Error fetching violation log for update: $e");
             }
+          },
+          onError: (error) {
+            avoidPrint("DEBUG - Post status listener error: $error");
+            _postStatusSubscription?.cancel();
+            _postStatusSubscription = null;
 
-            avoidPrint(
-              "DEBUG - Post $postId was rejected during update: $updateError",
-            );
-          }
-          // CASE 2: UPDATE APPROVED BY AI
-          else if (moderatedBy == 'AI_Update' ||
-              updateStatus == 'success' ||
-              moderatedBy == 'system_failover') {
-            // AI approved (or AI error -> approved by system_failover) => show success
-            await postSubscription?.cancel();
-            if (!mounted) return;
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+                _isAwaitingModeration = false;
+              });
+              displaySnackBar(
+                "Có lỗi xảy ra khi theo dõi trạng thái bài đăng",
+                context,
+                SnackBarType.error,
+              );
+            }
+          },
+        );
 
-            setState(() {
-              _isLoading = false; // Stop loading indicator
-              _isAwaitingModeration = false;
-            });
+    // INCREASE timeout to 60 seconds to handle large uploads
+    Future.delayed(const Duration(seconds: 60), () async {
+      if (!mounted) return;
 
-            displaySnackBar(
-              "Cập nhật bài viết thành công!",
-              context,
-              SnackBarType.success,
-            );
-            clearImage();
-            _textController.clear();
+      if (_isLoading && _isAwaitingModeration) {
+        await _postStatusSubscription?.cancel();
+        _postStatusSubscription = null;
 
-            // Navigate to Feed Screen
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const ResponsiveLayout(
-                  mobileScreenLayout: MobileScreenLayout(),
-                  webScreenLayout: WebScreenLayout(),
-                ),
-              ),
-              // remove all previous routes
-              (route) => false,
-            );
-
-            avoidPrint("DEBUG - Post $postId update approved and active.");
-          }
-        });
-
-    // Timeout safeguard: cancel subscription after 15 seconds
-    Future.delayed(const Duration(seconds: 15), () async {
-      if (_isLoading && mounted) {
-        await postSubscription?.cancel();
         if (!mounted) return;
+
         setState(() {
           _isLoading = false;
+          _isAwaitingModeration = false;
         });
-        avoidPrint("DEBUG - Post $postId update listener timed out.");
+
+        avoidPrint("DEBUG - Post $postId update listener timed out after 60s.");
+
         displaySnackBar(
-          'Hết thời gian chờ xử lý từ hệ thống. Vui lòng kiểm tra trạng thái bài đăng sau.',
+          'Đang xử lý cập nhật. Vui lòng kiểm tra bài đăng sau ít phút.',
           context,
           SnackBarType.info,
         );
+
+        // Navigate to NewsFeed screen
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const ResponsiveLayout(
+                mobileScreenLayout: MobileScreenLayout(),
+                webScreenLayout: WebScreenLayout(),
+              ),
+            ),
+            (route) => false,
+          );
+        }
       }
     });
   }
 
   void clearImage() {
-    setState(() {
-      _image = null;
-    });
+    _newImages.clear();
+    _existingImageUrls.clear();
   }
 
   @override
   void dispose() {
-    super.dispose();
+    // Cancel subscription before dispose
+    _postStatusSubscription?.cancel();
+    _postStatusSubscription = null;
+
     _textController.dispose();
-    _image = null;
+    _scrollController.dispose();
+
+    _newImages.clear();
+    _existingImageUrls.clear();
+
+    super.dispose();
   }
 
   @override
@@ -418,6 +558,9 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
 
     final postData = widget.snap;
     final postId = postData['postId'];
+
+    // Calculate total images
+    final totalImages = _existingImageUrls.length + _newImages.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -509,7 +652,22 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
           child: Column(
             children: [
               _isLoading
-                  ? customLinearProgressIndicator()
+                  ? Column(
+                      children: [
+                        customLinearProgressIndicator(),
+                        if (_uploadStatus.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              _uploadStatus,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: secondaryColor,
+                              ),
+                            ),
+                          ),
+                      ],
+                    )
                   : const Padding(padding: EdgeInsets.only(top: 0)),
               ?width > webScreenSize
                   ? null
@@ -575,49 +733,127 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
                 _buildOriginalPostPreview(postData),
               ] else ...[
                 // Show editable image section
-                Center(
-                  child: Stack(
-                    alignment: Alignment.topRight,
+                if (totalImages == 0)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: CustomButton(
+                      backgroundColor: appPrimaryColor,
+                      onPressed: () => _selectImages(),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(
+                            Icons.add_photo_alternate,
+                            color: onPrimaryColor,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Thêm ảnh',
+                            style: TextStyle(color: onPrimaryColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (_isLoading)
-                        customCircularProgressIndicator()
-                      else if (_image == null)
-                        Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: const Text(
-                            'Không có ảnh cho bài đăng',
-                            style: TextStyle(color: primaryTextColor),
-                          ),
-                        )
-                      else if (_image is Uint8List)
-                        Image.memory(
-                          _image as Uint8List,
-                          width: double.infinity,
-                          fit: BoxFit.contain,
-                        )
-                      else if (_image is String)
-                        Image.network(
-                          _image as String,
-                          width: double.infinity,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) => Padding(
-                            padding: const EdgeInsets.all(32.0),
-                            child: const Text(
-                              'Không thể tải ảnh',
-                              style: TextStyle(color: primaryTextColor),
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '$totalImages/$maxTotalImages ảnh',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: totalImages >= maxTotalImages
+                                    ? errorBackgroundColor
+                                    : secondaryColor,
+                              ),
                             ),
+                            CustomButton(
+                              backgroundColor: totalImages >= maxTotalImages
+                                  ? secondaryColor
+                                  : appPrimaryColor,
+                              borderRadius: BorderRadius.circular(8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              onPressed: totalImages >= maxTotalImages
+                                  ? () {} // No-op function when disabled
+                                  : () => _selectImages(),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.add,
+                                    color: totalImages >= maxTotalImages
+                                        ? Colors.grey
+                                        : onPrimaryColor,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    totalImages >= maxTotalImages
+                                        ? 'Đã đủ'
+                                        : 'Thêm ảnh',
+                                    style: TextStyle(
+                                      color: totalImages >= maxTotalImages
+                                          ? Colors.grey
+                                          : onPrimaryColor,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Images list
+                      Container(
+                        height: 220,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.mouse,
+                            },
+                            scrollbars: width > webScreenSize,
+                          ),
+                          child: ListView(
+                            controller: _scrollController,
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            children: [
+                              // Existing images
+                              ..._existingImageUrls.asMap().entries.map((
+                                entry,
+                              ) {
+                                final index = entry.key;
+                                final url = entry.value;
+                                return _buildExistingImageItem(url, index);
+                              }),
+
+                              // New images
+                              ..._newImages.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final imageData = entry.value;
+                                return _buildNewImageItem(imageData, index);
+                              }),
+                            ],
                           ),
                         ),
-                      if (_image != null && !_isLoading)
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: secondaryColor),
-                          onPressed: () {
-                            _selectImage();
-                          },
-                        ),
+                      ),
                     ],
                   ),
-                ),
               ],
             ],
           ),
@@ -626,7 +862,7 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
     );
   }
 
-  // Helper widget to show original post preview
+  // Build original post preview (for reshare)
   Widget _buildOriginalPostPreview(Map<String, dynamic> postData) {
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -686,12 +922,130 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
             'Bạn không thể chỉnh sửa nội dung gốc',
             style: TextStyle(
               fontStyle: FontStyle.italic,
-              color: primaryTextColor,
+              color: secondaryColor,
               fontSize: 12,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // Build existing image item (from server)
+  Widget _buildExistingImageItem(String imageUrl, int index) {
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              width: 200,
+              height: 200,
+              errorBuilder: (context, error, stackTrace) => Container(
+                width: 200,
+                height: 200,
+                color: secondaryColor.withValues(alpha: 0.3),
+                child: const Icon(Icons.broken_image, color: secondaryColor),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 4,
+          left: 12,
+          child: Container(
+            decoration: BoxDecoration(
+              color: onPrimaryColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.close, color: secondaryColor),
+              onPressed: () => removeExistingImage(index),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 8,
+          left: 16,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: appPrimaryColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Hiện tại',
+              style: TextStyle(
+                color: onPrimaryColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Build new image item (local)
+  Widget _buildNewImageItem(Uint8List imageData, int index) {
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.memory(
+              imageData,
+              fit: BoxFit.cover,
+              width: 200,
+              height: 200,
+              errorBuilder: (context, error, stackTrace) => Container(
+                width: 200,
+                height: 200,
+                color: secondaryColor.withValues(alpha: 0.3),
+                child: const Icon(Icons.broken_image, color: secondaryColor),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 4,
+          left: 12,
+          child: Container(
+            decoration: BoxDecoration(
+              color: onPrimaryColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.close, color: secondaryColor),
+              onPressed: () => removeNewImage(index),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 8,
+          left: 16,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Mới',
+              style: TextStyle(
+                color: onPrimaryColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
