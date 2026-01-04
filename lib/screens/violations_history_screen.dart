@@ -476,7 +476,7 @@ class _LogCardState extends State<_LogCard> {
 
                           const SizedBox(height: 8),
                         ],
-                      ),
+                      ),             
                     );
                   }),
                 ]
@@ -577,6 +577,8 @@ class _LogCardState extends State<_LogCard> {
             postText: postData['postText'],
             postUrl: postData['postUrl'],
             postUrls: postUrls,
+            // For UPDATE violations, don't show toxic image indicators
+            showToxicImageIndicators: widget.log.actionType != 'update',
           ),
         // Case 2: It's a reshare post. We'll mimic the PostCard structure.
         if (isReshare)
@@ -641,6 +643,7 @@ class _LogCardState extends State<_LogCard> {
                     postUrl: postData['postUrl'],
                     isNested: true, // Add a flag for nested style
                     postUrls: postUrls,
+                    showToxicImageIndicators: false, // Original post is always clean
                   ),
                 ),
               ],
@@ -658,6 +661,7 @@ class _LogCardState extends State<_LogCard> {
     String? postUrl,
     bool isNested = false, // Flag to control background color
     List<String>? postUrls, // for multiple images
+    bool showToxicImageIndicators = true, // NEW: Control whether to show toxic indicators
   }) {
     // Identify the list of image URLs
     final List<String> imageUrls = [];
@@ -713,172 +717,208 @@ class _LogCardState extends State<_LogCard> {
               overflow: TextOverflow.ellipsis,
             ),
 
-          // Post image with reason for violation
+          // Post images - Show differently based on showToxicImageIndicators
           if (imageUrls.isNotEmpty) ...[
             if (postText != null && postText.isNotEmpty)
               const SizedBox(height: 8),
 
-            // Display each image along with the corresponding violation reason
-            ...imageUrls.asMap().entries.map((entry) {
-              final index = entry.key;
-              final imageUrl = entry.value;
-
-              // Find the toxic image corresponding to this URL
-              final toxicImage = widget.log.toxicImages.firstWhere(
-                (ti) => ti.url == imageUrl,
-                orElse: () => widget.log.toxicImages.isNotEmpty
-                    ? widget.log.toxicImages[0]
-                    : null as dynamic,
-              );
-              return Container(
-                margin: EdgeInsets.only(
-                  bottom: index < imageUrls.length - 1 ? 12 : 0,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: errorBackgroundColor.withValues(alpha: 0.3),
-                    width: 2,
+            // If we should NOT show toxic indicators (for UPDATE context)
+            if (!showToxicImageIndicators) ...[
+              // Just show images normally without any violation styling
+              ...imageUrls.asMap().entries.map((entry) {
+                final index = entry.key;
+                final imageUrl = entry.value;
+                
+                return Container(
+                  margin: EdgeInsets.only(
+                    bottom: index < imageUrls.length - 1 ? 8 : 0,
                   ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header với số thứ tự ảnh và điểm vi phạm (nếu có)
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: errorBackgroundColor.withValues(alpha: 0.1),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(8),
-                          topRight: Radius.circular(8),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.warning_rounded,
-                                color: errorBackgroundColor,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Ảnh ${index + 1} vi phạm',
-                                style: const TextStyle(
-                                  color: errorBackgroundColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: errorBackgroundColor,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${(toxicImage.score * 100).toStringAsFixed(1)}%',
-                              style: const TextStyle(
-                                color: onPrimaryColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Lý do vi phạm (nếu có)
-                    Container(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      imageUrl,
+                      height: 150,
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      color: Colors.red.shade50,
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            color: errorBackgroundColor,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              toxicImage.reason,
-                              style: const TextStyle(
-                                color: errorBackgroundColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Container(
+                            height: 150,
+                            color: secondaryColor.withValues(alpha: 0.1),
+                            child: const Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                color: secondaryColor,
+                                size: 32,
                               ),
                             ),
                           ),
-                        ],
-                      ),
                     ),
+                  ),
+                );
+              }),
+            ]
+            // If we SHOULD show toxic indicators (for CREATE violations)
+            else ...[
+              // Display each image along with the corresponding violation reason
+              ...imageUrls.asMap().entries.map((entry) {
+                final index = entry.key;
+                final imageUrl = entry.value;
 
-                    // Ảnh
-                    ClipRRect(
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: const Radius.circular(8),
-                        bottomRight: const Radius.circular(8),
-                        topLeft: Radius.zero,
-                        topRight: Radius.zero,
-                      ),
-                      child: Stack(
-                        children: [
-                          Image.network(
-                            imageUrl,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  height: 150,
-                                  color: secondaryColor.withValues(alpha: 0.1),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.broken_image,
-                                      color: secondaryColor,
-                                      size: 32,
-                                    ),
+                // Find the toxic image corresponding to this URL
+                final toxicImage = widget.log.toxicImages.firstWhere(
+                  (ti) => ti.url == imageUrl,
+                  orElse: () => widget.log.toxicImages[0],
+                );
+                return Container(
+                  margin: EdgeInsets.only(
+                    bottom: index < imageUrls.length - 1 ? 12 : 0,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: errorBackgroundColor.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header với số thứ tự ảnh và điểm vi phạm (nếu có)
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: errorBackgroundColor.withValues(alpha: 0.1),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(8),
+                            topRight: Radius.circular(8),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.warning_rounded,
+                                  color: errorBackgroundColor,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Ảnh ${index + 1} vi phạm',
+                                  style: const TextStyle(
+                                    color: errorBackgroundColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
                                   ),
                                 ),
-                          ),
-                          // Overlay mờ cho ảnh vi phạm
-                          Positioned.fill(
-                            child: Container(
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    errorBackgroundColor.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                  ],
+                                color: errorBackgroundColor,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${(toxicImage.score * 100).toStringAsFixed(1)}%',
+                                style: const TextStyle(
+                                  color: onPrimaryColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }),
+
+                      // Lý do vi phạm (nếu có)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        color: Colors.red.shade50,
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: errorBackgroundColor,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                toxicImage.reason,
+                                style: const TextStyle(
+                                  color: errorBackgroundColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Ảnh
+                      ClipRRect(
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: const Radius.circular(8),
+                          bottomRight: const Radius.circular(8),
+                          topLeft: Radius.zero,
+                          topRight: Radius.zero,
+                        ),
+                        child: Stack(
+                          children: [
+                            Image.network(
+                              imageUrl,
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    height: 150,
+                                    color: secondaryColor.withValues(alpha: 0.1),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        color: secondaryColor,
+                                        size: 32,
+                                      ),
+                                    ),
+                                  ),
+                            ),
+                            // Overlay mờ cho ảnh vi phạm
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      errorBackgroundColor.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
           ],
         ],
       ),
