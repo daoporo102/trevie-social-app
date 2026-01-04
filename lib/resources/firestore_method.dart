@@ -90,9 +90,19 @@ class FirestoreMethod {
 
       // return the postId on success
       res = postId;
+    } on FirebaseException catch (e) {
+      avoidPrint("Firebase error in uploadPost: ${e.code} - ${e.message}");
+      if (e.code == 'permission-denied' || e.code == 'unauthorized') {
+        return "Ảnh không hợp lệ hoặc quá lớn. Vui lòng chọn ảnh dưới 5MB";
+      }
+      return "Lỗi Firebase: ${e.message ?? e.code}";
     } catch (e) {
       avoidPrint("Error in uploadPost: ${e.toString()}");
-      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
+      // Check for custom error messages
+      if (e.toString().contains('quá lớn')) {
+        return e.toString().replaceAll('Exception: ', '');
+      }
+      return "Đã xảy ra lỗi, vui lòng thử lại sau";
     }
     return res;
   }
@@ -102,26 +112,24 @@ class FirestoreMethod {
     String postId,
     String postText,
     List<Uint8List>? newImages,
-    List<String>? existingImageUrls,
+    List<String>? urlsToDelete,
   ) async {
     String res = "Một lỗi đã xảy ra";
     try {
+      final startTime = DateTime.now();
+      avoidPrint("=== START UPDATE POST ===");
+
       final now = DateTime.now();
 
-      // Get the current post data to check if text changed
+      // Get current post data
       DocumentSnapshot postDoc = await _firestore
           .collection('posts')
           .doc(postId)
           .get();
-
-      if (!postDoc.exists) {
-        return "Bài viết không tồn tại";
-      }
+      if (!postDoc.exists) return "Bài viết không tồn tại";
 
       final currentData = postDoc.data() as Map<String, dynamic>;
       final oldText = currentData['postText'] as String? ?? '';
-
-      // Only set processing if text actually changed
       final textChanged = postText != oldText;
 
       Map<String, dynamic> updateData = {
@@ -133,69 +141,88 @@ class FirestoreMethod {
         'moderatedBy': null,
       };
 
-      // Only update status if text changed
       if (textChanged) {
         updateData['status'] = 'processing';
         updateData['adminReason'] = null;
       }
 
-      // Only update image if user selected a new one
-      if (newImages != null && newImages.isNotEmpty) {
-        // Delete old images from storage if they exist
-      if (existingImageUrls != null && existingImageUrls.isNotEmpty) {
+      // Get current postUrls
+      List<String> currentUrls = [];
+      if (currentData['postUrls'] != null) {
+        currentUrls = List<String>.from(currentData['postUrls']);
+      } else if (currentData['postUrl'] != null) {
+        currentUrls = [currentData['postUrl']];
+      }
+
+      // Delete images if specified
+      if (urlsToDelete != null && urlsToDelete.isNotEmpty) {
+        final deleteStart = DateTime.now();
+        avoidPrint("Deleting ${urlsToDelete.length} old images...");
+
         try {
-          await StorageMethod().deleteMultipleImagesFromStorage(existingImageUrls);
+          await StorageMethod().deleteMultipleImagesFromStorage(urlsToDelete);
+          currentUrls.removeWhere((url) => urlsToDelete.contains(url));
+
+          final deleteDuration = DateTime.now().difference(deleteStart);
+          avoidPrint("Deleted images in ${deleteDuration.inSeconds}s");
         } catch (storageError) {
-          avoidPrint(
-            "Storage deletion warning (old images may be missing): $storageError",
-          );
+          avoidPrint("Storage deletion warning: $storageError");
         }
       }
 
-        // Upload the new images to storage
+      // Upload new images if provided
+      if (newImages != null && newImages.isNotEmpty) {
+        final uploadStart = DateTime.now();
+        avoidPrint("Uploading ${newImages.length} new images...");
+
         List<String> newPhotoUrls = await StorageMethod().uploadMultipleImages(
           'posts',
           newImages,
           true,
         );
 
-        //  Check if upload succeeded
         if (newPhotoUrls.isEmpty) {
           return "Lỗi tải ảnh lên, vui lòng thử lại";
         }
 
-        // Add the new photo Url to updateData
-        updateData['postUrls'] = newPhotoUrls;
+        final uploadDuration = DateTime.now().difference(uploadStart);
+        avoidPrint("Uploaded images in ${uploadDuration.inSeconds}s");
 
-        // Update the post document with the new image URL, text and date
-        await _firestore.collection('posts').doc(postId).update(updateData);
-
-        // Update Reshare (Logic này cần sửa để hỗ trợ list, tạm thời lấy ảnh đầu tiên làm đại diện)
-         String? firstNewImage = newPhotoUrls.isNotEmpty ? newPhotoUrls.first : null;
-
-        // Update all reshared posts that reference this original post
-        await _updateResharesOfPost(
-          postId,
-          postText,
-          firstNewImage, // Will be null if no new image was uploaded
-        );
-
-        res = 'success';
-      } else {
-        // If no new file is provided, just update the text
-        await _firestore.collection('posts').doc(postId).update(updateData);
-
-        // Update all reshared posts that reference this original post
-        await _updateResharesOfPost(
-          postId,
-          postText,
-          null, // Will be null if no new image was uploaded
-        );
+        currentUrls.addAll(newPhotoUrls);
       }
+
+      // Update postUrls
+      updateData['postUrls'] = currentUrls;
+
+      // Update Firestore
+      final firestoreStart = DateTime.now();
+      await _firestore.collection('posts').doc(postId).update(updateData);
+
+      final firestoreDuration = DateTime.now().difference(firestoreStart);
+      avoidPrint("Updated Firestore in ${firestoreDuration.inMilliseconds}ms");
+
+      // Update reshares
+      String? firstImage = currentUrls.isNotEmpty ? currentUrls.first : null;
+      await _updateResharesOfPost(postId, postText, firstImage);
+
+      final totalDuration = DateTime.now().difference(startTime);
+      avoidPrint(
+        "=== UPDATE POST COMPLETED in ${totalDuration.inSeconds}s ===",
+      );
+
       res = 'success';
+    } on FirebaseException catch (e) {
+      avoidPrint("Firebase error in updatePost: ${e.code} - ${e.message}");
+      if (e.code == 'permission-denied' || e.code == 'unauthorized') {
+        return "Ảnh không hợp lệ hoặc quá lớn. Vui lòng chọn ảnh dưới 5MB";
+      }
+      return "Lỗi Firebase: ${e.message ?? e.code}";
     } catch (e) {
       avoidPrint("Error in updatePost: ${e.toString()}");
-      res = "Đã xảy ra lỗi, vui lòng thử lại sau";
+      if (e.toString().contains('quá lớn')) {
+        return e.toString().replaceAll('Exception: ', '');
+      }
+      return "Đã xảy ra lỗi, vui lòng thử lại sau";
     }
     return res;
   }
@@ -374,11 +401,12 @@ class FirestoreMethod {
           imageUrls = List<String>.from(postData['postUrls']);
         }
         // Fallback to single postUrl
-        else if (postData['postUrl'] != null && postData['postUrl'].isNotEmpty) {
+        else if (postData['postUrl'] != null &&
+            postData['postUrl'].isNotEmpty) {
           imageUrls.add(postData['postUrl']);
         }
 
-        if(imageUrls.isNotEmpty) {
+        if (imageUrls.isNotEmpty) {
           try {
             await StorageMethod().deleteMultipleImagesFromStorage(imageUrls);
           } catch (storageError) {
