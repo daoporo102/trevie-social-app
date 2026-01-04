@@ -179,23 +179,6 @@ class _PostCardState extends State<PostCard> {
         return;
       }
 
-      final postData = postDoc.data()!;
-
-      // Normalize postUrls field for old posts
-      if (!postData.containsKey('postUrls') || postData['postUrls'] == null) {
-        // Old post format - convert postUrl to postUrls array
-        if (postData.containsKey('postUrl') && postData['postUrl'] != null) {
-          postData['postUrls'] = [postData['postUrl']];
-        } else {
-          postData['postUrls'] = [];
-        }
-      }
-
-      // Ensure postUrls is a List
-      if (postData['postUrls'] is! List) {
-        postData['postUrls'] = [];
-      }
-
       // Now safe to convert
       Post originalPost = Post.fromSnap(postDoc);
 
@@ -291,25 +274,6 @@ class _PostCardState extends State<PostCard> {
                                 return;
                               }
 
-                              final originalData = originalReshareDoc.data()!;
-
-                              // Normalize postUrls
-                              if (!originalData.containsKey('postUrls') ||
-                                  originalData['postUrls'] == null) {
-                                if (originalData.containsKey('postUrl') &&
-                                    originalData['postUrl'] != null) {
-                                  originalData['postUrls'] = [
-                                    originalData['postUrl'],
-                                  ];
-                                } else {
-                                  originalData['postUrls'] = [];
-                                }
-                              }
-
-                              if (originalData['postUrls'] is! List) {
-                                originalData['postUrls'] = [];
-                              }
-
                               Post originalResharePost = Post.fromSnap(
                                 originalReshareDoc,
                               );
@@ -394,13 +358,11 @@ class _PostCardState extends State<PostCard> {
 
     final snapData = _getSnapData();
 
-    // Get image URLs (support both single and multiple)
-    final List<String> imageUrls = [];
-    if (snapData['postUrls'] != null && snapData['postUrls'] is List) {
-      imageUrls.addAll((snapData['postUrls'] as List).cast<String>());
-    } else if (snapData['postUrl'] != null && snapData['postUrl'].isNotEmpty) {
-      imageUrls.add(snapData['postUrl']);
-    }
+    // Get image URLs directly
+    final List<String> imageUrls =
+        snapData['postUrls'] != null && snapData['postUrls'] is List
+        ? List<String>.from(snapData['postUrls'])
+        : [];
 
     // Extract status and adminReason if needed
     final status = snapData['status'] as String?;
@@ -889,19 +851,14 @@ class _PostCardState extends State<PostCard> {
                           // Original post images (for single or multiple)
                           Builder(
                             builder: (context) {
-                              // Build list of image URLs supporting both `postUrls` (List) and legacy `postUrl` (String)
-                              List<String> originalImageUrls = [];
-                              if (originalPostData['postUrls'] != null &&
-                                  originalPostData['postUrls'] is List) {
-                                originalImageUrls = List<String>.from(
-                                  originalPostData['postUrls'],
-                                );
-                              } else if (originalPostData['postUrl'] != null &&
-                                  originalPostData['postUrl'].isNotEmpty) {
-                                originalImageUrls = [
-                                  originalPostData['postUrl'],
-                                ];
-                              }
+                              // Direct image URL assignment
+                              List<String> originalImageUrls =
+                                  originalPostData['postUrls'] != null &&
+                                      originalPostData['postUrls'] is List
+                                  ? List<String>.from(
+                                      originalPostData['postUrls'],
+                                    )
+                                  : [];
 
                               if (originalImageUrls.isEmpty) {
                                 return const SizedBox.shrink();

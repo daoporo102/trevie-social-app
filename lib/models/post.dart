@@ -128,14 +128,10 @@ class Post {
       return [];
     }
 
-    // Logic to handle both single and multiple image URLs
-    List<String> images = [];
-    if (snapshot['postUrls'] != null) {
-      images = List<String>.from(snapshot['postUrls']);
-    } else if (snapshot['postUrl'] != null) {
-      // If the old post only has one string image, force it into a list.
-      images.add(snapshot['postUrl']);
-    }
+    // Parse postUrls
+    List<String> images = snapshotData['postUrls'] != null 
+        ? List<String>.from(snapshotData['postUrls'])
+        : [];
 
     return Post(
       postId: snapshotData['postId'] ?? '',

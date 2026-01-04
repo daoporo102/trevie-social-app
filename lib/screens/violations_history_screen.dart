@@ -553,10 +553,9 @@ class _LogCardState extends State<_LogCard> {
     final bool isReshare = postData['originalPostId'] != null;
 
     // Get a list of image URLs
-    List<String>? postUrls;
-    if (postData['postUrls'] != null && postData['postUrls'] is List) {
-      postUrls = List<String>.from(postData['postUrls']);
-    }
+    List<String> postUrls = postData['postUrls'] != null && postData['postUrls'] is List
+      ? List<String>.from(postData['postUrls'])
+      : [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -575,7 +574,6 @@ class _LogCardState extends State<_LogCard> {
             avatarUrl: postData['profImage'],
             displayName: postData['displayName'],
             postText: postData['postText'],
-            postUrl: postData['postUrl'],
             postUrls: postUrls,
             // For UPDATE violations, don't show toxic image indicators
             showToxicImageIndicators: widget.log.actionType != 'update',
@@ -640,7 +638,6 @@ class _LogCardState extends State<_LogCard> {
                     avatarUrl: postData['originalProfImage'],
                     displayName: postData['originalDisplayName'],
                     postText: postData['originalPostText'],
-                    postUrl: postData['postUrl'],
                     isNested: true, // Add a flag for nested style
                     postUrls: postUrls,
                     showToxicImageIndicators: false, // Original post is always clean
@@ -658,18 +655,12 @@ class _LogCardState extends State<_LogCard> {
     String? avatarUrl,
     String? displayName,
     String? postText,
-    String? postUrl,
     bool isNested = false, // Flag to control background color
     List<String>? postUrls, // for multiple images
     bool showToxicImageIndicators = true, // NEW: Control whether to show toxic indicators
   }) {
     // Identify the list of image URLs
-    final List<String> imageUrls = [];
-    if (postUrls != null && postUrls.isNotEmpty) {
-      imageUrls.addAll(postUrls);
-    } else if (postUrl != null && postUrl.isNotEmpty) {
-      imageUrls.add(postUrl);
-    }
+    final List<String> imageUrls = postUrls ?? [];
 
     return Container(
       padding: const EdgeInsets.all(12),

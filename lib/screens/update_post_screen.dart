@@ -47,13 +47,10 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
     // Initialize text controller with existing post text
     _textController.text = postData['postText'];
 
-    // Initialize _image with existing images
     // Initialize existing images
-    if (postData['postUrls'] != null && postData['postUrls'] is List) {
-      _existingImageUrls = List<String>.from(postData['postUrls']);
-    } else if (postData['postUrl'] != null && postData['postUrl'].isNotEmpty) {
-      _existingImageUrls = [postData['postUrl']];
-    }
+    _existingImageUrls = postData['postUrls'] != null && postData['postUrls'] is List
+      ? List<String>.from(postData['postUrls'])
+      : [];
 
     // Check if the post is a reshare
     _isReshare = postData['originalPostId'] != null;
@@ -288,14 +285,11 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
             ? _newImages
             : null;
 
-        List<String> originalUrls = [];
-        if (widget.snap['postUrls'] != null &&
-            widget.snap['postUrls'] is List) {
-          originalUrls = List<String>.from(widget.snap['postUrls']);
-        } else if (widget.snap['postUrl'] != null &&
-            widget.snap['postUrl'].isNotEmpty) {
-          originalUrls = [widget.snap['postUrl']];
-        }
+        // Get a list of original image URLs
+        List<String> originalUrls = widget.snap['postUrls'] != null &&
+                widget.snap['postUrls'] is List
+            ? List<String>.from(widget.snap['postUrls'])
+            : [];
 
         List<String> urlsToDelete = originalUrls
             .where((url) => !_existingImageUrls.contains(url))
@@ -864,13 +858,11 @@ class _UpdatePostScreenState extends State<UpdatePostScreen> {
 
   // Build original post preview (for reshare)
   Widget _buildOriginalPostPreview(Map<String, dynamic> postData) {
-    // Get list of original post images (support both single and multiple)
-    List<String> originalImageUrls = [];
-    if (postData['postUrls'] != null && postData['postUrls'] is List) {
-      originalImageUrls = List<String>.from(postData['postUrls']);
-    } else if (postData['postUrl'] != null && postData['postUrl'].isNotEmpty) {
-      originalImageUrls = [postData['postUrl']];
-    }
+    // Get list of original post images
+    List<String> originalImageUrls = postData['postUrls'] != null &&
+            postData['postUrls'] is List
+        ? List<String>.from(postData['postUrls'])
+        : [];
 
     return Container(
       padding: const EdgeInsets.all(16.0),

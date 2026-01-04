@@ -147,12 +147,10 @@ class FirestoreMethod {
       }
 
       // Get current postUrls
-      List<String> currentUrls = [];
-      if (currentData['postUrls'] != null) {
-        currentUrls = List<String>.from(currentData['postUrls']);
-      } else if (currentData['postUrl'] != null) {
-        currentUrls = [currentData['postUrl']];
-      }
+      List<String> currentUrls = currentData['postUrls'] != null &&
+              currentData['postUrls'] is List
+          ? List<String>.from(currentData['postUrls'])
+          : [];
 
       // Delete images if specified
       if (urlsToDelete != null && urlsToDelete.isNotEmpty) {
@@ -394,17 +392,10 @@ class FirestoreMethod {
         }
       } else {
         // Delete multiple images from storage if postUrls is not empty
-        List<String> imageUrls = [];
-
-        // Check for postUrls (multiple images)
-        if (postData['postUrls'] != null) {
-          imageUrls = List<String>.from(postData['postUrls']);
-        }
-        // Fallback to single postUrl
-        else if (postData['postUrl'] != null &&
-            postData['postUrl'].isNotEmpty) {
-          imageUrls.add(postData['postUrl']);
-        }
+        List<String> imageUrls = postData['postUrls'] != null &&
+                postData['postUrls'] is List
+            ? List<String>.from(postData['postUrls'])
+            : [];
 
         if (imageUrls.isNotEmpty) {
           try {
@@ -655,9 +646,9 @@ class FirestoreMethod {
           'originalPostText': newPostText,
         };
 
-        // Only update photoUrl if a new one is provided
+        // Only update postUrls if newPhotoUrls is provided
         if (newPhotoUrl != null) {
-          reshareUpdateData['postUrl'] = newPhotoUrl;
+          reshareUpdateData['postUrls'] = [newPhotoUrl];
         }
 
         batch.update(doc.reference, reshareUpdateData);
