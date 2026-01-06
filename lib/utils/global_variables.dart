@@ -41,17 +41,22 @@ List<Widget> homeWebScreenItems() {
 
 Widget customCircularProgressIndicator() {
   return Center(
-    child: CircularProgressIndicator(
-      backgroundColor: secondaryColor,
-      color: appPrimaryColor,
+    child: SizedBox(
+      width: 40,
+      height: 40,
+      child: CircularProgressIndicator(
+        strokeWidth: 3,
+        backgroundColor: secondaryColor.withValues(alpha: 0.2),
+        valueColor: AlwaysStoppedAnimation<Color>(appPrimaryColor),
+      ),
     ),
   );
 }
 
 Widget customLinearProgressIndicator() {
   return LinearProgressIndicator(
-    backgroundColor: secondaryColor,
-    color: appPrimaryColor,
+    backgroundColor: secondaryColor.withValues(alpha: 0.2),
+    valueColor: AlwaysStoppedAnimation<Color>(appPrimaryColor),
     minHeight: 3,
   );
 }
