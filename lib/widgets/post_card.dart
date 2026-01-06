@@ -1276,14 +1276,19 @@ class _PostCardState extends State<PostCard> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.35,
-            width: double.infinity,
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.broken_image, size: 64),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.5,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.broken_image, size: 64),
+              ),
             ),
           ),
           AnimatedOpacity(
@@ -1349,16 +1354,28 @@ class _PostCardState extends State<PostCard> {
     List<String> imageUrls,
     Map<String, dynamic> snapData,
   ) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.25,
+    final width = MediaQuery.of(context).size.width;
+    final bool isWeb = width > webScreenSize;
+
+    final double containerWidth = isWeb ? width * 0.4 : width - 32;
+    final double imageWidth = (containerWidth - 2) / 2;
+
+    return IntrinsicHeight(
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: _buildGridImageItem(imageUrls[0], 0, imageUrls, snapData),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: _buildGridImageItem(imageUrls[0], 0, imageUrls, snapData),
+            ),
           ),
           const SizedBox(width: 2),
           Expanded(
-            child: _buildGridImageItem(imageUrls[1], 1, imageUrls, snapData),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: _buildGridImageItem(imageUrls[1], 1, imageUrls, snapData),
+            ),
           ),
         ],
       ),
