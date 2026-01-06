@@ -1,12 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:social_media_app/resources/auth_methods.dart';
 import 'package:social_media_app/responsive/mobile_screen_layout.dart';
 import 'package:social_media_app/responsive/responsive_layout_screen.dart';
 import 'package:social_media_app/responsive/web_screen_layout.dart';
 import 'package:social_media_app/screens/account_blocked_screen.dart';
 import 'package:social_media_app/screens/login_screen.dart';
+import 'package:social_media_app/screens/splash_screen.dart';
 import 'package:social_media_app/utils/colors.dart';
 import 'package:social_media_app/utils/global_variables.dart';
 import 'package:social_media_app/utils/utils.dart';
@@ -18,6 +20,11 @@ import 'package:intl/date_symbol_data_local.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 
+  FlutterNativeSplash.preserve(
+    widgetsBinding: WidgetsFlutterBinding.ensureInitialized(),
+  );
 
   // Guard against duplicate initialization
   if (Firebase.apps.isEmpty) {
@@ -48,6 +55,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Remove native splash after Flutter ready
+    FlutterNativeSplash.remove();
+
     return MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => UserProvider())],
       child: MaterialApp(
@@ -154,7 +164,9 @@ class MyApp extends StatelessWidget {
                       return AccountBlockedScreen(
                         reason: status['reason'] ?? 'Tài khoản bị khóa',
                         suspendedAt: status['suspendedAt'],
-                        isDeleted: status['reason']?.contains('deleted') ?? false,// Check if deleted
+                        isDeleted:
+                            status['reason']?.contains('deleted') ??
+                            false, // Check if deleted
                         deletionReason: status['deletionReason'],
                         suspensionReason: status['suspensionReason'],
                       );
@@ -168,7 +180,7 @@ class MyApp extends StatelessWidget {
             }
             if (snapshot.connectionState == ConnectionState.waiting) {
               avoidPrint("Waiting for auth state...");
-              return customCircularProgressIndicator();
+              return SplashScreen(child: SizedBox());
             }
 
             // No user authenticated - show login
