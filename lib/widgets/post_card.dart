@@ -145,9 +145,7 @@ class _PostCardState extends State<PostCard> {
             allowFullScreen: false,
             placeholder: Container(
               color: Colors.black,
-              child: Center(
-                child: customCircularProgressIndicator(),
-              ),
+              child: Center(child: customCircularProgressIndicator()),
             ),
             materialProgressColors: ChewieProgressColors(
               playedColor: appPrimaryColor,
@@ -155,7 +153,7 @@ class _PostCardState extends State<PostCard> {
               backgroundColor: secondaryColor,
               bufferedColor: secondaryColor.withValues(alpha: 0.5),
             ),
-            
+
             errorBuilder: (context, errorMessage) {
               return Center(
                 child: Column(
@@ -766,7 +764,8 @@ class _PostCardState extends State<PostCard> {
                                 children: [
                                   if (user.uid == snapData['uid']) ...[
                                     // Only show edit if original post exists (or not a reshare)
-                                    if (!isResharePost || canEdit)
+                                    if (snapData['mediaType'] != 'video' &&
+                                        (!isResharePost || canEdit))
                                       SimpleDialogOption(
                                         padding: const EdgeInsets.all(16),
                                         child: const Text(
@@ -831,23 +830,23 @@ class _PostCardState extends State<PostCard> {
                                       },
                                     ),
                                   ] else ...[
-                                    SimpleDialogOption(
-                                      padding: const EdgeInsets.all(16),
-                                      child: const Text(
-                                        'Báo cáo bài viết',
-                                        style: TextStyle(
-                                          color: primaryTextColor,
-                                        ),
-                                      ),
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                        displaySnackBar(
-                                          'Tính năng sẽ được phát triển trong thời gian tới',
-                                          context,
-                                          SnackBarType.info,
-                                        );
-                                      },
-                                    ),
+                                    // SimpleDialogOption(
+                                    //   padding: const EdgeInsets.all(16),
+                                    //   child: const Text(
+                                    //     'Báo cáo bài viết',
+                                    //     style: TextStyle(
+                                    //       color: primaryTextColor,
+                                    //     ),
+                                    //   ),
+                                    //   onPressed: () {
+                                    //     Navigator.of(context).pop();
+                                    //     displaySnackBar(
+                                    //       'Tính năng sẽ được phát triển trong thời gian tới',
+                                    //       context,
+                                    //       SnackBarType.info,
+                                    //     );
+                                    //   },
+                                    // ),
                                   ],
                                   SimpleDialogOption(
                                     padding: const EdgeInsets.all(16),
@@ -1585,7 +1584,7 @@ class _PostCardState extends State<PostCard> {
     // Calculate container width based on screen size
     final double containerWidth = isWeb
         ? width *
-              0.4 // Web: 40% screen (cuz it has padding 0.3 at PostCard)
+              0.4 // Web: 40% of screen width
         : width - 32; // Mobile: full width - padding
 
     // each image = (containerWidth - spacing) / 2
@@ -1774,26 +1773,37 @@ class _PostCardState extends State<PostCard> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final videoAspectRatio = _videoController!.value.aspectRatio;
+    final isWeb = screenWidth > webScreenSize;
 
-    // Tính chiều cao thông minh
+    // Calculate smart height
     double videoHeight;
     if (videoAspectRatio >= 1.5) {
-      // Video ngang (16:9, 4:3...)
+      // Landscape video (16:9, 4:3...)
       videoHeight = screenHeight * 0.35;
     } else if (videoAspectRatio <= 0.7) {
-      // Video dọc (9:16, 3:4...)
+      // Portrait video (9:16, 3:4...)
       videoHeight = screenHeight * 0.6;
     } else {
-      // Video vuông (1:1)
-      videoHeight = screenWidth - 32; // Trừ margin
+      // Square video (1:1)
+      videoHeight = isWeb
+          ? screenWidth *
+                0.4 // Web: 40% of screen width
+          : screenWidth - 32; // Mobile: full width - padding
     }
 
-    // Giới hạn tối đa
+    // Max height limit
     videoHeight = videoHeight.clamp(200.0, screenHeight * 0.7);
+
+    // Calculate container width
+    final double containerWidth = isWeb
+        ? screenWidth *
+              0.4 // Web: 40% of screen width (match PostCard padding)
+        : screenWidth - 32; // Mobile: full width - padding
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       height: videoHeight,
+      width: containerWidth,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: AspectRatio(
