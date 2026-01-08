@@ -21,7 +21,7 @@ import 'package:intl/date_symbol_data_local.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 
+  //
   FlutterNativeSplash.preserve(
     widgetsBinding: WidgetsFlutterBinding.ensureInitialized(),
   );
@@ -99,7 +99,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        title: 'TreVie',
+        title: 'Mạng xã hội TreVie',
         home: StreamBuilder(
           // Use injected stream in tests, real FirebaseAuth stream in app
           stream: authStream ?? FirebaseAuth.instance.authStateChanges(),
