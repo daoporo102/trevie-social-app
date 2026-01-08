@@ -34,6 +34,10 @@ class Post {
   final bool? textChecked;
   final bool? imageChecked;
 
+  final String? mediaType; // 'images' | 'video'
+  final String? videoThumbnail;
+  final int? videoDuration; // seconds
+
   const Post({
     required this.postId,
     required this.uid,
@@ -65,6 +69,9 @@ class Post {
     this.aiReasonImage,
     this.textChecked = false,
     this.imageChecked = false,
+    this.mediaType = 'images',
+    this.videoThumbnail,
+    this.videoDuration,
   });
 
   Map<String, dynamic> toJson() => {
@@ -102,6 +109,9 @@ class Post {
     "aiReasonImage": aiReasonImage,
     "textChecked": textChecked,
     "imageChecked": imageChecked,
+    "mediaType": mediaType,
+    "videoThumbnail": videoThumbnail,
+    "videoDuration": videoDuration,
   };
 
   static Post fromSnap(DocumentSnapshot snapshot) {
@@ -167,6 +177,9 @@ class Post {
       aiReasonImage: snapshotData['aiReasonImage'],
       textChecked: snapshotData['textChecked'] ?? false,
       imageChecked: snapshotData['imageChecked'] ?? false,
+      mediaType: snapshotData['mediaType'] ?? 'images',
+      videoThumbnail: snapshotData['videoThumbnail'],
+      videoDuration: snapshotData['videoDuration'],
     );
   }
 }

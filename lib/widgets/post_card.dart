@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:chewie/chewie.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +19,7 @@ import 'package:social_media_app/widgets/custom_button.dart';
 import 'package:social_media_app/widgets/custom_snack_bar.dart';
 import 'package:social_media_app/widgets/like_animation.dart';
 import 'package:social_media_app/widgets/reject_dialog.dart';
+import 'package:video_player/video_player.dart';
 
 class PostCard extends StatefulWidget {
   final snap;
@@ -34,11 +35,19 @@ class _PostCardState extends State<PostCard> {
   // Stream for the original post in reshared posts
   Stream<DocumentSnapshot>? _originalPostStream;
 
+  // properties for video
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
+  bool _isVideoInitialized = false;
+  bool _isDisposing = false;
+
   @override
   void initState() {
     super.initState();
     // Initialize the stream for the original post in reshared posts
     _initializeStream();
+    // Initialize video if applicable
+    _initializeVideo();
   }
 
   @override
@@ -47,8 +56,17 @@ class _PostCardState extends State<PostCard> {
     // Update the stream if the widget changes (important for ListView).
     final oldSnap = _getSnapDataFromSnap(oldWidget.snap);
     final newSnap = _getSnapData();
-    if (oldSnap['originalPostId'] != newSnap['originalPostId']) {
-      _initializeStream();
+
+    // Check if video is changed
+    final oldMediaType = oldSnap['mediaType'] as String?;
+    final newMediaType = newSnap['mediaType'] as String?;
+    final oldVideoUrl = (oldSnap['postUrls'] as List?)?.first;
+    final newVideoUrl = (newSnap['postUrls'] as List?)?.first;
+
+    if (oldMediaType != newMediaType ||
+        (newMediaType == 'video' && oldVideoUrl != newVideoUrl)) {
+      _disposeVideo();
+      _initializeVideo();
     }
   }
 
@@ -77,9 +95,138 @@ class _PostCardState extends State<PostCard> {
 
   @override
   void dispose() {
-    // Cancel any active subscriptions
+    _isDisposing = true;
+
+    // Cancel subscriptions
     _reshareSubscription?.cancel();
+    _reshareSubscription = null;
+
+    // Dispose video với error handling
+    try {
+      _videoController?.pause();
+      _chewieController?.dispose();
+      _chewieController = null;
+      _videoController?.dispose();
+      _videoController = null;
+    } catch (e) {
+      avoidPrint('Error in dispose: $e');
+    }
+
     super.dispose();
+  }
+
+  Future<void> _initializeVideo() async {
+    if (_isDisposing) return;
+
+    final snapData = _getSnapData();
+    final mediaType = snapData['mediaType'] as String?;
+
+    if (mediaType == 'video') {
+      final videoUrl = (snapData['postUrls'] as List?)?.first;
+      if (videoUrl != null && videoUrl.isNotEmpty) {
+        _videoController = VideoPlayerController.networkUrl(
+          Uri.parse(videoUrl),
+        );
+
+        try {
+          await _videoController!.initialize();
+
+          if (_isDisposing || !mounted) {
+            // Widget disposed during initialization
+            _videoController?.dispose();
+            return;
+          }
+
+          _chewieController = ChewieController(
+            videoPlayerController: _videoController!,
+            autoPlay: false,
+            looping: false,
+            aspectRatio: _videoController!.value.aspectRatio,
+            allowFullScreen: false,
+            placeholder: Container(
+              color: Colors.black,
+              child: Center(
+                child: customCircularProgressIndicator(),
+              ),
+            ),
+            materialProgressColors: ChewieProgressColors(
+              playedColor: appPrimaryColor,
+              handleColor: appPrimaryColor,
+              backgroundColor: secondaryColor,
+              bufferedColor: secondaryColor.withValues(alpha: 0.5),
+            ),
+            
+            errorBuilder: (context, errorMessage) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Không thể tải video',
+                      style: TextStyle(color: primaryTextColor),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+
+          if (_isDisposing || !mounted) {
+            // Widget disposed after creating Chewie
+            _chewieController?.dispose();
+            _videoController?.dispose();
+            return;
+          }
+
+          setState(() {
+            _isVideoInitialized = true;
+          });
+        } catch (e) {
+          avoidPrint('Error initializing video: $e');
+          if (!_isDisposing && mounted) {
+            setState(() {
+              _isVideoInitialized = false;
+            });
+          }
+        }
+      }
+    }
+  }
+
+  void _disposeVideo() {
+    _isDisposing = true;
+
+    try {
+      // 1. Pause video to stop background tasks
+      _videoController?.pause();
+
+      // 2. Dispose Chewie first (important because it listens to videoController)
+      _chewieController?.dispose();
+
+      _chewieController = null;
+
+      // 3. Dispose VideoController last
+      _videoController?.dispose();
+
+      _videoController = null;
+
+      // 4. Reset state
+      if (mounted) {
+        // Only setState if the widget has not been completely removed from the tree
+
+        // However, in dispose(), setState is not needed,
+        // This variable is mainly used for logic _initializeVideo
+        _isVideoInitialized = false;
+      }
+    } catch (e) {
+      avoidPrint('Error disposing video: $e');
+    }
   }
 
   Future<void> _deletePost(BuildContext context) async {
@@ -848,7 +995,7 @@ class _PostCardState extends State<PostCard> {
                               ),
                             ),
                           const SizedBox(height: 4),
-                          // Original post images (for single or multiple)
+                          // Original post images/video
                           Builder(
                             builder: (context) {
                               // Direct image URL assignment
@@ -864,12 +1011,11 @@ class _PostCardState extends State<PostCard> {
                                 return const SizedBox.shrink();
                               }
 
-                              // Reuse the existing image grid builder
-                              // Note: _buildImageGrid already has its own like animation
                               try {
-                                return _buildImageGrid(
+                                // Determine the media type (image/video)
+                                return _buildMediaContent(
                                   originalImageUrls,
-                                  snapData, // Pass the RESHARE post data for liking
+                                  originalPostData, // Pass the RESHARE post data for liking
                                 );
                               } catch (e) {
                                 avoidPrint(
@@ -893,7 +1039,7 @@ class _PostCardState extends State<PostCard> {
               const SizedBox(height: 8),
               Opacity(
                 opacity: contentOpacity,
-                child: _buildImageGrid(imageUrls, snapData),
+                child: _buildMediaContent(imageUrls, snapData),
               ),
             ],
             //LIKE, COMMENT, SHARE SECTION OF THE POST
@@ -1577,5 +1723,84 @@ class _PostCardState extends State<PostCard> {
         SnackBarType.error,
       );
     }
+  }
+
+  Widget _buildMediaContent(
+    List<String> imageUrls,
+    Map<String, dynamic> snapData,
+  ) {
+    final mediaType = snapData['mediaType'] as String?;
+
+    // if video
+    if (mediaType == 'video') {
+      return _buildVideoPlayer(snapData);
+    }
+
+    // if images
+    return _buildImageGrid(imageUrls, snapData);
+  }
+
+  // Video player widget
+  Widget _buildVideoPlayer(Map<String, dynamic> snapData) {
+    if (!_isVideoInitialized || _chewieController == null) {
+      final thumbnailUrl = snapData['videoThumbnail'] as String?;
+      return Container(
+        height: 300,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (thumbnailUrl != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  thumbnailUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.broken_image, size: 64),
+                ),
+              ),
+            customCircularProgressIndicator(),
+          ],
+        ),
+      );
+    }
+
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final videoAspectRatio = _videoController!.value.aspectRatio;
+
+    // Tính chiều cao thông minh
+    double videoHeight;
+    if (videoAspectRatio >= 1.5) {
+      // Video ngang (16:9, 4:3...)
+      videoHeight = screenHeight * 0.35;
+    } else if (videoAspectRatio <= 0.7) {
+      // Video dọc (9:16, 3:4...)
+      videoHeight = screenHeight * 0.6;
+    } else {
+      // Video vuông (1:1)
+      videoHeight = screenWidth - 32; // Trừ margin
+    }
+
+    // Giới hạn tối đa
+    videoHeight = videoHeight.clamp(200.0, screenHeight * 0.7);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      height: videoHeight,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: AspectRatio(
+          aspectRatio: videoAspectRatio,
+          child: Chewie(controller: _chewieController!),
+        ),
+      ),
+    );
   }
 }

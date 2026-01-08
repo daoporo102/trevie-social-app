@@ -1,13 +1,15 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:io';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:social_media_app/models/toxic_image.dart';
 import 'package:social_media_app/providers/user_provider.dart';
 import 'package:social_media_app/resources/firestore_method.dart';
+import 'package:social_media_app/resources/video_upload_service.dart';
 import 'package:social_media_app/responsive/mobile_screen_layout.dart';
 import 'package:social_media_app/responsive/responsive_layout_screen.dart';
 import 'package:social_media_app/responsive/web_screen_layout.dart';
@@ -32,6 +34,11 @@ class _AddPostScreenState extends State<AddPostScreen> {
   StreamSubscription<DocumentSnapshot>? _postSubscription; // Add this
   final ScrollController _scrollController = ScrollController();
   static const int maxTotalImages = 10;
+
+  File? _selectedVideo;
+  Uint8List? _videoThumbnail;
+  String _mediaType = 'none'; // 'none', 'images', 'video'
+  final VideoUploadService _videoService = VideoUploadService();
 
   Future<void> _selectImage() async {
     // Capture the State's context BEFORE async
@@ -97,6 +104,14 @@ class _AddPostScreenState extends State<AddPostScreen> {
               onPressed: () async {
                 try {
                   Navigator.of(dialogContext).pop();
+
+                  // Reset video when selecting images
+                  if (_selectedVideo != null) {
+                    setState(() {
+                      _selectedVideo = null;
+                      _videoThumbnail = null;
+                    });
+                  }
 
                   // Check current images number
                   if (_images.length >= maxTotalImages) {
@@ -196,13 +211,16 @@ class _AddPostScreenState extends State<AddPostScreen> {
     });
   }
 
-  void postImage(String uid, String displayName, String profImage) async {
+  void postContent(String uid, String displayName, String profImage) async {
     // Add debug logging
     avoidPrint("DEBUG - uid: $uid");
     avoidPrint("DEBUG - displayName: $displayName");
     avoidPrint("DEBUG - profImage: $profImage");
     avoidPrint("DEBUG - postText: ${_textController.text}");
-    avoidPrint("DEBUG - image size: ${_images.length}");
+    avoidPrint("DEBUG - mediaType: $_mediaType");
+    avoidPrint("DEBUG - images count: ${_images.length}");
+    avoidPrint("DEBUG - has video: ${_selectedVideo != null}");
+
     // Validate inputs
     if (_textController.text.isEmpty) {
       displaySnackBar(
@@ -213,9 +231,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
       return;
     }
 
-    if (_images.isEmpty) {
+    if (_images.isEmpty && _selectedVideo == null) {
       displaySnackBar(
-        'Vui lòng chọn ảnh để đăng bài',
+        'Vui lòng chọn ảnh hoặc video',
         context,
         SnackBarType.error,
       );
@@ -236,14 +254,30 @@ class _AddPostScreenState extends State<AddPostScreen> {
       _isLoading = true;
     });
     try {
-      // Call the uploadPost method((At this point, the function returns either the postId or an error message.))
-      String result = await FirestoreMethod().uploadPost(
-        _textController.text.trim(),
-        _images,
-        uid,
-        displayName,
-        profImage,
-      );
+      String result;
+
+      // Separate logic for images vs video
+      if (_mediaType == 'images' && _images.isNotEmpty) {
+        // Upload images
+        result = await FirestoreMethod().uploadPost(
+          _textController.text.trim(),
+          _images,
+          uid,
+          displayName,
+          profImage,
+        );
+      } else if (_mediaType == 'video' && _selectedVideo != null) {
+        // Upload video
+        result = await FirestoreMethod().uploadVideo(
+          _textController.text.trim(),
+          _selectedVideo!,
+          uid,
+          displayName,
+          profImage,
+        );
+      } else {
+        throw Exception('Invalid media type');
+      }
 
       avoidPrint("DEBUG - Upload result: $result"); // See what fails
 
@@ -349,7 +383,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
                     SnackBarType.success,
                   );
                 }
-                removeImage(0); // Clear selected images
+                // Clear images, video and text
+                _clearAllMedia();
                 _textController.clear();
 
                 // Navigate to Feed Screen
@@ -486,6 +521,89 @@ class _AddPostScreenState extends State<AddPostScreen> {
     });
   }
 
+  Future<void> _selectVideo() async {
+    final scaffoldContext = context;
+
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? video = await picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(minutes: 3), // limit 3 mins
+      );
+
+      if (video == null) {
+        if (scaffoldContext.mounted) {
+          displaySnackBar(
+            'Không có video nào được chọn',
+            scaffoldContext,
+            SnackBarType.error,
+          );
+        }
+        return;
+      }
+
+      final File videoFile = File(video.path);
+      final fileSize = await videoFile.length();
+
+      // Validate size (50MB limit)
+      if (fileSize > 50 * 1024 * 1024) {
+        if (scaffoldContext.mounted) {
+          displaySnackBar(
+            'Video quá lớn. Vui lòng chọn video dưới 50MB',
+            scaffoldContext,
+            SnackBarType.error,
+          );
+        }
+        return;
+      }
+
+      // Validate video duration
+      final validationError = await _videoService.validateVideo(videoFile);
+      if (validationError != null) {
+        if (scaffoldContext.mounted) {
+          avoidPrint("Error in Validate video duration $validationError");
+          displaySnackBar("Đã xảy ra lỗi xác thực thời lượng video, vui lòng thử lại sau!", scaffoldContext, SnackBarType.error);
+        }
+        return;
+      }
+
+      // Get thumbnail
+      final thumbnail = await _videoService.getVideoThumbnail(videoFile);
+
+      setState(() {
+        _selectedVideo = videoFile;
+        _videoThumbnail = thumbnail;
+        _mediaType = 'video';
+        _images.clear(); // Clear images if it have
+      });
+
+      if (scaffoldContext.mounted) {
+        displaySnackBar(
+          'Đã chọn video (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)',
+          scaffoldContext,
+          SnackBarType.success,
+        );
+      }
+    } catch (e) {
+      if (scaffoldContext.mounted) {
+        displaySnackBar(
+          'Có lỗi khi chọn video',
+          scaffoldContext,
+          SnackBarType.error,
+        );
+      }
+      avoidPrint(e.toString());
+    }
+  }
+
+  void _removeVideo() {
+    setState(() {
+      _selectedVideo = null;
+      _videoThumbnail = null;
+      _mediaType = 'none';
+    });
+  }
+
   @override
   void dispose() {
     super.dispose();
@@ -493,6 +611,20 @@ class _AddPostScreenState extends State<AddPostScreen> {
     _scrollController.dispose();
     _images = [];
     _postSubscription?.cancel(); // Cancel subscription on dispose
+
+    // Only cancel compression on mobile/desktop platforms
+    if (!kIsWeb) {
+      _videoService.cancelCompression();
+    }
+  }
+
+  void _clearAllMedia() {
+    setState(() {
+      _images = [];
+      _selectedVideo = null;
+      _videoThumbnail = null;
+      _mediaType = 'none';
+    });
   }
 
   @override
@@ -515,7 +647,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
             ? null
             : IconButton(
                 onPressed: () {
-                  removeImage(0);
+                  _clearAllMedia();
+                  _textController.clear();
                   // Navigate to the feed screen
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
@@ -540,7 +673,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   CustomButton(
                     onPressed:
                         hasProfilePhoto // Disable if no photo
-                        ? () => postImage(
+                        ? () => postContent(
                             user.uid,
                             user.displayName,
                             user.photoUrl,
@@ -568,7 +701,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   child: CustomButton(
                     onPressed:
                         hasProfilePhoto // Disable if no photo
-                        ? () => postImage(
+                        ? () => postContent(
                             user.uid,
                             user.displayName,
                             user.photoUrl,
@@ -664,8 +797,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 ),
               ),
               const Divider(color: secondaryColor),
-              // show the selected image preview
-              _images.isEmpty
+              // show the selected image or video preview
+              _mediaType == 'none'
                   ? Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Row(
@@ -679,6 +812,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                             overlayColor: appPrimaryColor,
                             hasBorder: true,
                             onPressed: () {
+                              setState(() => _mediaType = 'images');
                               _selectImage();
                             },
                             child: Row(
@@ -703,7 +837,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                             borderRadius: BorderRadius.circular(8),
                             overlayColor: appPrimaryColor,
                             hasBorder: true,
-                            onPressed: () {},
+                            onPressed: _selectVideo,
                             child: Row(
                               children: const [
                                 Icon(
@@ -718,314 +852,333 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               ],
                             ),
                           ),
-                          CustomButton(
-                            backgroundColor: width > webScreenSize
-                                ? webBackgroundColor
-                                : mobileBackgroundColor,
-                            borderRadius: BorderRadius.circular(8),
-                            overlayColor: appPrimaryColor,
-                            hasBorder: true,
-                            onPressed: () {},
-                            child: Row(
-                              children: const [
-                                Icon(
-                                  Icons.file_open_outlined,
-                                  color: primaryTextColor,
-                                ),
-                                Text(
-                                  'Tài liệu',
-                                  style: TextStyle(color: primaryTextColor),
-                                ),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header
-                        Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              // Display the quantity with a warning color if the limit is nearly reached
-                              Flexible(
-                                child: Text(
-                                  '${_images.length}/$maxTotalImages ảnh đã chọn',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: _images.length >= maxTotalImages
-                                        ? errorBackgroundColor
-                                        : secondaryColor,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              CustomButton(
-                                backgroundColor:
-                                    _images.length >= maxTotalImages
-                                    ? secondaryColor
-                                    : appPrimaryColor,
-                                borderRadius: BorderRadius.circular(8),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                onPressed: _images.length >= maxTotalImages
-                                    ? () {}
-                                    : () {
-                                        _selectImage();
-                                      },
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _images.length >= maxTotalImages
-                                        ? SizedBox.shrink()
-                                        : Icon(
-                                            Icons.add,
-                                            color: onPrimaryColor,
-                                            size: 16,
-                                          ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      _images.length >= maxTotalImages
-                                          ? 'Đã đủ'
-                                          : 'Thêm ảnh',
-                                      style: TextStyle(
-                                        color: onPrimaryColor,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Image Preview (can scroll)
-                        Container(
-                          height: 220,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          child: Stack(
-                            children: [
-                              ScrollConfiguration(
-                                behavior: ScrollConfiguration.of(context)
-                                    .copyWith(
-                                      dragDevices: {
-                                        PointerDeviceKind.touch,
-                                        PointerDeviceKind
-                                            .mouse, // Enable mouse drag
-                                      },
-                                      scrollbars:
-                                          width >
-                                          webScreenSize, // Show scrollbar on Web
-                                    ),
-                                child: ListView.builder(
-                                  controller: _scrollController,
-                                  scrollDirection: Axis.horizontal,
-                                  padding: EdgeInsets.symmetric(horizontal: 8),
-                                  physics: const ClampingScrollPhysics(),
-                                  itemCount: _images.length,
-                                  itemBuilder: (context, index) {
-                                    return Stack(
-                                      children: [
-                                        // Image Container
-                                        Container(
-                                          margin: const EdgeInsets.symmetric(
-                                            horizontal: 8.0,
-                                          ),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            child: Image.memory(
-                                              _images[index],
-                                              fit: BoxFit.cover,
-                                              width: 200,
-                                              height: 200,
-                                            ),
-                                          ),
-                                        ),
-
-                                        // Remove button
-                                        Positioned(
-                                          top: 4,
-                                          left: 12,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: onPrimaryColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            child: IconButton(
-                                              icon: const Icon(
-                                                Icons.close,
-                                                color: secondaryColor,
-                                              ),
-                                              onPressed: () {
-                                                removeImage(index);
-                                              },
-                                            ),
-                                          ),
-                                        ),
-
-                                        // Display image number
-                                        Positioned(
-                                          bottom: 8,
-                                          left: 16,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: onPrimaryColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              '${index + 1}/${_images.length}',
-                                              style: const TextStyle(
-                                                color: secondaryColor,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ),
-
-                              // Scroll hint indicator (chỉ hiện trên web khi có > 2 ảnh)
-                              if (_images.length > 2 &&
-                                  width > webScreenSize) ...[
-                                // Left scroll button
-                                Positioned(
-                                  left: 0,
-                                  top: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    width: 40,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.centerRight,
-                                        end: Alignment.centerLeft,
-                                        colors: [
-                                          Colors.transparent,
-                                          mobileBackgroundColor.withValues(
-                                            alpha: 0.7,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: IconButton(
-                                        icon: const Icon(
-                                          Icons.chevron_left,
-                                          color: secondaryColor,
-                                          size: 24,
-                                        ),
-                                        onPressed: () {
-                                          _scrollController.animateTo(
-                                            _scrollController.offset - 200,
-                                            duration: const Duration(
-                                              milliseconds: 300,
-                                            ),
-                                            curve: Curves.easeInOut,
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Right scroll button
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    width: 40,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                        colors: [
-                                          Colors.transparent,
-                                          mobileBackgroundColor.withValues(
-                                            alpha: 0.7,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: IconButton(
-                                        icon: const Icon(
-                                          Icons.chevron_right,
-                                          color: secondaryColor,
-                                          size: 24,
-                                        ),
-                                        onPressed: () {
-                                          _scrollController.animateTo(
-                                            _scrollController.offset + 200,
-                                            duration: const Duration(
-                                              milliseconds: 300,
-                                            ),
-                                            curve: Curves.easeInOut,
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-
-                              // Mobile gradient hint (chỉ hiện khi có > 2 ảnh và không phải web)
-                              if (_images.length > 2 && width <= webScreenSize)
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    width: 40,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                        colors: [
-                                          Colors.transparent,
-                                          mobileBackgroundColor.withValues(
-                                            alpha: 0.7,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.chevron_right,
-                                        color: secondaryColor,
-                                        size: 24,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  : _mediaType == 'video'
+                  ? _buildVideoPreview()
+                  : _buildImagesPreview(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // Widget preview video
+  Widget _buildVideoPreview() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Video đã chọn',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              CustomButton(
+                backgroundColor: errorBackgroundColor,
+                borderRadius: BorderRadius.circular(8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                onPressed: _removeVideo,
+                child: const Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: onPrimaryColor, size: 16),
+                    SizedBox(width: 4),
+                    Text('Xóa', style: TextStyle(color: onPrimaryColor)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_videoThumbnail != null)
+          Container(
+            margin: const EdgeInsets.all(16),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    _videoThumbnail!,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Widget build image preview
+  Widget _buildImagesPreview() {
+    final width = MediaQuery.of(context).size.width;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Display the quantity with a warning color if the limit is nearly reached
+              Flexible(
+                child: Text(
+                  '${_images.length}/$maxTotalImages ảnh đã chọn',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: _images.length >= maxTotalImages
+                        ? errorBackgroundColor
+                        : secondaryColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              CustomButton(
+                backgroundColor: _images.length >= maxTotalImages
+                    ? secondaryColor
+                    : appPrimaryColor,
+                borderRadius: BorderRadius.circular(8),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                onPressed: _images.length >= maxTotalImages
+                    ? () {}
+                    : () {
+                        _selectImage();
+                      },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _images.length >= maxTotalImages
+                        ? SizedBox.shrink()
+                        : Icon(Icons.add, color: onPrimaryColor, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      _images.length >= maxTotalImages ? 'Đã đủ' : 'Thêm ảnh',
+                      style: TextStyle(color: onPrimaryColor, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Image Preview (can scroll)
+        Container(
+          height: 220,
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Stack(
+            children: [
+              ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.mouse, // Enable mouse drag
+                  },
+                  scrollbars: width > webScreenSize, // Show scrollbar on Web
+                ),
+                child: ListView.builder(
+                  controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  physics: const ClampingScrollPhysics(),
+                  itemCount: _images.length,
+                  itemBuilder: (context, index) {
+                    return Stack(
+                      children: [
+                        // Image Container
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              _images[index],
+                              fit: BoxFit.cover,
+                              width: 200,
+                              height: 200,
+                            ),
+                          ),
+                        ),
+
+                        // Remove button
+                        Positioned(
+                          top: 4,
+                          left: 12,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: onPrimaryColor,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.close,
+                                color: secondaryColor,
+                              ),
+                              onPressed: () {
+                                removeImage(index);
+                              },
+                            ),
+                          ),
+                        ),
+
+                        // Display image number
+                        Positioned(
+                          bottom: 8,
+                          left: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: onPrimaryColor,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${index + 1}/${_images.length}',
+                              style: const TextStyle(
+                                color: secondaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+
+              // Scroll hint indicator (chỉ hiện trên web khi có > 2 ảnh)
+              if (_images.length > 2 && width > webScreenSize) ...[
+                // Left scroll button
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 40,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerRight,
+                        end: Alignment.centerLeft,
+                        colors: [
+                          Colors.transparent,
+                          mobileBackgroundColor.withValues(alpha: 0.7),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.chevron_left,
+                          color: secondaryColor,
+                          size: 24,
+                        ),
+                        onPressed: () {
+                          _scrollController.animateTo(
+                            _scrollController.offset - 200,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Right scroll button
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 40,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          Colors.transparent,
+                          mobileBackgroundColor.withValues(alpha: 0.7),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.chevron_right,
+                          color: secondaryColor,
+                          size: 24,
+                        ),
+                        onPressed: () {
+                          _scrollController.animateTo(
+                            _scrollController.offset + 200,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              // Mobile gradient hint (chỉ hiện khi có > 2 ảnh và không phải web)
+              if (_images.length > 2 && width <= webScreenSize)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 40,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          Colors.transparent,
+                          mobileBackgroundColor.withValues(alpha: 0.7),
+                        ],
+                      ),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.chevron_right,
+                        color: secondaryColor,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
