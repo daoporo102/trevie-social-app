@@ -20,7 +20,7 @@ List<Widget> homeMobileScreenItems() {
     const FeedScreen(),
     const SearchScreen(),
     const ChatListScreen(),
-    const Text('Notifications'),
+    // const Text('Notifications'),
     ProfileScreen(uid: uid),
     MoreScreen(uid: uid),
   ];
@@ -33,7 +33,7 @@ List<Widget> homeWebScreenItems() {
     const SearchScreen(),
     const AddPostScreen(),
     const ChatListScreen(),
-    const Text('Notifications'),
+    // const Text('Notifications'),
     ProfileScreen(uid: uid),
     MoreScreen(uid: uid),
   ];
