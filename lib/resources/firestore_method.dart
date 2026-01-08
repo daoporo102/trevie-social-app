@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:social_media_app/models/comment.dart';
 import 'package:social_media_app/models/post.dart';
 import 'package:social_media_app/resources/storage_method.dart';
+import 'package:social_media_app/resources/video_upload_service.dart';
 import 'package:social_media_app/utils/utils.dart';
 import 'package:uuid/uuid.dart';
 
@@ -147,8 +150,8 @@ class FirestoreMethod {
       }
 
       // Get current postUrls
-      List<String> currentUrls = currentData['postUrls'] != null &&
-              currentData['postUrls'] is List
+      List<String> currentUrls =
+          currentData['postUrls'] != null && currentData['postUrls'] is List
           ? List<String>.from(currentData['postUrls'])
           : [];
 
@@ -392,8 +395,8 @@ class FirestoreMethod {
         }
       } else {
         // Delete multiple images from storage if postUrls is not empty
-        List<String> imageUrls = postData['postUrls'] != null &&
-                postData['postUrls'] is List
+        List<String> imageUrls =
+            postData['postUrls'] != null && postData['postUrls'] is List
             ? List<String>.from(postData['postUrls'])
             : [];
 
@@ -673,5 +676,82 @@ class FirestoreMethod {
     } catch (e) {
       avoidPrint("Error updating reshares: ${e.toString()}");
     }
+  }
+
+  // Upload video
+  Future<String> uploadVideo(
+    String postText,
+    File videoFile,
+    String uid,
+    String displayName,
+    String profImage,
+  ) async {
+    String res = "Một lỗi đã xảy ra";
+
+    try {
+      final videoService = VideoUploadService();
+
+      // 1. Compress video
+      final compressedVideo = await videoService.compressVideo(videoFile);
+      if (compressedVideo == null) {
+        return "Lỗi khi nén video";
+      }
+
+      // 2. Upload to Storage
+      String videoUrl = await videoService.uploadVideoToStorage(
+        compressedVideo,
+      );
+
+      // 3. Get thumbnail for preview
+      Uint8List? thumbnail = await videoService.getVideoThumbnail(
+        compressedVideo,
+      );
+      String thumbnailUrl = '';
+
+      if (thumbnail != null) {
+        thumbnailUrl = await StorageMethod().uploadImageToStorage(
+          'thumbnails',
+          thumbnail,
+          true,
+        );
+      }
+
+      // 4. Create post
+      String postId = const Uuid().v1();
+      final now = DateTime.now();
+
+      final authorDoc = await _firestore.collection('users').doc(uid).get();
+      final authorRole = (authorDoc.exists && authorDoc.data() != null)
+          ? (authorDoc.data() as Map<String, dynamic>)['role'] as String? ??
+                'user'
+          : 'user';
+
+      Post post = Post(
+        postId: postId,
+        uid: uid,
+        postText: postText,
+        displayName: displayName,
+        postUrls: [videoUrl], // Video URL
+        profImage: profImage,
+        datePublished: now,
+        likes: [],
+        dateUpdated: null,
+        lastDateModified: now,
+        reshareCount: 0,
+        likesCount: 0,
+        role: authorRole,
+        status: 'processing',
+        mediaType: 'video',
+        videoThumbnail: thumbnailUrl,
+      );
+
+      await _firestore.collection('posts').doc(postId).set(post.toJson());
+      res = postId;
+    } catch (e) {
+      avoidPrint("Error uploading video post: $e");
+      return e.toString().replaceAll('Exception: ', '');
+    }
+
+    return res;
   }
 }
