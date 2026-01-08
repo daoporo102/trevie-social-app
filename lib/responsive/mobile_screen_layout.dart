@@ -82,14 +82,14 @@ class _MobileScreenLayoutState extends State<MobileScreenLayout> {
               label: 'Tin nhắn',
               backgroundColor: mobileBackgroundColor,
             ),
-            BottomNavigationBarItem(
-              icon: Icon(
-                Icons.notifications_outlined,
-                color: _page == 3 ? appPrimaryColor : secondaryColor,
-              ),
-              label: 'Chuông',
-              backgroundColor: mobileBackgroundColor,
-            ),
+            // BottomNavigationBarItem(
+            //   icon: Icon(
+            //     Icons.notifications_outlined,
+            //     color: _page == 3 ? appPrimaryColor : secondaryColor,
+            //   ),
+            //   label: 'Chuông',
+            //   backgroundColor: mobileBackgroundColor,
+            // ),
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.person_outlined,

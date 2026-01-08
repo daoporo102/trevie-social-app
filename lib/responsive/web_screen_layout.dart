@@ -80,12 +80,12 @@ class _WebScreenLayoutState extends State<WebScreenLayout> {
             isActive: _page == 3,
             onPress: () => navigationTapped(3),
           ),
-          NavBarButton(
-            icon: Icons.notification_add_outlined,
-            label: 'Chuông',
-            isActive: _page == 4,
-            onPress: () => navigationTapped(4),
-          ),
+          // NavBarButton(
+          //   icon: Icons.notification_add_outlined,
+          //   label: 'Chuông',
+          //   isActive: _page == 4,
+          //   onPress: () => navigationTapped(4),
+          // ),
           NavBarButton(
             icon: Icons.person_outlined,
             label: 'Hồ sơ',
