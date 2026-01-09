@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.example.social_media_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36 // Latest
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -26,7 +26,7 @@ android {
         applicationId = "com.example.social_media_app"
 
         minSdk = maxOf(21, flutter.minSdkVersion) // 21+ recommended with Firebase/Flutter
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
 
         versionCode = flutter.versionCode
         versionName = flutter.versionName
